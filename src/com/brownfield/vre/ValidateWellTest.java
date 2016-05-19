@@ -378,7 +378,7 @@ public class ValidateWellTest {
 			statement.setBoolean(9, vreFlag);
 			statement.setString(10, remark);
 			rowsInserted = statement.executeUpdate();
-			LOGGER.log(Level.INFO, rowsInserted + " rows inserted ");
+			LOGGER.log(Level.INFO, rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : " + startDate);
 		} catch (Exception e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}

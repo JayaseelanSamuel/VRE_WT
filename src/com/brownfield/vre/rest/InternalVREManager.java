@@ -77,8 +77,16 @@ public class InternalVREManager {
 	public void validateNewTests() {
 		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection()) {
 
-			ValidateWellTest vwt = new ValidateWellTest();
-			vwt.validateNewWellTests(vreConn, phdConn);
+			if(vreConn != null){
+				if(phdConn != null){
+					ValidateWellTest vwt = new ValidateWellTest();
+					vwt.validateNewWellTests(vreConn, phdConn);
+				}else{
+					LOGGER.log(Level.SEVERE, "Can not validate Wells as PHD connection is unavailable");
+				}
+			}else{
+				LOGGER.log(Level.SEVERE, "Can not validate Wells as VRE connection is unavailable");
+			}
 
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
