@@ -254,7 +254,8 @@ public class ValidateWellTest {
 			statement.setString(2, effectiveDate);
 			try (ResultSet rset = statement.executeQuery();) {
 				if (rset != null && rset.next()) { // always one row per date
-					watercut = rset.getDouble(WATER_CUT_LAB); // modify static watercut
+					// set watercut to seabed wc / 100 
+					watercut = rset.getDouble(WATER_CUT_LAB) / 100;
 					if (rset.getObject(STABILITY_FLAG) != null) {
 						isStable = rset.getBoolean(STABILITY_FLAG);
 					}
