@@ -11,13 +11,25 @@ import java.sql.Statement;
  */
 public class VREConstants {
 
+	/** The sql driver name. */
+	public static final String SQL_DRIVER_NAME = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+
 	/** The teiid driver name. */
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
+
+	/** The vre db url. */
+	public static String VRE_DB_URL = "<SQL_URL>";
+
+	/** The vre user. */
+	public static String VRE_USER = "<USER>";
+
+	/** The vre password. */
+	public static String VRE_PASSWORD = "<PASSWORD>";
 
 	// Properties which will be overridden at the application context load
 	
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "<SERVER_URL>";
+	public static String PHD_TEIID_URL = "<SQL_URL>";
 
 	/** The teiid user. */
 	public static String TEIID_USER = "<USER>";
@@ -65,9 +77,36 @@ public class VREConstants {
 
 	/** The shrinkage factor. */
 	public static double SHRINKAGE_FACTOR = 0.95;
+	
+	/** The vre exe. */
+	public static String VRE_EXE = "D:/Pipesim_Models/VRE.exe";
 
 	// Properties end
 
+	
+	/**
+	 * The Enum VRE_TYPE.
+	 */
+	public static enum VRE_TYPE {
+		/** The recalibration execution . */
+		RECAL,
+
+		/** The VRE1 execution. */
+		VRE1,
+
+		/** The VRE2 execution. */
+		VRE2,
+
+		/** The VRE3 execution. */
+		VRE3,
+
+		/** The VRE4 execution. */
+		VRE4,
+
+		/** The VRE5 execution. */
+		VRE5
+	};
+	
 	// Queries
 
 	/** The well test new query. */
@@ -99,6 +138,46 @@ public class VREConstants {
 
 	/** The Constant VRE_VARIABLE_QUERY. */
 	public static final String VRE_VARIABLE_QUERY = "SELECT NAME, \"VALUE\" FROM VRE_VARIABLES";
+	
+	/**
+	 * The Constant VRE1_DATASET_QUERY. TODO : Change TRY_CONVERT(DATETIME,
+	 * '2015-12-02', 102) to getdate() later
+	 */
+	public static final String VRE1_DATASET_QUERY = "SELECT T.*, DM.AVG_WELLHEAD_PRESSURE, DD.WATER_CUT_LAB, DM.AVG_HEADER_PRESSURE, DM.AVG_BH_PRESSURE, DM.AVG_GAS_INJ_RATE, DM.AVG_CHOKE "
+			+ " FROM ( "
+			+ "	SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, DATEADD(dd, DATEDIFF(dd, 0, TRY_CONVERT(DATETIME, '2015-12-02', 102)), -1) AS RECORDED_DATE, "
+			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE2, "
+			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE3,"
+			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL AND TAG_GASLIFT_INJ_RATE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE4, "
+			+ "	CAST(IIF(SM.TAG_CHOKE_SIZE IS NOT NULL AND P.TAG_HEADER_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE5 "
+			+ "	FROM STRING S " + "	LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
+			+ "	LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
+			+ "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
+			+ "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL AND TAG_WHP IS NOT NULL) T "
+			+ " INNER JOIN DAILY_AVERAGE_MEASUREMENT DM ON DM.STRING_ID = T.STRING_ID AND DM.RECORDED_DATE = T.RECORDED_DATE "
+			+ " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = T.RECORDED_DATE ";
+
+	/**
+	 * The Constant WELL_TEST_CALIBRATE_QUERY. identify eligible tests for
+	 * calibration by looking for SR testType, VRE flag = true and Calibrated
+	 * flag set to null. We will then update IS_CALIBRATED to true or false TODO:
+	 * Change VRE flag to 1 later
+	 */
+	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CONVERT(date, TEST_END_DATE) AS EFFECTIVE_DATE, "
+			+ " IS_CALIBRATED, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+			+ " FROM WELL_TEST WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 0 AND IS_CALIBRATED IS NULL ";
+
+	/** The Constant VRE_TABLE_SELECT_QUERY. */
+	public static final String VRE_TABLE_SELECT_QUERY = "SELECT STRING_ID, RECORDED_DATE, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
+			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, REMARK, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+			+ " FROM VIRTUAL_RATE_ESTIMATION "
+			+ " WHERE RECORDED_DATE = ? AND STRING_ID = ? AND (WATER_CUT_FLAG IS NULL OR WATER_CUT_FLAG='LAB')";
+
+	/** The Constant INSERT_VRE_QUERY. */
+	public static final String INSERT_VRE_QUERY = "INSERT INTO VIRTUAL_RATE_ESTIMATION (STRING_ID, RECORDED_DATE, SOURCE_ID, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
+			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, REMARK) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?)";
+
 
 	// other constants
 
@@ -116,6 +195,18 @@ public class VREConstants {
 	
 	/** The Constant WTV_WORKFLOW. */
 	public static final String WTV_WORKFLOW = "WellTestValidation Workflow";
+	
+	/** The Constant THREAD_POOL_SIZE. */
+	public static final int THREAD_POOL_SIZE = 4;
+
+	/** The Constant VRE_WORKFLOW. */
+	public static final String VRE_WORKFLOW = "VRE Automation Workflow";
+
+	/** The Constant DEFAULT_WATER_CUT. */
+	public static final String DEFAULT_WATER_CUT = "LAB";
+
+	/** The Constant DEFAULT_REMARK. */
+	public static final String DEFAULT_REMARK = "Inserted/Updated by VRE Workflow"; // TODO: Rename
 
 	// Column Names
 
@@ -217,6 +308,122 @@ public class VREConstants {
 	
 	/** The Constant ROW_CHANGED_DATE. */
 	public static final String ROW_CHANGED_DATE = "ROW_CHANGED_DATE";
+
+	/** The Constant RECORDED_DATE. */
+	public static final String RECORDED_DATE = "RECORDED_DATE";
+
+	/** The Constant AVG_WELLHEAD_PRESSURE. */
+	public static final String AVG_WELLHEAD_PRESSURE = "AVG_WELLHEAD_PRESSURE";
+
+	/** The Constant AVG_HEADER_PRESSURE. */
+	public static final String AVG_HEADER_PRESSURE = "AVG_HEADER_PRESSURE";
+
+	/** The Constant AVG_BH_PRESSURE. */
+	public static final String AVG_BH_PRESSURE = "AVG_BH_PRESSURE";
+
+	/** The Constant AVG_GAS_INJ_RATE. */
+	public static final String AVG_GAS_INJ_RATE = "AVG_GAS_INJ_RATE";
+
+	/** The Constant AVG_CHOKE. */
+	public static final String AVG_CHOKE = "AVG_CHOKE";
+
+	/** The Constant RUN_VRE2. */
+	public static final String RUN_VRE2 = "RUN_VRE2";
+
+	/** The Constant RUN_VRE3. */
+	public static final String RUN_VRE3 = "RUN_VRE3";
+
+	/** The Constant RUN_VRE4. */
+	public static final String RUN_VRE4 = "RUN_VRE4";
+
+	/** The Constant RUN_VRE5. */
+	public static final String RUN_VRE5 = "RUN_VRE5";
+
+	/** The Constant VRE1. */
+	public static final String VRE1 = "VRE1";
+
+	/** The Constant VRE2. */
+	public static final String VRE2 = "VRE2";
+
+	/** The Constant VRE3. */
+	public static final String VRE3 = "VRE3";
+
+	/** The Constant VRE4. */
+	public static final String VRE4 = "VRE4";
+
+	/** The Constant VRE5. */
+	public static final String VRE5 = "VRE5";
+
+	/** The Constant VRE6. */
+	public static final String VRE6 = "VRE6";
+
+	/** The Constant WATER_CUT. */
+	public static final String WATER_CUT = "WATER_CUT";
+
+	/** The Constant WATER_CUT_FLAG. */
+	public static final String WATER_CUT_FLAG = "WATER_CUT_FLAG";
+
+	/** The Constant GOR. */
+	public static final String GOR = "GOR";
+
+	/** The Constant PI. */
+	public static final String PI = "PI";
+
+	/** The Constant HOLDUP. */
+	public static final String HOLDUP = "HOLDUP";
+
+	/** The Constant FRICTION_FACTOR. */
+	public static final String FRICTION_FACTOR = "FRICTION_FACTOR";
+
+	/** The Constant RESERVOIR_PRESSURE. */
+	public static final String RESERVOIR_PRESSURE = "RESERVOIR_PRESSURE";
+
+	/** The Constant REMARK. */
+	public static final String REMARK = "REMARK";
+
+	// arguments
+
+	/** The Constant ARG_VRE1. */
+	public static final String ARG_VRE1 = "-vre1";
+
+	/** The Constant ARG_VRE2. */
+	public static final String ARG_VRE2 = "-vre2";
+
+	/** The Constant ARG_VRE3. */
+	public static final String ARG_VRE3 = "-vre3";
+
+	/** The Constant ARG_VRE4. */
+	public static final String ARG_VRE4 = "-vre4";
+
+	/** The Constant ARG_VRE5. */
+	public static final String ARG_VRE5 = "-vre5";
+
+	/** The Constant ARG_VRE6. */
+	public static final String ARG_VRE6 = "-vre6";
+
+	/** The Constant ARG_MODEL. */
+	public static final String ARG_MODEL = "-model";
+
+	/** The Constant ARG_WHP. */
+	public static final String ARG_WHP = "-whp";
+
+	/** The Constant ARG_WATERCUT. */
+	public static final String ARG_WATERCUT = "-wc";
+
+	/** The Constant ARG_HEADER. */
+	public static final String ARG_HEADER = "-header";
+
+	/** The Constant ARG_PDGP. */
+	public static final String ARG_PDGP = "-pdgp";
+
+	/** The Constant ARG_CHOKE. */
+	public static final String ARG_CHOKE = "-choke";
+
+	/** The Constant ARG_RESERVOIR. */
+	public static final String ARG_RESERVOIR = "-reservoir";
+
+	/** The Constant ARG_TEST_LIQ_RATE. */
+	public static final String ARG_TEST_LIQ_RATE = "-qtest";
 
 	/**
 	 * Refresh variables.
