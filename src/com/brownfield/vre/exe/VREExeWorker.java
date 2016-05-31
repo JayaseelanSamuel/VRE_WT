@@ -35,6 +35,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
+import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.WellModel;
 
 /**
@@ -64,10 +65,9 @@ public class VREExeWorker implements Runnable {
 
 	/** The recorded date. */
 	private Timestamp recordedDate;
-	
-	
-	///** The vre type. */
-	//private VRE_TYPE vreType; 
+
+	/** The vre type. */
+	private VRE_TYPE vreType;
 
 	/**
 	 * Instantiates a new VRE exe worker.
@@ -84,7 +84,6 @@ public class VREExeWorker implements Runnable {
 	 *            the wcut
 	 * @param recordedDate
 	 *            the recorded date
-	 * @param  
 	 */
 	public VREExeWorker(Connection vreConn, List<String> params, int stringID, double whp, double wcut,
 			Timestamp recordedDate) {
@@ -96,6 +95,21 @@ public class VREExeWorker implements Runnable {
 		this.recordedDate = recordedDate;
 	}
 
+	/**
+	 * Instantiates a new VRE exe worker for VRE6 output calculation.
+	 *
+	 * @param params
+	 *            the params
+	 * @param stringID
+	 *            the string id
+	 * @param vreType
+	 *            the vre type
+	 */
+	public VREExeWorker(List<String> params, int stringID, VRE_TYPE vreType) {
+		this.params = params;
+		this.stringID = stringID;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -103,19 +117,31 @@ public class VREExeWorker implements Runnable {
 	 */
 	@Override
 	public void run() {
-		this.executeVRE();		
+		String threadName = Thread.currentThread().getName();
+		if (this.vreType == VRE_TYPE.VRE6) {
+			try {
+				LOGGER.log(Level.INFO, threadName + " : Started to run VRE6 for " + this.stringID);
+				Thread.sleep(10000);
+			} catch (InterruptedException e) {
+				LOGGER.log(Level.SEVERE, e.getMessage());
+			}
+		} else {
+			this.executeVRE(threadName);
+		}
 	}
 
 	/**
 	 * Execute vre1.
+	 *
+	 * @param threadName
+	 *            the thread name
 	 */
-	private void executeVRE() {
-		String threadName = Thread.currentThread().getName();
-		LOGGER.log(Level.INFO, threadName + " : Started to run VRE for " + this.stringID ); 
+	private void executeVRE(String threadName) {
+		LOGGER.log(Level.INFO, threadName + " : Started to run VRE for " + this.stringID);
 		long startT = System.currentTimeMillis();
-		WellModel wellModel = this.runVRE(params);
+		WellModel wellModel = runVRE(params);
 		long endT = System.currentTimeMillis();
-		double duration = ((endT - startT)/1000);
+		double duration = ((endT - startT) / 1000);
 		LOGGER.log(Level.INFO, threadName + " : Time to run VRE : " + duration);
 		if (wellModel != null) {
 			if (wellModel.getErrors() == null) {
@@ -125,9 +151,10 @@ public class VREExeWorker implements Runnable {
 				LOGGER.log(Level.SEVERE, threadName + " : Exception in calling VRE1 - " + wellModel.getErrors());
 			}
 		} else {
-			LOGGER.log(Level.SEVERE, threadName + " : Something went wrong while calling VRE1 for string - " + stringID);
+			LOGGER.log(Level.SEVERE,
+					threadName + " : Something went wrong while calling VRE1 for string - " + stringID);
 		}
-		LOGGER.log(Level.INFO, threadName + " Finished VRE for " + this.stringID );
+		LOGGER.log(Level.INFO, threadName + " Finished VRE for " + this.stringID);
 	}
 
 	/**
@@ -137,7 +164,7 @@ public class VREExeWorker implements Runnable {
 	 *            the parameters
 	 * @return the well model
 	 */
-	private WellModel runVRE(List<String> params) {
+	public static WellModel runVRE(List<String> params) {
 		WellModel wellModel = null;
 		try {
 			ProcessBuilder pb = new ProcessBuilder(params);
@@ -213,7 +240,7 @@ public class VREExeWorker implements Runnable {
 				double pi = model.getProperties().getPi();
 				double ii = model.getProperties().getIi();
 				// set pi to ii if pi is 0 (e.g. Injector wells)
-				pi = pi !=0 ? pi : ii; 
+				pi = pi != 0 ? pi : ii;
 				if (rset.next()) { // record present, just update
 					if (vre1LiqRate != null) {
 						rset.updateDouble(VRE1, vre1LiqRate);

@@ -43,7 +43,7 @@ public class RecalModel {
 	 *
 	 * @return the test liquid
 	 */
-	@XmlElement(name="test_liquid")
+	@XmlElement(name = "test_liquid")
 	public double getTestLiquid() {
 		return testLiquid;
 	}
@@ -51,7 +51,8 @@ public class RecalModel {
 	/**
 	 * Sets the test liquid.
 	 *
-	 * @param testLiquid the new test liquid
+	 * @param testLiquid
+	 *            the new test liquid
 	 */
 	public void setTestLiquid(double testLiquid) {
 		this.testLiquid = testLiquid;
@@ -62,7 +63,7 @@ public class RecalModel {
 	 *
 	 * @return the calibration
 	 */
-	@XmlElement(name="calibration")
+	@XmlElement(name = "calibration")
 	public boolean getCalibration() {
 		return calibration;
 	}
@@ -70,7 +71,8 @@ public class RecalModel {
 	/**
 	 * Sets the calibration.
 	 *
-	 * @param calibration the new calibration
+	 * @param calibration
+	 *            the new calibration
 	 */
 	public void setCalibration(boolean calibration) {
 		this.calibration = calibration;
@@ -81,7 +83,7 @@ public class RecalModel {
 	 *
 	 * @return true, if is review
 	 */
-	@XmlElement(name="review")
+	@XmlElement(name = "review")
 	public boolean isReview() {
 		return review;
 	}
@@ -89,7 +91,8 @@ public class RecalModel {
 	/**
 	 * Sets the review.
 	 *
-	 * @param review the new review
+	 * @param review
+	 *            the new review
 	 */
 	public void setReview(boolean review) {
 		this.review = review;
@@ -100,7 +103,7 @@ public class RecalModel {
 	 *
 	 * @return the tolerance limit
 	 */
-	@XmlElement(name="tolerance_limit")
+	@XmlElement(name = "tolerance_limit")
 	public double getToleranceLimit() {
 		return toleranceLimit;
 	}
@@ -108,7 +111,8 @@ public class RecalModel {
 	/**
 	 * Sets the tolerance limit.
 	 *
-	 * @param toleranceLimit the new tolerance limit
+	 * @param toleranceLimit
+	 *            the new tolerance limit
 	 */
 	public void setToleranceLimit(double toleranceLimit) {
 		this.toleranceLimit = toleranceLimit;
@@ -119,7 +123,7 @@ public class RecalModel {
 	 *
 	 * @return the error limit
 	 */
-	@XmlElement(name="error_limit")
+	@XmlElement(name = "error_limit")
 	public double getErrorLimit() {
 		return errorLimit;
 	}
@@ -127,7 +131,8 @@ public class RecalModel {
 	/**
 	 * Sets the error limit.
 	 *
-	 * @param errorLimit the new error limit
+	 * @param errorLimit
+	 *            the new error limit
 	 */
 	public void setErrorLimit(double errorLimit) {
 		this.errorLimit = errorLimit;
@@ -138,7 +143,7 @@ public class RecalModel {
 	 *
 	 * @return the pwf
 	 */
-	@XmlElement(name="pwf")
+	@XmlElement(name = "pwf")
 	public double getPwf() {
 		return pwf;
 	}
@@ -146,7 +151,8 @@ public class RecalModel {
 	/**
 	 * Sets the pwf.
 	 *
-	 * @param pwf the new pwf
+	 * @param pwf
+	 *            the new pwf
 	 */
 	public void setPwf(double pwf) {
 		this.pwf = pwf;
@@ -157,7 +163,7 @@ public class RecalModel {
 	 *
 	 * @return the new pi
 	 */
-	@XmlElement(name="new_pi")
+	@XmlElement(name = "new_pi")
 	public double getNewPI() {
 		return newPI;
 	}
@@ -165,7 +171,8 @@ public class RecalModel {
 	/**
 	 * Sets the new pi.
 	 *
-	 * @param newPI the new new pi
+	 * @param newPI
+	 *            the new new pi
 	 */
 	public void setNewPI(double newPI) {
 		this.newPI = newPI;
@@ -176,7 +183,7 @@ public class RecalModel {
 	 *
 	 * @return the error
 	 */
-	@XmlElement(name="error")
+	@XmlElement(name = "error")
 	public double getError() {
 		return error;
 	}
@@ -184,7 +191,8 @@ public class RecalModel {
 	/**
 	 * Sets the error.
 	 *
-	 * @param error the new error
+	 * @param error
+	 *            the new error
 	 */
 	public void setError(double error) {
 		this.error = error;
@@ -195,7 +203,7 @@ public class RecalModel {
 	 *
 	 * @return the time
 	 */
-	@XmlElement(name="time")
+	@XmlElement(name = "time")
 	public double getTime() {
 		return time;
 	}
@@ -203,7 +211,8 @@ public class RecalModel {
 	/**
 	 * Sets the time.
 	 *
-	 * @param time the new time
+	 * @param time
+	 *            the new time
 	 */
 	public void setTime(double time) {
 		this.time = time;

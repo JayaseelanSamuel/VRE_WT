@@ -8,7 +8,7 @@ import javax.xml.bind.annotation.XmlElement;
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
 public class VREModel {
-	
+
 	/** The rate liquid. */
 	private double rateLiquid;
 
@@ -23,7 +23,7 @@ public class VREModel {
 
 	/** The error. */
 	private double error;
-	
+
 	/** The whp. */
 	// VRE3
 	private double whp;
@@ -37,9 +37,9 @@ public class VREModel {
 
 	/** The time. */
 	private double time;
-	
+
 	/** The choke multiplier. */
-	// VRE 5 
+	// VRE 5
 	private double chokeMultiplier;
 
 	/** The dp choke. */
@@ -50,7 +50,7 @@ public class VREModel {
 
 	/** The bean size. */
 	private double beanSize;
-	
+
 	/** The properties. */
 	private PropertiesModel properties;
 
@@ -59,7 +59,7 @@ public class VREModel {
 	 *
 	 * @return the rate liquid
 	 */
-	@XmlElement(name="rate_liquid")
+	@XmlElement(name = "rate_liquid")
 	public double getRateLiquid() {
 		return rateLiquid;
 	}
@@ -67,7 +67,8 @@ public class VREModel {
 	/**
 	 * Sets the rate liquid.
 	 *
-	 * @param rateLiquid the new rate liquid
+	 * @param rateLiquid
+	 *            the new rate liquid
 	 */
 	public void setRateLiquid(double rateLiquid) {
 		this.rateLiquid = rateLiquid;
@@ -78,7 +79,7 @@ public class VREModel {
 	 *
 	 * @return the rate oil
 	 */
-	@XmlElement(name="rate_oil")
+	@XmlElement(name = "rate_oil")
 	public double getRateOil() {
 		return rateOil;
 	}
@@ -86,7 +87,8 @@ public class VREModel {
 	/**
 	 * Sets the rate oil.
 	 *
-	 * @param rateOil the new rate oil
+	 * @param rateOil
+	 *            the new rate oil
 	 */
 	public void setRateOil(double rateOil) {
 		this.rateOil = rateOil;
@@ -97,7 +99,7 @@ public class VREModel {
 	 *
 	 * @return the iterations
 	 */
-	@XmlElement(name="iterations")
+	@XmlElement(name = "iterations")
 	public double getIterations() {
 		return iterations;
 	}
@@ -105,7 +107,8 @@ public class VREModel {
 	/**
 	 * Sets the iterations.
 	 *
-	 * @param iterations the new iterations
+	 * @param iterations
+	 *            the new iterations
 	 */
 	public void setIterations(double iterations) {
 		this.iterations = iterations;
@@ -116,7 +119,7 @@ public class VREModel {
 	 *
 	 * @return the pdg pressure
 	 */
-	@XmlElement(name="pdg_pressure")
+	@XmlElement(name = "pdg_pressure")
 	public double getPdgPressure() {
 		return pdgPressure;
 	}
@@ -124,7 +127,8 @@ public class VREModel {
 	/**
 	 * Sets the pdg pressure.
 	 *
-	 * @param pdgPressure the new pdg pressure
+	 * @param pdgPressure
+	 *            the new pdg pressure
 	 */
 	public void setPdgPressure(double pdgPressure) {
 		this.pdgPressure = pdgPressure;
@@ -135,7 +139,7 @@ public class VREModel {
 	 *
 	 * @return the error
 	 */
-	@XmlElement(name="error")
+	@XmlElement(name = "error")
 	public double getError() {
 		return error;
 	}
@@ -143,7 +147,8 @@ public class VREModel {
 	/**
 	 * Sets the error.
 	 *
-	 * @param error the new error
+	 * @param error
+	 *            the new error
 	 */
 	public void setError(double error) {
 		this.error = error;
@@ -154,7 +159,7 @@ public class VREModel {
 	 *
 	 * @return the whp
 	 */
-	@XmlElement(name="whp")
+	@XmlElement(name = "whp")
 	public double getWhp() {
 		return whp;
 	}
@@ -162,7 +167,8 @@ public class VREModel {
 	/**
 	 * Sets the whp.
 	 *
-	 * @param whp the new whp
+	 * @param whp
+	 *            the new whp
 	 */
 	public void setWhp(double whp) {
 		this.whp = whp;
@@ -173,7 +179,7 @@ public class VREModel {
 	 *
 	 * @return the qgi
 	 */
-	@XmlElement(name="qgi")
+	@XmlElement(name = "qgi")
 	public double getQgi() {
 		return qgi;
 	}
@@ -181,7 +187,8 @@ public class VREModel {
 	/**
 	 * Sets the qgi.
 	 *
-	 * @param qgi the new qgi
+	 * @param qgi
+	 *            the new qgi
 	 */
 	public void setQgi(double qgi) {
 		this.qgi = qgi;
@@ -192,7 +199,7 @@ public class VREModel {
 	 *
 	 * @return true, if is interrupted
 	 */
-	@XmlElement(name="interrupted")
+	@XmlElement(name = "interrupted")
 	public boolean isInterrupted() {
 		return interrupted;
 	}
@@ -200,7 +207,8 @@ public class VREModel {
 	/**
 	 * Sets the interrupted.
 	 *
-	 * @param interrupted the new interrupted
+	 * @param interrupted
+	 *            the new interrupted
 	 */
 	public void setInterrupted(boolean interrupted) {
 		this.interrupted = interrupted;
@@ -211,7 +219,7 @@ public class VREModel {
 	 *
 	 * @return the time
 	 */
-	@XmlElement(name="time")
+	@XmlElement(name = "time")
 	public double getTime() {
 		return time;
 	}
@@ -219,7 +227,8 @@ public class VREModel {
 	/**
 	 * Sets the time.
 	 *
-	 * @param time the new time
+	 * @param time
+	 *            the new time
 	 */
 	public void setTime(double time) {
 		this.time = time;
@@ -230,7 +239,7 @@ public class VREModel {
 	 *
 	 * @return the choke multiplier
 	 */
-	@XmlElement(name="choke_multiplier")
+	@XmlElement(name = "choke_multiplier")
 	public double getChokeMultiplier() {
 		return chokeMultiplier;
 	}
@@ -238,7 +247,8 @@ public class VREModel {
 	/**
 	 * Sets the choke multiplier.
 	 *
-	 * @param chokeMultiplier the new choke multiplier
+	 * @param chokeMultiplier
+	 *            the new choke multiplier
 	 */
 	public void setChokeMultiplier(double chokeMultiplier) {
 		this.chokeMultiplier = chokeMultiplier;
@@ -249,7 +259,7 @@ public class VREModel {
 	 *
 	 * @return the dp choke
 	 */
-	@XmlElement(name="dpchoke")
+	@XmlElement(name = "dpchoke")
 	public double getDpChoke() {
 		return dpChoke;
 	}
@@ -257,7 +267,8 @@ public class VREModel {
 	/**
 	 * Sets the dp choke.
 	 *
-	 * @param dpChoke the new dp choke
+	 * @param dpChoke
+	 *            the new dp choke
 	 */
 	public void setDpChoke(double dpChoke) {
 		this.dpChoke = dpChoke;
@@ -268,7 +279,7 @@ public class VREModel {
 	 *
 	 * @return the header pressure
 	 */
-	@XmlElement(name="header_pressure")
+	@XmlElement(name = "header_pressure")
 	public double getHeaderPressure() {
 		return headerPressure;
 	}
@@ -276,7 +287,8 @@ public class VREModel {
 	/**
 	 * Sets the header pressure.
 	 *
-	 * @param headerPressure the new header pressure
+	 * @param headerPressure
+	 *            the new header pressure
 	 */
 	public void setHeaderPressure(double headerPressure) {
 		this.headerPressure = headerPressure;
@@ -287,7 +299,7 @@ public class VREModel {
 	 *
 	 * @return the bean size
 	 */
-	@XmlElement(name="beansize")
+	@XmlElement(name = "beansize")
 	public double getBeanSize() {
 		return beanSize;
 	}
@@ -295,7 +307,8 @@ public class VREModel {
 	/**
 	 * Sets the bean size.
 	 *
-	 * @param beanSize the new bean size
+	 * @param beanSize
+	 *            the new bean size
 	 */
 	public void setBeanSize(double beanSize) {
 		this.beanSize = beanSize;
@@ -306,7 +319,7 @@ public class VREModel {
 	 *
 	 * @return the properties
 	 */
-	@XmlElement(name="properties", type=PropertiesModel.class)
+	@XmlElement(name = "properties", type = PropertiesModel.class)
 	public PropertiesModel getProperties() {
 		return properties;
 	}
@@ -314,10 +327,11 @@ public class VREModel {
 	/**
 	 * Sets the properties.
 	 *
-	 * @param properties the new properties
+	 * @param properties
+	 *            the new properties
 	 */
 	public void setProperties(PropertiesModel properties) {
 		this.properties = properties;
 	}
-	
+
 }

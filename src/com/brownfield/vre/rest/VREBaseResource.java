@@ -31,6 +31,11 @@ public class VREBaseResource {
 	 * }
 	 */
 
+	/**
+	 * Validate well t est.
+	 *
+	 * @return the response
+	 */
 	@GET
 	public Response validateWellTEst() {
 		String result = "Well Test Validation Success";

@@ -8,36 +8,36 @@ import javax.xml.bind.annotation.XmlRootElement;
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-@XmlRootElement(name="well")
+@XmlRootElement(name = "well")
 public class WellModel {
 
 	/** The model name. */
 	private String modelName;
-	
+
 	/** The model location. */
 	private String modelLocation;
-	
+
 	/** The vre1. */
 	private VREModel vre1;
-	
+
 	/** The vre2. */
 	private VREModel vre2;
 
 	/** The vre3. */
 	private VREModel vre3;
-	
+
 	/** The vre4. */
 	private VREModel vre4;
-	
+
 	/** The vre5. */
 	private VREModel vre5;
-	
+
 	/** The recal. */
 	private RecalModel recal;
-	
+
 	/** The properties. */
 	private PropertiesModel properties;
-	
+
 	/** The errors. */
 	private ErrorsHolderModel errors;
 
@@ -46,7 +46,7 @@ public class WellModel {
 	 *
 	 * @return the model name
 	 */
-	@XmlElement(name="model")
+	@XmlElement(name = "model")
 	public String getModelName() {
 		return modelName;
 	}
@@ -54,7 +54,8 @@ public class WellModel {
 	/**
 	 * Sets the model name.
 	 *
-	 * @param modelName the new model name
+	 * @param modelName
+	 *            the new model name
 	 */
 	public void setModelName(String modelName) {
 		this.modelName = modelName;
@@ -72,7 +73,8 @@ public class WellModel {
 	/**
 	 * Sets the model location.
 	 *
-	 * @param modelLocation the new model location
+	 * @param modelLocation
+	 *            the new model location
 	 */
 	public void setModelLocation(String modelLocation) {
 		this.modelLocation = modelLocation;
@@ -83,7 +85,7 @@ public class WellModel {
 	 *
 	 * @return the vre1
 	 */
-	@XmlElement(name="vre1", type=VREModel.class)
+	@XmlElement(name = "vre1", type = VREModel.class)
 	public VREModel getVre1() {
 		return vre1;
 	}
@@ -91,7 +93,8 @@ public class WellModel {
 	/**
 	 * Sets the vre1.
 	 *
-	 * @param vre1 the new vre1
+	 * @param vre1
+	 *            the new vre1
 	 */
 	public void setVre1(VREModel vre1) {
 		this.vre1 = vre1;
@@ -102,7 +105,7 @@ public class WellModel {
 	 *
 	 * @return the vre2
 	 */
-	@XmlElement(name="vre2", type=VREModel.class)
+	@XmlElement(name = "vre2", type = VREModel.class)
 	public VREModel getVre2() {
 		return vre2;
 	}
@@ -110,7 +113,8 @@ public class WellModel {
 	/**
 	 * Sets the vre2.
 	 *
-	 * @param vre2 the new vre2
+	 * @param vre2
+	 *            the new vre2
 	 */
 	public void setVre2(VREModel vre2) {
 		this.vre2 = vre2;
@@ -121,7 +125,7 @@ public class WellModel {
 	 *
 	 * @return the vre3
 	 */
-	@XmlElement(name="vre3", type=VREModel.class)
+	@XmlElement(name = "vre3", type = VREModel.class)
 	public VREModel getVre3() {
 		return vre3;
 	}
@@ -129,7 +133,8 @@ public class WellModel {
 	/**
 	 * Sets the vre3.
 	 *
-	 * @param vre3 the new vre3
+	 * @param vre3
+	 *            the new vre3
 	 */
 	public void setVre3(VREModel vre3) {
 		this.vre3 = vre3;
@@ -140,7 +145,7 @@ public class WellModel {
 	 *
 	 * @return the vre4
 	 */
-	@XmlElement(name="vre4", type=VREModel.class)
+	@XmlElement(name = "vre4", type = VREModel.class)
 	public VREModel getVre4() {
 		return vre4;
 	}
@@ -148,7 +153,8 @@ public class WellModel {
 	/**
 	 * Sets the vre4.
 	 *
-	 * @param vre4 the new vre4
+	 * @param vre4
+	 *            the new vre4
 	 */
 	public void setVre4(VREModel vre4) {
 		this.vre4 = vre4;
@@ -159,7 +165,7 @@ public class WellModel {
 	 *
 	 * @return the vre5
 	 */
-	@XmlElement(name="vre5", type=VREModel.class)
+	@XmlElement(name = "vre5", type = VREModel.class)
 	public VREModel getVre5() {
 		return vre5;
 	}
@@ -167,7 +173,8 @@ public class WellModel {
 	/**
 	 * Sets the vre5.
 	 *
-	 * @param vre5 the new vre5
+	 * @param vre5
+	 *            the new vre5
 	 */
 	public void setVre5(VREModel vre5) {
 		this.vre5 = vre5;
@@ -178,7 +185,7 @@ public class WellModel {
 	 *
 	 * @return the recal
 	 */
-	@XmlElement(name="recal", type=RecalModel.class)
+	@XmlElement(name = "recal", type = RecalModel.class)
 	public RecalModel getRecal() {
 		return recal;
 	}
@@ -186,7 +193,8 @@ public class WellModel {
 	/**
 	 * Sets the recal.
 	 *
-	 * @param recal the new recal
+	 * @param recal
+	 *            the new recal
 	 */
 	public void setRecal(RecalModel recal) {
 		this.recal = recal;
@@ -197,7 +205,7 @@ public class WellModel {
 	 *
 	 * @return the properties
 	 */
-	@XmlElement(name="properties", type=PropertiesModel.class)
+	@XmlElement(name = "properties", type = PropertiesModel.class)
 	public PropertiesModel getProperties() {
 		return properties;
 	}
@@ -205,7 +213,8 @@ public class WellModel {
 	/**
 	 * Sets the properties.
 	 *
-	 * @param properties the new properties
+	 * @param properties
+	 *            the new properties
 	 */
 	public void setProperties(PropertiesModel properties) {
 		this.properties = properties;
@@ -216,7 +225,7 @@ public class WellModel {
 	 *
 	 * @return the errors
 	 */
-	@XmlElement(name="errors", type=ErrorsHolderModel.class)
+	@XmlElement(name = "errors", type = ErrorsHolderModel.class)
 	public ErrorsHolderModel getErrors() {
 		return errors;
 	}
@@ -224,12 +233,11 @@ public class WellModel {
 	/**
 	 * Sets the errors.
 	 *
-	 * @param errors the new errors
+	 * @param errors
+	 *            the new errors
 	 */
 	public void setErrors(ErrorsHolderModel errors) {
 		this.errors = errors;
 	}
-	
-	
-	
+
 }

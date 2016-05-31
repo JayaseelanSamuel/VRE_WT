@@ -36,19 +36,24 @@ public class ErrorsHolderModel {
 	public void setErrors(List<String> list) {
 		this.errors = list;
 	}
-	
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
 	@Override
-	public String toString(){
+	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		if(this.errors !=null && this.errors.size() > 0){
+		if (this.errors != null && this.errors.size() > 0) {
 			for (String error : errors) {
 				sb.append(error).append(",");
 			}
 		}
-		if(sb.length() > 0){
+		if (sb.length() > 0) {
 			sb.replace(sb.length() - 1, sb.length(), "");
 		}
 		return sb.toString();
 	}
-	
+
 }

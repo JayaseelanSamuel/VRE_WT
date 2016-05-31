@@ -30,7 +30,6 @@ public class PropertyReader {
 	private PropertyReader() {
 	}
 
-
 	/**
 	 * Gets the property.
 	 *
@@ -47,10 +46,11 @@ public class PropertyReader {
 	/**
 	 * Load properties.
 	 *
-	 * @param servletContext the servlet context
+	 * @param servletContext
+	 *            the servlet context
 	 */
 	public static void loadProperties(ServletContext servletContext) {
-		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/"+propertyFileName);) {
+		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/" + propertyFileName);) {
 			props = new Properties();
 			props.load(is);
 		} catch (IOException e) {

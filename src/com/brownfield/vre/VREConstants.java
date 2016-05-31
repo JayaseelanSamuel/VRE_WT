@@ -27,7 +27,7 @@ public class VREConstants {
 	public static String VRE_PASSWORD = "<PASSWORD>";
 
 	// Properties which will be overridden at the application context load
-	
+
 	/** The phd teiid url. */
 	public static String PHD_TEIID_URL = "<SQL_URL>";
 
@@ -64,10 +64,10 @@ public class VREConstants {
 	public static double MAX_LIQUID_RATE = 20000;
 
 	/** The freeze whp limit. */
-	public static double FREEZE_WHP_LIMIT = 10;
+	public static double FREEZE_WHP_LIMIT = 0;
 
 	/** The freeze liquid rate limit. */
-	public static double FREEZE_LIQUID_RATE_LIMIT = 10;
+	public static double FREEZE_LIQUID_RATE_LIMIT = 6;
 
 	/** The cv liq rate max. */
 	public static double CV_LIQ_RATE_MAX = 0.08;
@@ -77,13 +77,12 @@ public class VREConstants {
 
 	/** The shrinkage factor. */
 	public static double SHRINKAGE_FACTOR = 0.95;
-	
+
 	/** The vre exe. */
-	public static String VRE_EXE = "D:/Pipesim_Models/VRE.exe";
+	public static String VRE_EXE_LOC = "D:/Pipesim_Models/VRE.exe";
 
 	// Properties end
 
-	
 	/**
 	 * The Enum VRE_TYPE.
 	 */
@@ -104,18 +103,94 @@ public class VREConstants {
 		VRE4,
 
 		/** The VRE5 execution. */
-		VRE5
+		VRE5,
+
+		/** The VRE6 execution. */
+		VRE6
 	};
-	
+
+	/**
+	 * The Enum DSIS_JOB_TYPE.
+	 */
+	public enum DSIS_JOB_TYPE {
+		/** The submitted. */
+		SUBMITTED(0),
+		/** The in progress. */
+		IN_PROGRESS(1),
+		/** The finished. */
+		FINISHED(2),
+		/** The failed. */
+		FAILED(3);
+
+		/** The num val. */
+		private int numVal;
+
+		/**
+		 * Instantiates a new dsis job type.
+		 *
+		 * @param numVal
+		 *            the num val
+		 */
+		DSIS_JOB_TYPE(int numVal) {
+			this.numVal = numVal;
+		}
+
+		/**
+		 * Gets the num val.
+		 *
+		 * @return the num val
+		 */
+		public int getNumVal() {
+			return numVal;
+		}
+	}
+
+	/**
+	 * The Enum DSRTA_JOB_TYPE.
+	 */
+	public enum DSRTA_JOB_TYPE {
+
+		/** The reset. */
+		RESET(0),
+		/** The finished. */
+		FINISHED(1),
+		/** The updated. */
+		UPDATED(2);
+
+		/** The num val. */
+		private int numVal;
+
+		/**
+		 * Instantiates a new dsrta job type.
+		 *
+		 * @param numVal
+		 *            the num val
+		 */
+		DSRTA_JOB_TYPE(int numVal) {
+			this.numVal = numVal;
+		}
+
+		/**
+		 * Gets the num val.
+		 *
+		 * @return the num val
+		 */
+		public int getNumVal() {
+			return numVal;
+		}
+	}
+
 	// Queries
 
 	/** The well test new query. */
-	// identify new well test by looking for FT testType and Null flag. We will then update VRE_FLAG to false (to
+	// identify new well test by looking for FT testType and Null flag. We will
+	// then update VRE_FLAG to false (to
 	// exclude it in next run) and update QL1 to standard conditions
 	public static final String WELL_TEST_NEW_QUERY = "SELECT STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, TRY_CONVERT(VARCHAR(10), TEST_END_DATE, 120) AS EFFECTIVE_DATE, "
 			+ " TEST_TYPE, VRE_FLAG, ROW_CHANGED_BY, ROW_CHANGED_DATE "
-			+ " FROM WELL_TEST WHERE TEST_TYPE = 'FT' AND VRE_FLAG IS NULL"; // AND SOURCE_ID
-	
+			+ " FROM WELL_TEST WHERE TEST_TYPE = 'FT' AND VRE_FLAG IS NULL"; // AND
+																				// SOURCE_ID
+
 	/** The get string tags query. */
 	public static final String GET_STRING_TAGS_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, "
 			+ " SM.TAG_WHP, SM.TAG_WHT FROM STRING S "
@@ -138,7 +213,7 @@ public class VREConstants {
 
 	/** The Constant VRE_VARIABLE_QUERY. */
 	public static final String VRE_VARIABLE_QUERY = "SELECT NAME, \"VALUE\" FROM VRE_VARIABLES";
-	
+
 	/**
 	 * The Constant VRE1_DATASET_QUERY. TODO : Change TRY_CONVERT(DATETIME,
 	 * '2015-12-02', 102) to getdate() later
@@ -160,12 +235,12 @@ public class VREConstants {
 	/**
 	 * The Constant WELL_TEST_CALIBRATE_QUERY. identify eligible tests for
 	 * calibration by looking for SR testType, VRE flag = true and Calibrated
-	 * flag set to null. We will then update IS_CALIBRATED to true or false TODO:
-	 * Change VRE flag to 1 later
+	 * flag set to null. We will then update IS_CALIBRATED to true or false.
 	 */
-	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CONVERT(date, TEST_END_DATE) AS EFFECTIVE_DATE, "
-			+ " IS_CALIBRATED, ROW_CHANGED_BY, ROW_CHANGED_DATE "
-			+ " FROM WELL_TEST WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 0 AND IS_CALIBRATED IS NULL ";
+	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CONVERT(date, TEST_END_DATE) AS EFFECTIVE_DATE, "
+			+ " IS_CALIBRATED, TEST_WATER_CUT, SM.PIPESIM_MODEL_LOC, WT.ROW_CHANGED_BY, WT.ROW_CHANGED_DATE "
+			+ " FROM WELL_TEST WT " + " LEFT OUTER JOIN STRING_METADATA SM ON WT.STRING_ID = SM.STRING_ID "
+			+ " WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 1 AND IS_CALIBRATED IS NULL  ";
 
 	/** The Constant VRE_TABLE_SELECT_QUERY. */
 	public static final String VRE_TABLE_SELECT_QUERY = "SELECT STRING_ID, RECORDED_DATE, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
@@ -178,7 +253,16 @@ public class VREConstants {
 			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, REMARK) "
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?)";
 
+	/** The Constant VRE_JOBS_QUERY. */
+	public static final String VRE_JOBS_QUERY = "SELECT STRING_ID, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
+			+ " FROM VRE6_JOBS WHERE STRING_ID = ? ";
 
+	/** The Constant INSERT_VRE_JOBS_QUERY. */
+	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK) "
+			+ " VALUES (?, ?, ?, ?) ";
+
+	/** The Constant JOBS_REMARK. */
+	public static final String JOBS_REMARK = "Job %s on %s";
 	// other constants
 
 	/** The single rate test. */
@@ -190,28 +274,28 @@ public class VREConstants {
 	/** The source vre. */
 	public static final int SOURCE_VRE = 6;
 
-	/** The date time format. */
-	public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
-	
-	/** The Constant WTV_WORKFLOW. */
-	public static final String WTV_WORKFLOW = "WellTestValidation Workflow";
-	
 	/** The Constant THREAD_POOL_SIZE. */
 	public static final int THREAD_POOL_SIZE = 4;
 
+	/** The date time format. */
+	public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
+
+	/** The Constant WTV_WORKFLOW. */
+	public static final String WTV_WORKFLOW = "WellTestValidation Workflow";
+
 	/** The Constant VRE_WORKFLOW. */
 	public static final String VRE_WORKFLOW = "VRE Automation Workflow";
+
+	/** The Constant VRE_WORKFLOW. */
+	public static final String RECAL_WORKFLOW = "Recalibration Workflow";
 
 	/** The Constant DEFAULT_WATER_CUT. */
 	public static final String DEFAULT_WATER_CUT = "LAB";
 
 	/** The Constant DEFAULT_REMARK. */
-	public static final String DEFAULT_REMARK = "Inserted/Updated by VRE Workflow"; // TODO: Rename
+	public static final String DEFAULT_REMARK = "Inserted/Updated by VRE Workflow";
 
 	// Column Names
-
-	/** The vre flag. */
-	public static final String VRE_FLAG = "VRE_FLAG";
 
 	/** The string id. */
 	public static final String STRING_ID = "STRING_ID";
@@ -239,6 +323,15 @@ public class VREConstants {
 
 	/** The WH p1. */
 	public static final String WHP1 = "WHP1";
+
+	/** The vre flag. */
+	public static final String VRE_FLAG = "VRE_FLAG";
+
+	/** The Constant IS_CALIBRATED. */
+	public static final String IS_CALIBRATED = "IS_CALIBRATED";
+
+	/** The Constant TEST_WATER_CUT. */
+	public static final String TEST_WATER_CUT = "TEST_WATER_CUT";
 
 	/** The test start date. */
 	public static final String TEST_START_DATE = "TEST_START_DATE";
@@ -302,10 +395,10 @@ public class VREConstants {
 
 	/** The pipesim model loc. */
 	public static final String PIPESIM_MODEL_LOC = "PIPESIM_MODEL_LOC";
-	
+
 	/** The Constant ROW_CHANGED_BY. */
 	public static final String ROW_CHANGED_BY = "ROW_CHANGED_BY";
-	
+
 	/** The Constant ROW_CHANGED_DATE. */
 	public static final String ROW_CHANGED_DATE = "ROW_CHANGED_DATE";
 
@@ -381,6 +474,15 @@ public class VREConstants {
 	/** The Constant REMARK. */
 	public static final String REMARK = "REMARK";
 
+	/** The Constant DSIS_STATUS_ID. */
+	public static final String DSIS_STATUS_ID = "DSIS_STATUS_ID";
+
+	/** The Constant VRE6_EXE_OUTPUT. */
+	public static final String VRE6_EXE_OUTPUT = "VRE6_EXE_OUTPUT";
+
+	/** The Constant DSRTA_STATUS_ID. */
+	public static final String DSRTA_STATUS_ID = "DSRTA_STATUS_ID";
+
 	// arguments
 
 	/** The Constant ARG_VRE1. */
@@ -436,43 +538,46 @@ public class VREConstants {
 			if (rset != null) {
 				while (rset.next()) {
 					String name = rset.getString(NAME);
-					Double d = rset.getDouble(VALUE);
+					String val = rset.getString(VALUE);
 					switch (name) {
 					case "START_OFFSET":
-						START_OFFSET = d;
+						START_OFFSET = Double.parseDouble(val);
 						break;
 					case "END_OFFSET":
-						END_OFFSET = d;
+						END_OFFSET = Double.parseDouble(val);
 						break;
 					case "SWITCH_TIME_ZONE":
-						SWITCH_TIME_ZONE = d == 1 ? true : false;
+						SWITCH_TIME_ZONE = val.equalsIgnoreCase(Boolean.TRUE.toString()) ? true : false;
 						break;
 					case "MIN_WHP":
-						MIN_WHP = d;
+						MIN_WHP = Double.parseDouble(val);
 						break;
 					case "MAX_WHP":
-						MAX_WHP = d;
+						MAX_WHP = Double.parseDouble(val);
 						break;
 					case "MIN_LIQUID_RATE":
-						MIN_LIQUID_RATE = d;
+						MIN_LIQUID_RATE = Double.parseDouble(val);
 						break;
 					case "MAX_LIQUID_RATE":
-						MAX_LIQUID_RATE = d;
+						MAX_LIQUID_RATE = Double.parseDouble(val);
 						break;
 					case "FREEZE_WHP_LIMIT":
-						FREEZE_WHP_LIMIT = d;
+						FREEZE_WHP_LIMIT = Double.parseDouble(val);
 						break;
 					case "FREEZE_LIQUID_RATE_LIMIT":
-						FREEZE_LIQUID_RATE_LIMIT = d;
+						FREEZE_LIQUID_RATE_LIMIT = Double.parseDouble(val);
 						break;
 					case "CV_WHP_MAX":
-						CV_WHP_MAX = d;
+						CV_WHP_MAX = Double.parseDouble(val);
 						break;
 					case "CV_LIQ_RATE_MAX":
-						CV_LIQ_RATE_MAX = d;
+						CV_LIQ_RATE_MAX = Double.parseDouble(val);
 						break;
 					case "SHRINKAGE_FACTOR":
-						SHRINKAGE_FACTOR = d;
+						SHRINKAGE_FACTOR = Double.parseDouble(val);
+						break;
+					case "VRE_EXE_LOC":
+						VRE_EXE_LOC = val;
 						break;
 					}
 				}

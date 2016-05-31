@@ -14,6 +14,7 @@ import static com.brownfield.vre.VREConstants.MAX_WHP;
 import static com.brownfield.vre.VREConstants.MIN_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.MIN_WHP;
 import static com.brownfield.vre.VREConstants.PHD_QUERY;
+import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
 import static com.brownfield.vre.VREConstants.PLATFORM_ID;
 import static com.brownfield.vre.VREConstants.PLATFORM_NAME;
 import static com.brownfield.vre.VREConstants.QL1;
@@ -23,6 +24,7 @@ import static com.brownfield.vre.VREConstants.SHRINKAGE_FACTOR;
 import static com.brownfield.vre.VREConstants.SINGLE_RATE_TEST;
 import static com.brownfield.vre.VREConstants.SOURCE_VALUES;
 import static com.brownfield.vre.VREConstants.SOURCE_VRE;
+import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
 import static com.brownfield.vre.VREConstants.START_OFFSET;
 import static com.brownfield.vre.VREConstants.STRING_ID;
@@ -32,10 +34,16 @@ import static com.brownfield.vre.VREConstants.TAG_GAS_RATE;
 import static com.brownfield.vre.VREConstants.TAG_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.TAG_WHP;
 import static com.brownfield.vre.VREConstants.TAG_WHT;
+import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
+import static com.brownfield.vre.VREConstants.TEIID_PASSWORD;
+import static com.brownfield.vre.VREConstants.TEIID_USER;
 import static com.brownfield.vre.VREConstants.TEST_END_DATE;
 import static com.brownfield.vre.VREConstants.TEST_START_DATE;
 import static com.brownfield.vre.VREConstants.UWI;
+import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_FLAG;
+import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
+import static com.brownfield.vre.VREConstants.VRE_USER;
 import static com.brownfield.vre.VREConstants.WATER_CUT_LAB;
 import static com.brownfield.vre.VREConstants.WCUT_STABILITY_QUERY;
 import static com.brownfield.vre.VREConstants.WELL_TEST_NEW_QUERY;
@@ -44,6 +52,7 @@ import static com.brownfield.vre.VREConstants.WTV_WORKFLOW;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -76,6 +85,31 @@ public class ValidateWellTest {
 	private static Logger LOGGER = Logger.getLogger(ValidateWellTest.class.getName());
 
 	/**
+	 * The main method.
+	 *
+	 * @param args
+	 *            the arguments
+	 */
+	public static void main(String[] args) {
+		try {
+			Class.forName(SQL_DRIVER_NAME);
+			Class.forName(TEIID_DRIVER_NAME);
+			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD);
+					Connection phdConn = DriverManager.getConnection(PHD_TEIID_URL, TEIID_USER, TEIID_PASSWORD);) {
+
+				ValidateWellTest vw = new ValidateWellTest();
+				vw.validateNewWellTests(vreConn, phdConn);
+
+			} catch (SQLException e) {
+				LOGGER.log(Level.SEVERE, e.getMessage());
+			}
+
+		} catch (ClassNotFoundException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+	}
+
+	/**
 	 * Identify new well tests.
 	 *
 	 * @param vreConn
@@ -103,7 +137,7 @@ public class ValidateWellTest {
 
 					watercut = 0.0;
 					// this will also update watercut
-					boolean isStable = this.isStable(vreConn, stringID, effectiveTestDate); 
+					boolean isStable = this.isStable(vreConn, stringID, effectiveTestDate);
 					// update the FTQL1 to standard conditions.
 					ql1Standard = this.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut);
 
@@ -187,11 +221,13 @@ public class ValidateWellTest {
 					}
 
 					if (isStable) {
-						// No platform/string phd tags; if we don't have any one of them, still mark the well as stable
+						// No platform/string phd tags; if we don't have any one
+						// of them, still mark the well as stable
 						if (!(liqRateTabAvailable && whpTagAvailable)) {
 							setVRE = true;
-						} else if(phdLiqRateDataAvail && phdWHPDataAvail){
-							if(!liqRateHasNulls && !whpHasNulls && !isOutOfRangeLiqRate && !isOutOfRangeWHP && !isBelowFreezeLiqRate && !isBelowFreezeWHP) {
+						} else if (phdLiqRateDataAvail && phdWHPDataAvail) {
+							if (!liqRateHasNulls && !whpHasNulls && !isOutOfRangeLiqRate && !isOutOfRangeWHP
+									&& !isBelowFreezeLiqRate && !isBelowFreezeWHP) {
 								if (cvLiqRate <= CV_LIQ_RATE_MAX) {
 									if (cvLiqRate != 0 || meanLiqRate != 0) {
 										if (cvWHP <= CV_WHP_MAX) {
@@ -202,19 +238,22 @@ public class ValidateWellTest {
 												sb.append("WHP is 0").append("\r\n");
 											}
 										} else {
-											sb.append("Stability test failed. WHP coefficient " + cvWHP + " exceeds max limit " + CV_WHP_MAX).append("\r\n");
+											sb.append("Stability test failed. WHP coefficient " + cvWHP
+													+ " exceeds max limit " + CV_WHP_MAX).append("\r\n");
 										}
 									} else {
 										sb.append("Liquid rate is 0").append("\r\n");
 									}
 								} else {
-									sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate + " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
+									sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
+											+ " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
 								}
 							}
 						}
 					} else {
 						if (!(liqRateTabAvailable && whpTagAvailable)) {
-							sb.append("Unstable well. No data avaialbe for " + tags.get(UWI) + tags.get(STRING_TYPE)).append("\n");
+							sb.append("Unstable well. No data avaialbe for " + tags.get(UWI) + tags.get(STRING_TYPE))
+									.append("\n");
 						} else {
 							sb.append("Unstable well - " + tags.get(UWI) + tags.get(STRING_TYPE)).append("\n");
 						}
@@ -254,7 +293,7 @@ public class ValidateWellTest {
 			statement.setString(2, effectiveDate);
 			try (ResultSet rset = statement.executeQuery();) {
 				if (rset != null && rset.next()) { // always one row per date
-					// set watercut to seabed wc / 100 
+					// set watercut to seabed wc / 100
 					watercut = rset.getDouble(WATER_CUT_LAB) / 100;
 					if (rset.getObject(STABILITY_FLAG) != null) {
 						isStable = rset.getBoolean(STABILITY_FLAG);
@@ -379,7 +418,8 @@ public class ValidateWellTest {
 			statement.setBoolean(9, vreFlag);
 			statement.setString(10, remark);
 			rowsInserted = statement.executeUpdate();
-			LOGGER.log(Level.INFO, rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : " + startDate);
+			LOGGER.log(Level.INFO, rowsInserted + " rows inserted in WELLTEST table with String : " + stringID
+					+ " & Date : " + startDate);
 		} catch (Exception e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}

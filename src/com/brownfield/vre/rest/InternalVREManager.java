@@ -70,21 +70,20 @@ public class InternalVREManager {
 		return result;
 	}
 
-
 	/**
 	 * Validate new tests.
 	 */
 	public void validateNewTests() {
 		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection()) {
 
-			if(vreConn != null){
-				if(phdConn != null){
+			if (vreConn != null) {
+				if (phdConn != null) {
 					ValidateWellTest vwt = new ValidateWellTest();
 					vwt.validateNewWellTests(vreConn, phdConn);
-				}else{
+				} else {
 					LOGGER.log(Level.SEVERE, "Can not validate Wells as PHD connection is unavailable");
 				}
-			}else{
+			} else {
 				LOGGER.log(Level.SEVERE, "Can not validate Wells as VRE connection is unavailable");
 			}
 

@@ -46,7 +46,7 @@ public class PropertiesModel {
 
 	/** The water cut. */
 	private double waterCut;
-	
+
 	/** The ii. */
 	private double ii;
 
@@ -79,7 +79,7 @@ public class PropertiesModel {
 	 *
 	 * @return the reservoir
 	 */
-	@XmlElement(name="reservoir")
+	@XmlElement(name = "reservoir")
 	public String getReservoir() {
 		return reservoir;
 	}
@@ -87,7 +87,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the reservoir.
 	 *
-	 * @param reservoir the new reservoir
+	 * @param reservoir
+	 *            the new reservoir
 	 */
 	public void setReservoir(String reservoir) {
 		this.reservoir = reservoir;
@@ -98,7 +99,7 @@ public class PropertiesModel {
 	 *
 	 * @return the gor
 	 */
-	@XmlElement(name="gor")
+	@XmlElement(name = "gor")
 	public double getGor() {
 		return gor;
 	}
@@ -106,7 +107,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the gor.
 	 *
-	 * @param gor the new gor
+	 * @param gor
+	 *            the new gor
 	 */
 	public void setGor(double gor) {
 		this.gor = gor;
@@ -117,7 +119,7 @@ public class PropertiesModel {
 	 *
 	 * @return the gas
 	 */
-	@XmlElement(name="gas")
+	@XmlElement(name = "gas")
 	public double getGas() {
 		return gas;
 	}
@@ -125,7 +127,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the gas.
 	 *
-	 * @param gas the new gas
+	 * @param gas
+	 *            the new gas
 	 */
 	public void setGas(double gas) {
 		this.gas = gas;
@@ -136,7 +139,7 @@ public class PropertiesModel {
 	 *
 	 * @return the water
 	 */
-	@XmlElement(name="water")
+	@XmlElement(name = "water")
 	public double getWater() {
 		return water;
 	}
@@ -144,7 +147,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the water.
 	 *
-	 * @param water the new water
+	 * @param water
+	 *            the new water
 	 */
 	public void setWater(double water) {
 		this.water = water;
@@ -155,7 +159,7 @@ public class PropertiesModel {
 	 *
 	 * @return the api
 	 */
-	@XmlElement(name="api")
+	@XmlElement(name = "api")
 	public double getApi() {
 		return api;
 	}
@@ -163,7 +167,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the api.
 	 *
-	 * @param api the new api
+	 * @param api
+	 *            the new api
 	 */
 	public void setApi(double api) {
 		this.api = api;
@@ -174,7 +179,7 @@ public class PropertiesModel {
 	 *
 	 * @return the hold upv
 	 */
-	@XmlElement(name="holdupv")
+	@XmlElement(name = "holdupv")
 	public double getHoldUPV() {
 		return holdUPV;
 	}
@@ -182,7 +187,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the hold upv.
 	 *
-	 * @param holdUPV the new hold upv
+	 * @param holdUPV
+	 *            the new hold upv
 	 */
 	public void setHoldUPV(double holdUPV) {
 		this.holdUPV = holdUPV;
@@ -193,7 +199,7 @@ public class PropertiesModel {
 	 *
 	 * @return the hold uph
 	 */
-	@XmlElement(name="holduph")
+	@XmlElement(name = "holduph")
 	public double getHoldUPH() {
 		return holdUPH;
 	}
@@ -201,7 +207,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the hold uph.
 	 *
-	 * @param holdUPH the new hold uph
+	 * @param holdUPH
+	 *            the new hold uph
 	 */
 	public void setHoldUPH(double holdUPH) {
 		this.holdUPH = holdUPH;
@@ -212,7 +219,7 @@ public class PropertiesModel {
 	 *
 	 * @return the ffv
 	 */
-	@XmlElement(name="ffv")
+	@XmlElement(name = "ffv")
 	public double getFfv() {
 		return ffv;
 	}
@@ -220,7 +227,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the ffv.
 	 *
-	 * @param ffv the new ffv
+	 * @param ffv
+	 *            the new ffv
 	 */
 	public void setFfv(double ffv) {
 		this.ffv = ffv;
@@ -231,7 +239,7 @@ public class PropertiesModel {
 	 *
 	 * @return the ffh
 	 */
-	@XmlElement(name="ffh")
+	@XmlElement(name = "ffh")
 	public double getFfh() {
 		return ffh;
 	}
@@ -239,7 +247,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the ffh.
 	 *
-	 * @param ffh the new ffh
+	 * @param ffh
+	 *            the new ffh
 	 */
 	public void setFfh(double ffh) {
 		this.ffh = ffh;
@@ -250,7 +259,7 @@ public class PropertiesModel {
 	 *
 	 * @return the reservoir pressure
 	 */
-	@XmlElement(name="reservoir_pressure")
+	@XmlElement(name = "reservoir_pressure")
 	public double getReservoirPressure() {
 		return reservoirPressure;
 	}
@@ -258,7 +267,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the reservoir pressure.
 	 *
-	 * @param reservoirPressure the new reservoir pressure
+	 * @param reservoirPressure
+	 *            the new reservoir pressure
 	 */
 	public void setReservoirPressure(double reservoirPressure) {
 		this.reservoirPressure = reservoirPressure;
@@ -269,7 +279,7 @@ public class PropertiesModel {
 	 *
 	 * @return the reservoir temperature
 	 */
-	@XmlElement(name="reservoir_temperature")
+	@XmlElement(name = "reservoir_temperature")
 	public double getReservoirTemperature() {
 		return reservoirTemperature;
 	}
@@ -277,7 +287,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the reservoir temperature.
 	 *
-	 * @param reservoirTemperature the new reservoir temperature
+	 * @param reservoirTemperature
+	 *            the new reservoir temperature
 	 */
 	public void setReservoirTemperature(double reservoirTemperature) {
 		this.reservoirTemperature = reservoirTemperature;
@@ -288,7 +299,7 @@ public class PropertiesModel {
 	 *
 	 * @return the water cut
 	 */
-	@XmlElement(name="watercut")
+	@XmlElement(name = "watercut")
 	public double getWaterCut() {
 		return waterCut;
 	}
@@ -296,27 +307,28 @@ public class PropertiesModel {
 	/**
 	 * Sets the water cut.
 	 *
-	 * @param waterCut the new water cut
+	 * @param waterCut
+	 *            the new water cut
 	 */
 	public void setWaterCut(double waterCut) {
 		this.waterCut = waterCut;
 	}
-	
-	
+
 	/**
 	 * Gets the ii.
 	 *
 	 * @return the ii
 	 */
-	@XmlElement(name="ii")
+	@XmlElement(name = "ii")
 	public double getIi() {
 		return ii;
 	}
-	
+
 	/**
 	 * Sets the ii.
 	 *
-	 * @param ii the new ii
+	 * @param ii
+	 *            the new ii
 	 */
 	public void setIi(double ii) {
 		this.ii = ii;
@@ -327,7 +339,7 @@ public class PropertiesModel {
 	 *
 	 * @return the pi
 	 */
-	@XmlElement(name="pi")
+	@XmlElement(name = "pi")
 	public double getPi() {
 		return pi;
 	}
@@ -335,7 +347,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the pi.
 	 *
-	 * @param pi the new pi
+	 * @param pi
+	 *            the new pi
 	 */
 	public void setPi(double pi) {
 		this.pi = pi;
@@ -346,7 +359,7 @@ public class PropertiesModel {
 	 *
 	 * @return the qgi
 	 */
-	@XmlElement(name="qgi")
+	@XmlElement(name = "qgi")
 	public double getQgi() {
 		return qgi;
 	}
@@ -354,7 +367,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the qgi.
 	 *
-	 * @param qgi the new qgi
+	 * @param qgi
+	 *            the new qgi
 	 */
 	public void setQgi(double qgi) {
 		this.qgi = qgi;
@@ -365,7 +379,7 @@ public class PropertiesModel {
 	 *
 	 * @return the whp
 	 */
-	@XmlElement(name="whp")
+	@XmlElement(name = "whp")
 	public double getWhp() {
 		return whp;
 	}
@@ -373,7 +387,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the whp.
 	 *
-	 * @param whp the new whp
+	 * @param whp
+	 *            the new whp
 	 */
 	public void setWhp(double whp) {
 		this.whp = whp;
@@ -384,7 +399,7 @@ public class PropertiesModel {
 	 *
 	 * @return the pdg depth
 	 */
-	@XmlElement(name="pdg_depth")
+	@XmlElement(name = "pdg_depth")
 	public double getPdgDepth() {
 		return pdgDepth;
 	}
@@ -392,7 +407,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the pdg depth.
 	 *
-	 * @param pdgDepth the new pdg depth
+	 * @param pdgDepth
+	 *            the new pdg depth
 	 */
 	public void setPdgDepth(double pdgDepth) {
 		this.pdgDepth = pdgDepth;
@@ -403,7 +419,7 @@ public class PropertiesModel {
 	 *
 	 * @return the pdg pressure
 	 */
-	@XmlElement(name="pdg_pressure")
+	@XmlElement(name = "pdg_pressure")
 	public double getPdgPressure() {
 		return pdgPressure;
 	}
@@ -411,7 +427,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the pdg pressure.
 	 *
-	 * @param pdgPressure the new pdg pressure
+	 * @param pdgPressure
+	 *            the new pdg pressure
 	 */
 	public void setPdgPressure(double pdgPressure) {
 		this.pdgPressure = pdgPressure;
@@ -422,7 +439,7 @@ public class PropertiesModel {
 	 *
 	 * @return the divergence
 	 */
-	@XmlElement(name="divergence")
+	@XmlElement(name = "divergence")
 	public double getDivergence() {
 		return divergence;
 	}
@@ -430,7 +447,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the divergence.
 	 *
-	 * @param divergence the new divergence
+	 * @param divergence
+	 *            the new divergence
 	 */
 	public void setDivergence(double divergence) {
 		this.divergence = divergence;
@@ -441,7 +459,7 @@ public class PropertiesModel {
 	 *
 	 * @return the convergence
 	 */
-	@XmlElement(name="convergence")
+	@XmlElement(name = "convergence")
 	public double getConvergence() {
 		return convergence;
 	}
@@ -449,7 +467,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the convergence.
 	 *
-	 * @param convergence the new convergence
+	 * @param convergence
+	 *            the new convergence
 	 */
 	public void setConvergence(double convergence) {
 		this.convergence = convergence;
@@ -460,7 +479,7 @@ public class PropertiesModel {
 	 *
 	 * @return the tolerance
 	 */
-	@XmlElement(name="tolerance")
+	@XmlElement(name = "tolerance")
 	public double getTolerance() {
 		return tolerance;
 	}
@@ -468,7 +487,8 @@ public class PropertiesModel {
 	/**
 	 * Sets the tolerance.
 	 *
-	 * @param tolerance the new tolerance
+	 * @param tolerance
+	 *            the new tolerance
 	 */
 	public void setTolerance(double tolerance) {
 		this.tolerance = tolerance;

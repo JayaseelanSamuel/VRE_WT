@@ -19,10 +19,11 @@ import com.brownfield.vre.PropertyReader;
 import com.brownfield.vre.VREConstants;
 
 /**
- * The listener interface for receiving VREContext events. The class that is interested in processing a VREContext event
- * implements this interface, and the object created with that class is registered with a component using the
- * component's <code>addVREContextListener<code> method. When the VREContext event occurs, that object's appropriate
- * method is invoked.
+ * The listener interface for receiving VREContext events. The class that is
+ * interested in processing a VREContext event implements this interface, and
+ * the object created with that class is registered with a component using the
+ * component's <code>addVREContextListener<code> method. When the VREContext
+ * event occurs, that object's appropriate method is invoked.
  *
  * @see VREContextEvent
  */
@@ -34,7 +35,8 @@ public class VREContextListener implements ServletContextListener {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see javax.servlet.ServletContextListener#contextDestroyed(javax.servlet.ServletContextEvent)
+	 * @see javax.servlet.ServletContextListener#contextDestroyed(javax.servlet.
+	 * ServletContextEvent)
 	 */
 	@Override
 	public void contextDestroyed(ServletContextEvent arg0) {
@@ -44,13 +46,15 @@ public class VREContextListener implements ServletContextListener {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see javax.servlet.ServletContextListener#contextInitialized(javax.servlet.ServletContextEvent)
+	 * @see
+	 * javax.servlet.ServletContextListener#contextInitialized(javax.servlet.
+	 * ServletContextEvent)
 	 */
 	@Override
-	public void contextInitialized(ServletContextEvent arg0) {
+	public void contextInitialized(ServletContextEvent event) {
 
 		try {
-			PropertyReader.loadProperties(arg0.getServletContext());
+			PropertyReader.loadProperties(event.getServletContext());
 			VREConstants.PHD_TEIID_URL = PropertyReader.getProperty("PHD_TEIID_URL");
 			VREConstants.TEIID_USER = PropertyReader.getProperty("TEIID_USER");
 			VREConstants.TEIID_PASSWORD = PropertyReader.getProperty("TEIID_PASSWORD");
