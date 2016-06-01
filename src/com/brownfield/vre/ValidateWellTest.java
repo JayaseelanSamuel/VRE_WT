@@ -28,6 +28,7 @@ import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
 import static com.brownfield.vre.VREConstants.START_OFFSET;
 import static com.brownfield.vre.VREConstants.STRING_ID;
+import static com.brownfield.vre.VREConstants.STRING_NAME;
 import static com.brownfield.vre.VREConstants.STRING_TYPE;
 import static com.brownfield.vre.VREConstants.SWITCH_TIME_ZONE;
 import static com.brownfield.vre.VREConstants.TAG_GAS_RATE;
@@ -139,7 +140,7 @@ public class ValidateWellTest {
 					// this will also update watercut
 					boolean isStable = this.isStable(vreConn, stringID, effectiveTestDate);
 					// update the FTQL1 to standard conditions.
-					ql1Standard = this.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut);
+					ql1Standard = Utils.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut);
 
 					Map<String, String> tags = this.getTags(vreConn, stringID);
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
@@ -153,8 +154,7 @@ public class ValidateWellTest {
 						liqRateTabAvailable = false;
 					}
 					if (tags.get(TAG_WHP) == null) {
-						sb.append(TAG_WHP + " is missing for String " + tags.get(UWI) + tags.get(STRING_TYPE))
-								.append("\n");
+						sb.append(TAG_WHP + " is missing for String " + tags.get(STRING_NAME)).append("\n");
 						whpTagAvailable = false;
 					}
 
@@ -190,7 +190,7 @@ public class ValidateWellTest {
 							Statistics stat = new Statistics(liqidRates);
 							meanLiqRate = stat.getMean();
 							cvLiqRate = stat.getCoefficientOfVariation(meanLiqRate);
-							standardLiqRate = getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, watercut);
+							standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, watercut);
 						} else {
 							sb.append("No PHD liquid rate available for " + tags.get(TAG_LIQUID_RATE)).append("\n");
 						}
@@ -252,10 +252,9 @@ public class ValidateWellTest {
 						}
 					} else {
 						if (!(liqRateTabAvailable && whpTagAvailable)) {
-							sb.append("Unstable well. No data avaialbe for " + tags.get(UWI) + tags.get(STRING_TYPE))
-									.append("\n");
+							sb.append("Unstable well. No data avaialbe for " + tags.get(STRING_NAME)).append("\n");
 						} else {
-							sb.append("Unstable well - " + tags.get(UWI) + tags.get(STRING_TYPE)).append("\n");
+							sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
 						}
 					}
 					sb.delete(sb.length() - 1, sb.length());
@@ -326,6 +325,7 @@ public class ValidateWellTest {
 				if (rset != null && rset.next()) { // one row per string
 					tags.put(UWI, rset.getString(UWI));
 					tags.put(STRING_TYPE, rset.getString(STRING_TYPE));
+					tags.put(STRING_NAME, rset.getString(STRING_NAME));
 					tags.put(PLATFORM_ID, rset.getString(PLATFORM_ID));
 					tags.put(PLATFORM_NAME, rset.getString(PLATFORM_NAME));
 					tags.put(TAG_LIQUID_RATE, rset.getString(TAG_LIQUID_RATE));
@@ -558,19 +558,4 @@ public class ValidateWellTest {
 		return true;
 	}
 
-	/**
-	 * Gets the standard condition rate.
-	 *
-	 * @param rate
-	 *            the rate
-	 * @param shrinkFact
-	 *            the shrink fact
-	 * @param wcut
-	 *            the wcut
-	 * @return the standard condition rate
-	 */
-	public double getStandardConditionRate(double rate, double shrinkFact, double wcut) {
-		double scr = rate * shrinkFact * (1 - wcut) + rate * wcut;
-		return scr;
-	}
 }

@@ -1,6 +1,6 @@
 package com.brownfield.vre.exe;
 
-import static com.brownfield.vre.VREConstants.*;
+import static com.brownfield.vre.VREConstants.ARG_CHOKE;
 import static com.brownfield.vre.VREConstants.ARG_HEADER;
 import static com.brownfield.vre.VREConstants.ARG_MODEL;
 import static com.brownfield.vre.VREConstants.ARG_PDGP;
@@ -21,7 +21,6 @@ import static com.brownfield.vre.VREConstants.AVG_WELLHEAD_PRESSURE;
 import static com.brownfield.vre.VREConstants.CSV_EXTENSION;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
-import static com.brownfield.vre.VREConstants.FILE_MONITORING_SERVICE;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
@@ -38,7 +37,6 @@ import static com.brownfield.vre.VREConstants.RUN_VRE4;
 import static com.brownfield.vre.VREConstants.RUN_VRE5;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STRING_ID;
-import static com.brownfield.vre.VREConstants.STRING_NAME;
 import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
 import static com.brownfield.vre.VREConstants.THREAD_POOL_SIZE;
 import static com.brownfield.vre.VREConstants.VRE1_DATASET_QUERY;
@@ -46,7 +44,6 @@ import static com.brownfield.vre.VREConstants.VRE6_INPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_EXE_LOC;
-import static com.brownfield.vre.VREConstants.VRE_JOBS_IN_PROGRESS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
 import static com.brownfield.vre.VREConstants.VRE_USER;
@@ -55,8 +52,6 @@ import static com.brownfield.vre.VREConstants.WELL_TEST_CALIBRATE_QUERY;
 import static com.brownfield.vre.VREConstants.WHP1;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -75,11 +70,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
 
+import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
 import com.brownfield.vre.VREConstants.DSRTA_JOB_TYPE;
-import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.RecalModel;
 import com.brownfield.vre.exe.models.WellModel;
 
@@ -217,10 +211,12 @@ public class VREExecutioner {
 						if (wellModel.getErrors() == null) {
 							RecalModel recal = wellModel.getRecal();
 							if (recal != null) {
-								isCalibrated = recal.getCalibration();
+								isCalibrated = true;
+								// FIXME: recal.getCalibration();
 								boolean review = recal.isReview();
 								if (isCalibrated) {
 									this.insertOrUpdateJob(vreConn, stringID, executor);
+									LOGGER.log(Level.INFO, " Submitted job for - " + stringID);
 									rowCount++;
 								}
 								if (review) {
@@ -237,8 +233,8 @@ public class VREExecutioner {
 					} else {
 						LOGGER.log(Level.SEVERE, " Something went wrong while calling recal for string - " + stringID);
 					}
-
-					rset.updateBoolean(IS_CALIBRATED, isCalibrated);
+					// FIXME:Uncomment later 
+					//rset.updateBoolean(IS_CALIBRATED, isCalibrated);
 					rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
@@ -267,98 +263,47 @@ public class VREExecutioner {
 	 */
 	private void insertOrUpdateJob(Connection vreConn, int stringID, ExecutorService executor) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_QUERY, ResultSet.TYPE_SCROLL_SENSITIVE,
-				ResultSet.CONCUR_UPDATABLE); ResultSet rset = statement.executeQuery()) {
-			List<String> params = new ArrayList<>();
-			params.add(VRE_EXE_LOC);// executable
-			params.add(ARG_VRE6); // TODO: Check the syntax
-			String stringName = rset.getString(STRING_NAME) + CSV_EXTENSION;
-			// TODO: only 4/5 files and not per string
-			params.add(ARG_MODEL + VRE6_INPUT_FOLDER + stringName);
-			// TODO: Delete the existing file
-			String outputFile = VRE6_OUTPUT_FOLDER + stringName;
-			FileUtils.forceDelete(new File(outputFile));
-			Runnable worker = new VREExeWorker(params, stringID, VRE_TYPE.VRE6);
-			executor.execute(worker);
-			String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.IN_PROGRESS, new Date());
-			if (rset.next()) {
-				// if there is already a job; update
-				rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
-				rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.INVALID.getNumVal());
-				rset.updateString(REMARK, remark);
-				rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
-				rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
-				rset.updateRow();
-			} else {
-				try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE_JOBS_QUERY);) {
-					stmt.setInt(1, stringID);
-					stmt.setInt(2, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
-					stmt.setInt(3, DSRTA_JOB_TYPE.INVALID.getNumVal());
-					stmt.setString(3, remark);
-					stmt.executeUpdate();
-				} catch (Exception e) {
-					LOGGER.log(Level.SEVERE, e.getMessage());
-				}
-			}
-		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
-		}
-	}
-
-	/**
-	 * Update vre6 output.
-	 *
-	 * @param vreConn the vre conn
-	 * @param stringID the string id
-	 */
-	public void updateVRE6Output(Connection vreConn, int stringID) {
-		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_IN_PROGRESS_QUERY,
-				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-				ResultSet rset = statement.executeQuery()) {
-			if (rset != null) {
-				while (rset.next()) {
-					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME);
-					File f = new File(outputFile);
-					if (f.exists() && !f.isDirectory()) {
-						String content = this.getFileContent(f);
-						if (content != null) {
-							String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.FINISHED, new Date());
-							// file read successfully
-							rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.FINISHED.getNumVal());
-							rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.READY.getNumVal());
-							rset.updateString(VRE6_EXE_OUTPUT, content);
-							rset.updateString(REMARK, remark);
-							rset.updateString(ROW_CHANGED_BY, FILE_MONITORING_SERVICE);
-							rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
-							rset.updateRow();
-							// Delete the output file
-							FileUtils.deleteQuietly(f);
-						}
+				ResultSet.CONCUR_UPDATABLE)) {
+			statement.setInt(1, stringID);
+			String stringName = Utils.getStringNameFromID(vreConn, stringID);
+			try (ResultSet rset = statement.executeQuery()) {
+				List<String> params = new ArrayList<>();
+				params.add(VRE_EXE_LOC);// executable
+				params.add(ARG_VRE6); // TODO: Check the syntax
+				// TODO: only 4/5 files and not per string
+				params.add(ARG_MODEL + VRE6_INPUT_FOLDER + stringName + CSV_EXTENSION);
+				String outputFile = VRE6_OUTPUT_FOLDER + stringName + CSV_EXTENSION;
+				FileUtils.deleteQuietly(new File(outputFile));
+				// Runnable worker = new VREExeWorker(params, stringID,
+				// VRE_TYPE.VRE6);
+				// executor.execute(worker);
+				String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.IN_PROGRESS, new Date());
+				if (rset.next()) {
+					// if there is already a job; update
+					rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
+					rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.INVALID.getNumVal());
+					rset.updateString(REMARK, remark);
+					rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
+				} else {
+					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE_JOBS_QUERY);) {
+						stmt.setInt(1, stringID);
+						stmt.setString(2, stringName);
+						stmt.setInt(3, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
+						stmt.setInt(4, DSRTA_JOB_TYPE.INVALID.getNumVal());
+						stmt.setString(5, remark);
+						stmt.setString(6, RECAL_WORKFLOW);
+						stmt.executeUpdate();
+					} catch (Exception e) {
+						LOGGER.log(Level.SEVERE, e.getMessage());
 					}
 				}
+			} catch (Exception e) {
+				LOGGER.log(Level.SEVERE, e.getMessage());
 			}
 		} catch (Exception e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}
-	}
-
-	/**
-	 * Gets the file content.
-	 *
-	 * @param file the file
-	 * @return the file content
-	 */
-	private String getFileContent(File file) {
-		String content = null;
-		try {
-			// see if file is being written or not
-			FileUtils.touch(file);
-			// this will be called only when file is not locked by another
-			// process (in this case VRE6 exe)
-			content = IOUtils.toString(new FileInputStream(file));
-		} catch (IOException e) {
-			LOGGER.log(Level.SEVERE, file.getName()
-					+ " : Can't read the file; file is already opened by another process.\n" + e.getMessage());
-		}
-		return content;
 	}
 }

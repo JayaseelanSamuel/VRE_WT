@@ -12,13 +12,13 @@ import java.sql.Statement;
 public class VREConstants {
 
 	/** The sql driver name. */
-	public static final String SQL_DRIVER_NAME = "<SERVER_URL>";
+	public static final String SQL_DRIVER_NAME = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
 
 	/** The teiid driver name. */
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
+	public static String VRE_DB_URL = "<SERVER_URL>";
 
 	/** The vre user. */
 	public static String VRE_USER = "<USER>";
@@ -199,7 +199,7 @@ public class VREConstants {
 																				// SOURCE_ID
 
 	/** The get string tags query. */
-	public static final String GET_STRING_TAGS_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, "
+	public static final String GET_STRING_TAGS_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI, S.STRING_TYPE) AS STRING_NAME, P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, "
 			+ " SM.TAG_WHP, SM.TAG_WHT FROM STRING S "
 			+ " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
 			+ " LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
@@ -217,6 +217,11 @@ public class VREConstants {
 	/** The insert well test query. */
 	public static final String INSERT_WELL_TEST_QUERY = "INSERT INTO WELL_TEST (STRING_ID, TEST_TYPE, TEST_START_DATE, TEST_END_DATE, SOURCE_ID, QL1, WHP1, TEST_WATER_CUT, VRE_FLAG, REMARK) "
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	
+	
+	/** The Constant GET_STRING_INFO_QUERY. */
+	public static final String GET_STRING_INFO_QUERY = "SELECT STRING_ID, UWI, STRING_TYPE, CONCAT(UWI, STRING_TYPE) AS STRING_NAME "
+			+ " FROM STRING WHERE STRING_ID = ? ";
 
 	/** The Constant VRE_VARIABLE_QUERY. */
 	public static final String VRE_VARIABLE_QUERY = "SELECT NAME, \"VALUE\" FROM VRE_VARIABLES";
@@ -261,17 +266,17 @@ public class VREConstants {
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	/** The Constant VRE_JOBS_QUERY. */
-	public static final String VRE_JOBS_QUERY = "SELECT J.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI,S.STRING_TYPE) AS STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
+	public static final String VRE_JOBS_QUERY = "SELECT J.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI,S.STRING_TYPE) AS STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, J.ROW_CHANGED_BY, J.ROW_CHANGED_DATE "
 			+ " FROM VRE6_JOBS J " + " LEFT OUTER JOIN STRING S ON J.STRING_ID = S.STRING_ID "
 			+ " WHERE J.STRING_ID = ? ";
 
-	/** The Constant VRE_JOBS_IN_PROGRESS_QUERY. */
-	public static final String VRE_JOBS_IN_PROGRESS_QUERY = "SELECT STRING_ID, STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
-			+ " FROM VRE6_JOBS WHERE DSIS_STATUS_ID = 1 AND DSRTA_STATUS_ID = 0 ";
-
 	/** The Constant INSERT_VRE_JOBS_QUERY. */
-	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, STRING_NAME, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK) "
+	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, STRING_NAME, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK, ROW_CREATED_BY) "
 			+ " VALUES (?, ?, ?, ?, ?, ?) ";
+	
+	/** The Constant VRE_JOBS_IN_PROGRESS_QUERY. */
+	public static final String VRE_JOBS_IN_PROGRESS_QUERY = "SELECT STRING_ID, STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+			+ " FROM VRE6_JOBS WHERE DSIS_STATUS_ID = 1 AND DSRTA_STATUS_ID = 0 ";
 
 	/** The Constant JOBS_REMARK. */
 	public static final String JOBS_REMARK = "Job %s on %s";
