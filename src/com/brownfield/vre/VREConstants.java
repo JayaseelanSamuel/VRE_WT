@@ -12,13 +12,13 @@ import java.sql.Statement;
 public class VREConstants {
 
 	/** The sql driver name. */
-	public static final String SQL_DRIVER_NAME = "com.microsoft.sqlserver.jdbc.SQLServerDriver";
+	public static final String SQL_DRIVER_NAME = "<SERVER_URL>";
 
 	/** The teiid driver name. */
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "<SQL_URL>";
+	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
 
 	/** The vre user. */
 	public static String VRE_USER = "<USER>";
@@ -29,7 +29,7 @@ public class VREConstants {
 	// Properties which will be overridden at the application context load
 
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "<SQL_URL>";
+	public static String PHD_TEIID_URL = "<SERVER_URL>";
 
 	/** The teiid user. */
 	public static String TEIID_USER = "<USER>";
@@ -80,6 +80,13 @@ public class VREConstants {
 
 	/** The vre exe. */
 	public static String VRE_EXE_LOC = "D:/Pipesim_Models/VRE.exe";
+
+	// TODO: Revisit
+	/** The VRE6 input folder. */
+	public static String VRE6_INPUT_FOLDER = "D:/Pipesim_Models/VRE6_InputModels/";
+
+	/** The VRE6 output folder. */
+	public static String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
 
 	// Properties end
 
@@ -151,11 +158,11 @@ public class VREConstants {
 	public enum DSRTA_JOB_TYPE {
 
 		/** The reset. */
-		RESET(0),
+		INVALID(0),
 		/** The finished. */
-		FINISHED(1),
+		READY(1),
 		/** The updated. */
-		UPDATED(2);
+		FINISHED(2);
 
 		/** The num val. */
 		private int numVal;
@@ -254,12 +261,17 @@ public class VREConstants {
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	/** The Constant VRE_JOBS_QUERY. */
-	public static final String VRE_JOBS_QUERY = "SELECT STRING_ID, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
-			+ " FROM VRE6_JOBS WHERE STRING_ID = ? ";
+	public static final String VRE_JOBS_QUERY = "SELECT J.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI,S.STRING_TYPE) AS STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
+			+ " FROM VRE6_JOBS J " + " LEFT OUTER JOIN STRING S ON J.STRING_ID = S.STRING_ID "
+			+ " WHERE J.STRING_ID = ? ";
+
+	/** The Constant VRE_JOBS_IN_PROGRESS_QUERY. */
+	public static final String VRE_JOBS_IN_PROGRESS_QUERY = "SELECT STRING_ID, STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK "
+			+ " FROM VRE6_JOBS WHERE DSIS_STATUS_ID = 1 AND DSRTA_STATUS_ID = 0 ";
 
 	/** The Constant INSERT_VRE_JOBS_QUERY. */
-	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK) "
-			+ " VALUES (?, ?, ?, ?) ";
+	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, STRING_NAME, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK) "
+			+ " VALUES (?, ?, ?, ?, ?, ?) ";
 
 	/** The Constant JOBS_REMARK. */
 	public static final String JOBS_REMARK = "Job %s on %s";
@@ -289,11 +301,17 @@ public class VREConstants {
 	/** The Constant VRE_WORKFLOW. */
 	public static final String RECAL_WORKFLOW = "Recalibration Workflow";
 
+	/** The Constant FILE_MONITORING_SERVICE. */
+	public static final String FILE_MONITORING_SERVICE = "File Monitoring Service";
+
 	/** The Constant DEFAULT_WATER_CUT. */
 	public static final String DEFAULT_WATER_CUT = "LAB";
 
 	/** The Constant DEFAULT_REMARK. */
 	public static final String DEFAULT_REMARK = "Inserted/Updated by VRE Workflow";
+
+	/** The Constant CSV_EXTENSION. */
+	public static final String CSV_EXTENSION = ".csv";
 
 	// Column Names
 
@@ -305,6 +323,9 @@ public class VREConstants {
 
 	/** The string type. */
 	public static final String STRING_TYPE = "STRING_TYPE";
+
+	/** The Constant STRING_NAME. */
+	public static final String STRING_NAME = "STRING_NAME";
 
 	/** The platform id. */
 	public static final String PLATFORM_ID = "PLATFORM_ID";
