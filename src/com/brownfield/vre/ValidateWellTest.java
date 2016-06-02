@@ -69,7 +69,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -83,7 +82,7 @@ public class ValidateWellTest {
 	private double watercut = 0.0;
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(ValidateWellTest.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(ValidateWellTest.class.getName());
 
 	/**
 	 * The main method.
@@ -102,11 +101,11 @@ public class ValidateWellTest {
 				vw.validateNewWellTests(vreConn, phdConn);
 
 			} catch (SQLException e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 
 		} catch (ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -270,7 +269,7 @@ public class ValidateWellTest {
 			}
 
 		} catch (SQLException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -299,10 +298,10 @@ public class ValidateWellTest {
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return isStable;
 	}
@@ -334,10 +333,10 @@ public class ValidateWellTest {
 					tags.put(TAG_WHT, rset.getString(TAG_WHT));
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 
 		return tags;
@@ -370,10 +369,10 @@ public class ValidateWellTest {
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return values;
 	}
@@ -418,10 +417,10 @@ public class ValidateWellTest {
 			statement.setBoolean(9, vreFlag);
 			statement.setString(10, remark);
 			rowsInserted = statement.executeUpdate();
-			LOGGER.log(Level.INFO, rowsInserted + " rows inserted in WELLTEST table with String : " + stringID
+			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID
 					+ " & Date : " + startDate);
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return rowsInserted;
 	}
@@ -487,7 +486,7 @@ public class ValidateWellTest {
 			}
 			shiftDate = sdf.parse(date);
 		} catch (ParseException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return new Timestamp(shiftDate.getTime());
 	}

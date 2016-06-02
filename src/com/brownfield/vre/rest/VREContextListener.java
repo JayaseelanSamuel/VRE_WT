@@ -30,7 +30,7 @@ import com.brownfield.vre.VREConstants;
 public class VREContextListener implements ServletContextListener {
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(VREContextListener.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(VREContextListener.class.getName());
 
 	/*
 	 * (non-Javadoc)

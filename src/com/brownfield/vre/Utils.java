@@ -6,7 +6,6 @@ import static com.brownfield.vre.VREConstants.STRING_NAME;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -17,7 +16,7 @@ import java.util.logging.Logger;
 public class Utils {
 	
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(Utils.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
 	/**
 	 * Gets the standard condition rate.
@@ -54,10 +53,10 @@ public class Utils {
 					stringName = rset.getString(STRING_NAME);
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return stringName;
 	}

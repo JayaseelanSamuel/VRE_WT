@@ -28,7 +28,6 @@ import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.xml.bind.JAXBContext;
@@ -46,7 +45,7 @@ import com.brownfield.vre.exe.models.WellModel;
 public class VREExeWorker implements Runnable {
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(VREExeWorker.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(VREExeWorker.class.getName());
 
 	/** The vre conn. */
 	private Connection vreConn;
@@ -120,10 +119,10 @@ public class VREExeWorker implements Runnable {
 		String threadName = Thread.currentThread().getName();
 		if (this.vreType == VRE_TYPE.VRE6) {
 			try {
-				LOGGER.log(Level.INFO, threadName + " : Started to run VRE6 for " + this.stringID);
+				LOGGER.info(threadName + " : Started to run VRE6 for " + this.stringID);
 				Thread.sleep(10000);
 			} catch (InterruptedException e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} else {
 			this.executeVRE(threadName);
@@ -137,24 +136,23 @@ public class VREExeWorker implements Runnable {
 	 *            the thread name
 	 */
 	private void executeVRE(String threadName) {
-		LOGGER.log(Level.INFO, threadName + " : Started to run VRE for " + this.stringID);
+		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID);
 		long startT = System.currentTimeMillis();
 		WellModel wellModel = runVRE(params);
 		long endT = System.currentTimeMillis();
 		double duration = ((endT - startT) / 1000);
-		LOGGER.log(Level.INFO, threadName + " : Time to run VRE : " + duration);
+		LOGGER.info(threadName + " : Time to run VRE : " + duration);
 		if (wellModel != null) {
 			if (wellModel.getErrors() == null) {
-				LOGGER.log(Level.INFO, threadName + " : Time reported in VRE : " + wellModel.getVre1().getTime());
+				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getVre1().getTime());
 				this.insertOrUpdateVRE(stringID, whp, wcut, wellModel, recordedDate, vreConn);
 			} else {
-				LOGGER.log(Level.SEVERE, threadName + " : Exception in calling VRE1 - " + wellModel.getErrors());
+				LOGGER.severe(threadName + " : Exception in calling VRE1 - " + wellModel.getErrors());
 			}
 		} else {
-			LOGGER.log(Level.SEVERE,
-					threadName + " : Something went wrong while calling VRE1 for string - " + stringID);
+			LOGGER.severe(threadName + " : Something went wrong while calling VRE1 for string - " + stringID);
 		}
-		LOGGER.log(Level.INFO, threadName + " Finished VRE for " + this.stringID);
+		LOGGER.info(threadName + " Finished VRE for " + this.stringID);
 	}
 
 	/**
@@ -179,13 +177,13 @@ public class VREExeWorker implements Runnable {
 			Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
 			wellModel = (WellModel) jaxbUnmarshaller.unmarshal(input);
 		} catch (IOException e) {
-			LOGGER.log(Level.SEVERE, "Exception occurred while exeuting system command");
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe("Exception occurred while exeuting system command");
+			LOGGER.severe(e.getMessage());
 		} catch (JAXBException e) {
-			LOGGER.log(Level.SEVERE, "Exception occurred while parsing");
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe("Exception occurred while parsing");
+			LOGGER.severe(e.getMessage());
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return wellModel;
 	}
@@ -268,18 +266,17 @@ public class VREExeWorker implements Runnable {
 					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
-					LOGGER.log(Level.INFO,
-							" updated row in VRE table with String : " + stringID + " & Date : " + recordedDate);
+					LOGGER.info("updated row in VRE table with String : " + stringID + " & Date : " + recordedDate);
 				} else { // insert
 					this.insertVRERecord(vreConn, stringID, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
 							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, null, pi, holdUPV, ffv, resPres,
 							DEFAULT_REMARK);
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -347,10 +344,10 @@ public class VREExeWorker implements Runnable {
 			statement.setString(17, remark);
 
 			rowsInserted = statement.executeUpdate();
-			LOGGER.log(Level.INFO, rowsInserted + " rows inserted in VRE table with String : " + stringID + " & Date : "
+			LOGGER.info(rowsInserted + " rows inserted in VRE table with String : " + stringID + " & Date : "
 					+ recordedDate);
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 		return rowsInserted;
 	}

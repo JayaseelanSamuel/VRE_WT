@@ -373,9 +373,30 @@ public class VREConstants {
 
 	/** The stability flag. */
 	public static final String STABILITY_FLAG = "STABILITY_FLAG";
+	
+	/** The Constant TIMESTAMP. */
+	public static final String TIMESTAMP = "timestamp";
 
 	/** The source values. */
 	public static final String SOURCE_VALUES = "sourceValues";
+	
+	/** The Constant QUALITY. */
+	public static final String QUALITY = "quality";
+	
+	/** The Constant AGGREGATE_ID. */
+	public static final String AGGREGATE_ID = "aggregateId";
+	
+	/** The Constant NO_OF_VALUES. */
+	public static final String NO_OF_VALUES = "noOfValues";
+	
+	/** The Constant RESAMPLE_INTERVAL. */
+	public static final String RESAMPLE_INTERVAL = "resampleInterval";
+	
+	/** The Constant START_TIMESTAMP. */
+	public static final String START_TIMESTAMP = "startTimestamp";
+	
+	/** The Constant END_TIMESTAMP. */
+	public static final String END_TIMESTAMP = "endTimestamp";
 
 	/** The tag liquid rate. */
 	public static final String TAG_LIQUID_RATE = "TAG_LIQUID_RATE";

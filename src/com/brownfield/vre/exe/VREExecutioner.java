@@ -22,7 +22,6 @@ import static com.brownfield.vre.VREConstants.CSV_EXTENSION;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
-import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
 import static com.brownfield.vre.VREConstants.QL1;
@@ -66,7 +65,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
@@ -85,7 +83,7 @@ import com.brownfield.vre.exe.models.WellModel;
 public class VREExecutioner {
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(VREExecutioner.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(VREExecutioner.class.getName());
 
 	/**
 	 * The main method.
@@ -102,11 +100,11 @@ public class VREExecutioner {
 				// vreEx.runVREs(vreConn);
 				vreEx.runCalibration(vreConn);
 			} catch (SQLException e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 
 		} catch (ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -173,10 +171,10 @@ public class VREExecutioner {
 			while (!executor.isTerminated()) {
 			}
 			Instant endTime = Instant.now();
-			LOGGER.log(Level.INFO, "Finished running VRE1 for " + rowCount + " strings in "
+			LOGGER.info("Finished running VRE1 for " + rowCount + " strings in "
 					+ Duration.between(startTime, endTime) + " seconds");
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -216,7 +214,7 @@ public class VREExecutioner {
 								boolean review = recal.isReview();
 								if (isCalibrated) {
 									this.insertOrUpdateJob(vreConn, stringID, executor);
-									LOGGER.log(Level.INFO, " Submitted job for - " + stringID);
+									LOGGER.info(" Submitted job for - " + stringID);
 									rowCount++;
 								}
 								if (review) {
@@ -225,13 +223,13 @@ public class VREExecutioner {
 								}
 
 							} else {
-								LOGGER.log(Level.SEVERE, " No recal tag present in output for string - " + stringID);
+								LOGGER.severe(" No recal tag present in output for string - " + stringID);
 							}
 						} else {
-							LOGGER.log(Level.SEVERE, " Exception in calling recal - " + wellModel.getErrors());
+							LOGGER.severe(" Exception in calling recal - " + wellModel.getErrors());
 						}
 					} else {
-						LOGGER.log(Level.SEVERE, " Something went wrong while calling recal for string - " + stringID);
+						LOGGER.severe(" Something went wrong while calling recal for string - " + stringID);
 					}
 					// FIXME:Uncomment later 
 					//rset.updateBoolean(IS_CALIBRATED, isCalibrated);
@@ -242,12 +240,12 @@ public class VREExecutioner {
 				executor.shutdown();
 				// don't wait for executor to terminate
 				if (rowCount != 0) {
-					LOGGER.log(Level.INFO, "VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
+					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
 				}
 			}
 
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -296,14 +294,14 @@ public class VREExecutioner {
 						stmt.setString(6, RECAL_WORKFLOW);
 						stmt.executeUpdate();
 					} catch (Exception e) {
-						LOGGER.log(Level.SEVERE, e.getMessage());
+						LOGGER.severe(e.getMessage());
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 }

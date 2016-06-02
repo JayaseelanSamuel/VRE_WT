@@ -1,7 +1,6 @@
-package com.brownfield.vre.exe;
+package com.brownfield.vre.jobs;
 
-import static com.brownfield.vre.VREConstants.*;
-import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
+import static com.brownfield.vre.VREConstants.CSV_EXTENSION;
 import static com.brownfield.vre.VREConstants.FILE_MONITORING_SERVICE;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.REMARK;
@@ -19,6 +18,7 @@ import static com.brownfield.vre.VREConstants.VRE_USER;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -26,29 +26,31 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.quartz.Job;
+import org.quartz.JobExecutionContext;
+import org.quartz.JobExecutionException;
 
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
-import com.brownfield.vre.VREConstants.DSRTA_JOB_TYPE;
 
 /**
  * The Class JobsMonitor.
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-public class JobsMonitor {
+public class JobsMonitor implements Job{
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(JobsMonitor.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(JobsMonitor.class.getName());
 
 	/**
 	 * The main method.
 	 *
-	 * @param args the arguments
+	 * @param args
+	 *            the arguments
 	 */
 	public static void main(String[] args) {
 
@@ -59,13 +61,36 @@ public class JobsMonitor {
 				JobsMonitor jm = new JobsMonitor();
 				jm.updateVRE6Output(vreConn);
 			} catch (SQLException e) {
-				LOGGER.log(Level.SEVERE, e.getMessage());
+				LOGGER.severe(e.getMessage());
 			}
 
 		} catch (ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 
+	}
+	
+	/* (non-Javadoc)
+	 * @see org.quartz.Job#execute(org.quartz.JobExecutionContext)
+	 */
+	@Override
+	public void execute(JobExecutionContext context) throws JobExecutionException {
+		// Say Hello to the World and display the date/time
+		LOGGER.info("Monitor jobs invoked by scheduler on - " + new Date());
+		try {
+			Class.forName(SQL_DRIVER_NAME);
+			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD)) {
+
+				JobsMonitor jm = new JobsMonitor();
+				jm.updateVRE6Output(vreConn);
+			} catch (SQLException e) {
+				LOGGER.severe(e.getMessage());
+			}
+
+		} catch (ClassNotFoundException e) {
+			LOGGER.severe(e.getMessage());
+		}
+		LOGGER.info("Finished monitoring jobs on - " + new Date());
 	}
 
 	/**
@@ -74,7 +99,7 @@ public class JobsMonitor {
 	 * @param vreConn
 	 *            the vre conn
 	 */
-	public void updateVRE6Output(Connection vreConn) {
+	private void updateVRE6Output(Connection vreConn) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_IN_PROGRESS_QUERY,
 				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery()) {
@@ -83,7 +108,7 @@ public class JobsMonitor {
 					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME) + CSV_EXTENSION;
 					File f = new File(outputFile);
 					if (f.exists() && !f.isDirectory()) {
-						LOGGER.log(Level.INFO, " File available - " + outputFile);
+						LOGGER.info("Reading - " + outputFile);
 						String content = this.getFileContent(f);
 						if (content != null) {
 							String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.FINISHED, new Date());
@@ -96,16 +121,21 @@ public class JobsMonitor {
 							rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 							rset.updateRow();
 							// Delete the output file
-							FileUtils.deleteQuietly(f);
-							LOGGER.log(Level.INFO, " Updated job entry for - " + rset.getString(STRING_NAME));
+							try {
+								FileUtils.forceDelete(f);
+								LOGGER.info("File deleted successfully - " + f.getName());
+							} catch (Exception e) {
+								LOGGER.severe(e.getMessage());
+							}
+							LOGGER.info("Updated job entry for - " + rset.getString(STRING_NAME));
 						}
-					}else{
-						LOGGER.log(Level.INFO, " File not yet available - " + outputFile);
+					} else {
+						LOGGER.info("Waiting for file - " + f.getName());
 					}
 				}
 			}
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
+			LOGGER.severe(e.getMessage());
 		}
 	}
 
@@ -118,17 +148,27 @@ public class JobsMonitor {
 	 */
 	private String getFileContent(File file) {
 		String content = null;
-		try {
+		try (InputStream is = new FileInputStream(file)) {
 			// see if file is being written or not
 			FileUtils.touch(file);
 			// this will be called only when file is not locked by another
 			// process (in this case VRE6 exe)
-			content = IOUtils.toString(new FileInputStream(file));
+			content = IOUtils.toString(is);
 		} catch (IOException e) {
-			LOGGER.log(Level.SEVERE, file.getName()
+			LOGGER.severe(file.getName()
 					+ " : Can't read the file; file is already opened by another process.\n" + e.getMessage());
 		}
 		return content;
 	}
+
+	/*
+	 * private boolean isCompletelyWritten(File file) { RandomAccessFile stream
+	 * = null; try { stream = new RandomAccessFile(file, "rw"); return true; }
+	 * catch (Exception e) { LOGGER.info("Skipping file " +
+	 * file.getName() + " for this iteration due it's not completely written");
+	 * } finally { if (stream != null) { try { stream.close(); } catch
+	 * (IOException e) { LOGGER.log(Level.SEVERE,
+	 * "Exception during closing file " + file.getName()); } } } return false; }
+	 */
 
 }

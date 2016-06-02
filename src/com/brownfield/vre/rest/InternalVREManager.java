@@ -27,7 +27,7 @@ import com.brownfield.vre.ValidateWellTest;
 public class InternalVREManager {
 
 	/** The logger. */
-	private static Logger LOGGER = Logger.getLogger(InternalVREManager.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(InternalVREManager.class.getName());
 
 	/**
 	 * Gets the PHD connection.
