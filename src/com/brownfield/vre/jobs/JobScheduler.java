@@ -36,10 +36,10 @@ public class JobScheduler {
 	/**
 	 * Run cron scheduler.
 	 */
-	public void runCronScheduler() {
+	public Scheduler runCronScheduler() {
 		// First we must get a reference to a scheduler
 		SchedulerFactory sf = new StdSchedulerFactory();
-		Scheduler sched;
+		Scheduler sched = null;
 		try {
 			LOGGER.info("------- Initializing ----------------------");
 			sched = sf.getScheduler();
@@ -68,6 +68,7 @@ public class JobScheduler {
 		} catch (Exception e) {
 			LOGGER.error(e);
 		}
+		return sched;
 	}
 
 }

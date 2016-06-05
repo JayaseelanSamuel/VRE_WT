@@ -15,8 +15,12 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.sql.DataSource;
 
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+
 import com.brownfield.vre.PropertyReader;
 import com.brownfield.vre.VREConstants;
+import com.brownfield.vre.jobs.JobScheduler;
 
 /**
  * The listener interface for receiving VREContext events. The class that is
@@ -32,6 +36,9 @@ public class VREContextListener implements ServletContextListener {
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(VREContextListener.class.getName());
 
+	/** The sched. */
+	private static Scheduler sched;
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -40,6 +47,13 @@ public class VREContextListener implements ServletContextListener {
 	 */
 	@Override
 	public void contextDestroyed(ServletContextEvent arg0) {
+		if (sched != null) {
+			try {
+				sched.shutdown(true);
+			} catch (SchedulerException e) {
+				LOGGER.log(Level.SEVERE, e.getMessage());
+			}
+		}
 
 	}
 
@@ -54,12 +68,14 @@ public class VREContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent event) {
 
 		try {
+			// load PHD connection details
 			PropertyReader.loadProperties(event.getServletContext());
 			VREConstants.PHD_TEIID_URL = PropertyReader.getProperty("PHD_TEIID_URL");
 			VREConstants.TEIID_USER = PropertyReader.getProperty("TEIID_USER");
 			VREConstants.TEIID_PASSWORD = PropertyReader.getProperty("TEIID_PASSWORD");
 			VREConstants.VRE_JNDI_NAME = PropertyReader.getProperty("VRE_JNDI_NAME");
 
+			// update VRE variables from database by JNDI lookup
 			Context initialContext = new InitialContext();
 			DataSource datasource = (DataSource) initialContext.lookup(VRE_JNDI_NAME);
 			if (datasource != null) {
@@ -69,6 +85,10 @@ public class VREContextListener implements ServletContextListener {
 			} else {
 				LOGGER.log(Level.SEVERE, "Failed to lookup datasource.");
 			}
+
+			// start running jobs
+			JobScheduler js = new JobScheduler();
+			sched = js.runCronScheduler();
 		} catch (NamingException ex) {
 			LOGGER.log(Level.SEVERE, "Cannot get connection: " + ex);
 		} catch (SQLException ex) {

@@ -5,31 +5,44 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Response;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class VREApplicationResource.
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-@Path("/WellTestValidation")
+@Path("/VRE")
 public class VREBaseResource {
 
-	/*
-	 * @GET public Response doNothing() {
-	 * 
-	 * String result = "Almost there !!";
-	 * 
-	 * return Response.status(200).entity(result).build();
-	 * 
-	 * }
-	 * 
-	 * @GET public Response doNothing(@PathParam("param") String msg) {
-	 * 
-	 * String result = "It Works !!! " + msg;
-	 * 
-	 * return Response.status(200).entity(result).build();
-	 * 
-	 * }
+	/**
+	 * Do nothing.
+	 *
+	 * @return the response
 	 */
+	@GET
+	public Response doNothing() {
+
+		String result = "Almost there !!";
+
+		return Response.status(200).entity(result).build();
+
+	}
+
+	/**
+	 * Do nothing.
+	 *
+	 * @param msg
+	 *            the msg
+	 * @return the response
+	 */
+	@GET
+	public Response doNothing(@PathParam("param") String msg) {
+
+		String result = "It Works !!! " + msg;
+
+		return Response.status(200).entity(result).build();
+
+	}
 
 	/**
 	 * Validate well t est.
@@ -37,10 +50,56 @@ public class VREBaseResource {
 	 * @return the response
 	 */
 	@GET
-	public Response validateWellTEst() {
-		String result = "Well Test Validation Success";
+	@Path("/validateWellTests")
+	public Response validateWellTests() {
+		String result = "Well test validation started";
 		InternalVREManager ivm = new InternalVREManager();
-		ivm.validateNewTests();
+		ivm.validateWellTests();
+		return Response.status(200).entity(result).build();
+
+	}
+
+	/**
+	 * Refresh variables.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/refreshVariables")
+	public Response refreshVariables() {
+		String result = "Refreshed VRE variables";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.refreshVariables();
+		return Response.status(200).entity(result).build();
+
+	}
+
+	/**
+	 * Run calibration.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/runCalibration")
+	public Response runCalibration() {
+		String result = "Recalibration of models started";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.refreshVariables();
+		return Response.status(200).entity(result).build();
+
+	}
+
+	/**
+	 * Run vr es.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/runVREs")
+	public Response runVREs() {
+		String result = "Running VREs";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.refreshVariables();
 		return Response.status(200).entity(result).build();
 
 	}

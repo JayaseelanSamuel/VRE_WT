@@ -50,7 +50,7 @@ public class PropertyReader {
 	 *            the servlet context
 	 */
 	public static void loadProperties(ServletContext servletContext) {
-		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/" + propertyFileName);) {
+		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/classes/" + propertyFileName);) {
 			props = new Properties();
 			props.load(is);
 		} catch (IOException e) {
