@@ -19,6 +19,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -30,9 +31,6 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.quartz.Job;
-import org.quartz.JobExecutionContext;
-import org.quartz.JobExecutionException;
 
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
 
@@ -41,7 +39,7 @@ import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-public class JobsMonitor implements Job{
+public class JobsMonitor {
 
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(JobsMonitor.class.getName());
@@ -59,7 +57,7 @@ public class JobsMonitor implements Job{
 			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD)) {
 
 				JobsMonitor jm = new JobsMonitor();
-				jm.updateVRE6Output(vreConn);
+				jm.monitorJobs(vreConn);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
 			}
@@ -68,38 +66,15 @@ public class JobsMonitor implements Job{
 			LOGGER.severe(e.getMessage());
 		}
 
-	}
-	
-	/* (non-Javadoc)
-	 * @see org.quartz.Job#execute(org.quartz.JobExecutionContext)
-	 */
-	@Override
-	public void execute(JobExecutionContext context) throws JobExecutionException {
-		// Say Hello to the World and display the date/time
-		LOGGER.info("Monitor jobs invoked by scheduler on - " + new Date());
-		try {
-			Class.forName(SQL_DRIVER_NAME);
-			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD)) {
-
-				JobsMonitor jm = new JobsMonitor();
-				jm.updateVRE6Output(vreConn);
-			} catch (SQLException e) {
-				LOGGER.severe(e.getMessage());
-			}
-
-		} catch (ClassNotFoundException e) {
-			LOGGER.severe(e.getMessage());
-		}
-		LOGGER.info("Finished monitoring jobs on - " + new Date());
 	}
 
 	/**
-	 * Update vre6 output.
+	 * Monitor jobs.
 	 *
 	 * @param vreConn
 	 *            the vre conn
 	 */
-	private void updateVRE6Output(Connection vreConn) {
+	public void monitorJobs(Connection vreConn) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_IN_PROGRESS_QUERY,
 				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery()) {
@@ -113,8 +88,10 @@ public class JobsMonitor implements Job{
 						if (content != null) {
 							String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.FINISHED, new Date());
 							// file read successfully
-							//rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.FINISHED.getNumVal());
-							//rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.READY.getNumVal());
+							// rset.updateInt(DSIS_STATUS_ID,
+							// DSIS_JOB_TYPE.FINISHED.getNumVal());
+							// rset.updateInt(DSRTA_STATUS_ID,
+							// DSRTA_JOB_TYPE.READY.getNumVal());
 							rset.updateString(VRE6_EXE_OUTPUT, content);
 							rset.updateString(REMARK, remark);
 							rset.updateString(ROW_CHANGED_BY, FILE_MONITORING_SERVICE);
@@ -148,15 +125,16 @@ public class JobsMonitor implements Job{
 	 */
 	private String getFileContent(File file) {
 		String content = null;
-		try (InputStream is = new FileInputStream(file)) {
+		try (InputStream is = new FileInputStream(file);
+				InputStreamReader reader = new InputStreamReader(is)) {
 			// see if file is being written or not
 			FileUtils.touch(file);
 			// this will be called only when file is not locked by another
 			// process (in this case VRE6 exe)
-			content = IOUtils.toString(is);
+			content = IOUtils.toString(reader);
 		} catch (IOException e) {
-			LOGGER.severe(file.getName()
-					+ " : Can't read the file; file is already opened by another process.\n" + e.getMessage());
+			LOGGER.severe(file.getName() + " : Can't read the file; file is already opened by another process.\n"
+					+ e.getMessage());
 		}
 		return content;
 	}
@@ -164,11 +142,11 @@ public class JobsMonitor implements Job{
 	/*
 	 * private boolean isCompletelyWritten(File file) { RandomAccessFile stream
 	 * = null; try { stream = new RandomAccessFile(file, "rw"); return true; }
-	 * catch (Exception e) { LOGGER.info("Skipping file " +
-	 * file.getName() + " for this iteration due it's not completely written");
-	 * } finally { if (stream != null) { try { stream.close(); } catch
-	 * (IOException e) { LOGGER.log(Level.SEVERE,
-	 * "Exception during closing file " + file.getName()); } } } return false; }
+	 * catch (Exception e) { LOGGER.info("Skipping file " + file.getName() +
+	 * " for this iteration due it's not completely written"); } finally { if
+	 * (stream != null) { try { stream.close(); } catch (IOException e) {
+	 * LOGGER.log(Level.SEVERE, "Exception during closing file " +
+	 * file.getName()); } } } return false; }
 	 */
 
 }

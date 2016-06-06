@@ -317,6 +317,9 @@ public class VREConstants {
 
 	/** The Constant CSV_EXTENSION. */
 	public static final String CSV_EXTENSION = ".csv";
+	
+	/** The Constant JSON_EXTENSION. */
+	public static final String JSON_EXTENSION = ".json";
 
 	// Column Names
 

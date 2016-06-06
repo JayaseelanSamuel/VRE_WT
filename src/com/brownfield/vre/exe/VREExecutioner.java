@@ -58,8 +58,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -122,7 +120,7 @@ public class VREExecutioner {
 				ResultSet rset = statement.executeQuery(VRE1_DATASET_QUERY);) {
 
 			ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-			Instant startTime = Instant.now();
+			long start = System.currentTimeMillis();
 			int rowCount = 0;
 			while (rset.next()) {
 				// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
@@ -170,9 +168,10 @@ public class VREExecutioner {
 			executor.shutdown();
 			while (!executor.isTerminated()) {
 			}
-			Instant endTime = Instant.now();
+			long end = System.currentTimeMillis();
+			double duration = (end - start) / 1000 ;
 			LOGGER.info("Finished running VRE1 for " + rowCount + " strings in "
-					+ Duration.between(startTime, endTime) + " seconds");
+					+ duration + " seconds");
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 		}

@@ -20,6 +20,7 @@ import javax.sql.DataSource;
 import com.brownfield.vre.VREConstants;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
+import com.brownfield.vre.jobs.JobsMonitor;
 
 /**
  * The Class InternalVREManager.
@@ -67,8 +68,10 @@ public class InternalVREManager {
 	 */
 	public void validateWellTests() {
 		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection();) {
+			LOGGER.info("validate wellTests started !!!");
 			ValidateWellTest vwt = new ValidateWellTest();
 			vwt.validateNewWellTests(vreConn, phdConn);
+			LOGGER.info("validate wellTests finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (NamingException e) {
@@ -83,7 +86,9 @@ public class InternalVREManager {
 	 */
 	public void refreshVariables() {
 		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Refreshing VRE variables started !!!");
 			VREConstants.refreshVariables(vreConn);
+			LOGGER.info("Refreshing VRE variables finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (NamingException e) {
@@ -96,8 +101,26 @@ public class InternalVREManager {
 	 */
 	public void runCalibration() {
 		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Run calibrations started !!!");
 			VREExecutioner vreEx = new VREExecutioner();
 			vreEx.runCalibration(vreConn);
+			LOGGER.info("Run calibrations finished !!!");
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+	}
+
+	/**
+	 * Monitor jobs.
+	 */
+	public void monitorJobs() {
+		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Monitor jobs started !!!");
+			JobsMonitor jm = new JobsMonitor();
+			jm.monitorJobs(vreConn);
+			LOGGER.info("Monitor jobs finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (NamingException e) {
@@ -110,8 +133,10 @@ public class InternalVREManager {
 	 */
 	public void runVREs() {
 		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("run VREs started !!!");
 			VREExecutioner vreEx = new VREExecutioner();
 			vreEx.runVREs(vreConn);
+			LOGGER.info("run VREs finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (NamingException e) {

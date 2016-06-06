@@ -21,28 +21,10 @@ public class VREBaseResource {
 	 */
 	@GET
 	public Response doNothing() {
-
-		String result = "Almost there !!";
-
+		String result = "Too close but too far !!";
 		return Response.status(200).entity(result).build();
-
 	}
 
-	/**
-	 * Do nothing.
-	 *
-	 * @param msg
-	 *            the msg
-	 * @return the response
-	 */
-	@GET
-	public Response doNothing(@PathParam("param") String msg) {
-
-		String result = "It Works !!! " + msg;
-
-		return Response.status(200).entity(result).build();
-
-	}
 
 	/**
 	 * Validate well t est.
@@ -56,7 +38,6 @@ public class VREBaseResource {
 		InternalVREManager ivm = new InternalVREManager();
 		ivm.validateWellTests();
 		return Response.status(200).entity(result).build();
-
 	}
 
 	/**
@@ -71,7 +52,6 @@ public class VREBaseResource {
 		InternalVREManager ivm = new InternalVREManager();
 		ivm.refreshVariables();
 		return Response.status(200).entity(result).build();
-
 	}
 
 	/**
@@ -84,24 +64,36 @@ public class VREBaseResource {
 	public Response runCalibration() {
 		String result = "Recalibration of models started";
 		InternalVREManager ivm = new InternalVREManager();
-		ivm.refreshVariables();
+		ivm.runCalibration();
 		return Response.status(200).entity(result).build();
-
 	}
 
 	/**
-	 * Run vr es.
+	 * Run vres.
 	 *
 	 * @return the response
 	 */
 	@GET
 	@Path("/runVREs")
 	public Response runVREs() {
-		String result = "Running VREs";
+		String result = "Started running VREs";
 		InternalVREManager ivm = new InternalVREManager();
-		ivm.refreshVariables();
+		ivm.runVREs();
 		return Response.status(200).entity(result).build();
+	}
 
+	/**
+	 * Monitor jobs.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/monitorJobs")
+	public Response monitorJobs() {
+		String result = "Monitored and updated current jobs";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.monitorJobs();
+		return Response.status(200).entity(result).build();
 	}
 
 	/**
@@ -114,11 +106,8 @@ public class VREBaseResource {
 	@GET
 	@Path("/{param}")
 	public Response printMessage(@PathParam("param") String msg) {
-
-		String result = "Restful example : " + msg;
-
+		String result = "Invalid Resource : " + msg;
 		return Response.status(200).entity(result).build();
-
 	}
 
 }
