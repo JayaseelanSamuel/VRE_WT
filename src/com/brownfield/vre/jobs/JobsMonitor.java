@@ -1,8 +1,8 @@
 package com.brownfield.vre.jobs;
 
-import static com.brownfield.vre.VREConstants.CSV_EXTENSION;
 import static com.brownfield.vre.VREConstants.FILE_MONITORING_SERVICE;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
+import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.REMARK;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
@@ -80,7 +80,7 @@ public class JobsMonitor {
 				ResultSet rset = statement.executeQuery()) {
 			if (rset != null) {
 				while (rset.next()) {
-					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME) + CSV_EXTENSION;
+					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME) + JSON_EXTENSION;
 					File f = new File(outputFile);
 					if (f.exists() && !f.isDirectory()) {
 						LOGGER.info("Reading - " + outputFile);
@@ -125,8 +125,7 @@ public class JobsMonitor {
 	 */
 	private String getFileContent(File file) {
 		String content = null;
-		try (InputStream is = new FileInputStream(file);
-				InputStreamReader reader = new InputStreamReader(is)) {
+		try (InputStream is = new FileInputStream(file); InputStreamReader reader = new InputStreamReader(is)) {
 			// see if file is being written or not
 			FileUtils.touch(file);
 			// this will be called only when file is not locked by another

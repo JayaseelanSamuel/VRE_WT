@@ -7,7 +7,7 @@ import static com.brownfield.vre.VREConstants.EFFECTIVE_DATE;
 import static com.brownfield.vre.VREConstants.END_OFFSET;
 import static com.brownfield.vre.VREConstants.FREEZE_LIQUID_RATE_LIMIT;
 import static com.brownfield.vre.VREConstants.FREEZE_WHP_LIMIT;
-import static com.brownfield.vre.VREConstants.GET_STRING_TAGS_QUERY;
+import static com.brownfield.vre.VREConstants.GET_STRING_METADATA_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_WELL_TEST_QUERY;
 import static com.brownfield.vre.VREConstants.MAX_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.MAX_WHP;
@@ -23,7 +23,6 @@ import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.SHRINKAGE_FACTOR;
 import static com.brownfield.vre.VREConstants.SINGLE_RATE_TEST;
 import static com.brownfield.vre.VREConstants.SOURCE_VALUES;
-import static com.brownfield.vre.VREConstants.SOURCE_VRE;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
 import static com.brownfield.vre.VREConstants.START_OFFSET;
@@ -59,7 +58,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -70,6 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Logger;
+
+import com.brownfield.vre.VREConstants.SOURCE;
 
 /**
  * The Class ValidateWellTest.
@@ -318,7 +318,7 @@ public class ValidateWellTest {
 	private Map<String, String> getTags(Connection conn, int stringID) {
 		Map<String, String> tags = new HashMap<>();
 
-		try (PreparedStatement statement = conn.prepareStatement(GET_STRING_TAGS_QUERY);) {
+		try (PreparedStatement statement = conn.prepareStatement(GET_STRING_METADATA_QUERY);) {
 			statement.setInt(1, stringID);
 			try (ResultSet rset = statement.executeQuery();) {
 				if (rset != null && rset.next()) { // one row per string
@@ -406,19 +406,19 @@ public class ValidateWellTest {
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_WELL_TEST_QUERY);) {
 			statement.setInt(1, stringID);
 			statement.setString(2, SINGLE_RATE_TEST);
-			Timestamp testStartDate = convertDate(startDate, SWITCH_TIME_ZONE);
-			Timestamp testEndDate = convertDate(endDate, SWITCH_TIME_ZONE);
+			Timestamp testStartDate = Utils.getDateFromString(startDate, SWITCH_TIME_ZONE);
+			Timestamp testEndDate = Utils.getDateFromString(endDate, SWITCH_TIME_ZONE);
 			statement.setTimestamp(3, testStartDate);
 			statement.setTimestamp(4, testEndDate);
-			statement.setInt(5, SOURCE_VRE);
+			statement.setInt(5, SOURCE.VRE.getNumVal());
 			statement.setDouble(6, liquidRate);
 			statement.setDouble(7, whp);
 			statement.setDouble(8, watercut);
 			statement.setBoolean(9, vreFlag);
 			statement.setString(10, remark);
 			rowsInserted = statement.executeUpdate();
-			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID
-					+ " & Date : " + startDate);
+			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : "
+					+ startDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 		}
@@ -465,30 +465,6 @@ public class ValidateWellTest {
 		dates.put(TEST_END_DATE, sdf.format(endCal.getTime()));
 
 		return dates;
-	}
-
-	/**
-	 * Convert date.
-	 *
-	 * @param date
-	 *            the date
-	 * @param shiftTimeZone
-	 *            the shift time zone
-	 * @return the timestamp
-	 */
-	private Timestamp convertDate(String date, boolean shiftTimeZone) {
-		SimpleDateFormat sdf = new SimpleDateFormat(DATE_TIME_FORMAT);
-		Date shiftDate = new Date();
-		try {
-			if (shiftTimeZone) {
-				TimeZone utcTZ = TimeZone.getTimeZone("GST");
-				sdf.setTimeZone(utcTZ);
-			}
-			shiftDate = sdf.parse(date);
-		} catch (ParseException e) {
-			LOGGER.severe(e.getMessage());
-		}
-		return new Timestamp(shiftDate.getTime());
 	}
 
 	/**

@@ -9,7 +9,6 @@ import static com.brownfield.vre.VREConstants.PI;
 import static com.brownfield.vre.VREConstants.RESERVOIR_PRESSURE;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
-import static com.brownfield.vre.VREConstants.SOURCE_VRE;
 import static com.brownfield.vre.VREConstants.VRE1;
 import static com.brownfield.vre.VREConstants.VRE2;
 import static com.brownfield.vre.VREConstants.VRE3;
@@ -34,6 +33,7 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 
+import com.brownfield.vre.VREConstants.SOURCE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.WellModel;
 
@@ -147,10 +147,10 @@ public class VREExeWorker implements Runnable {
 				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getVre1().getTime());
 				this.insertOrUpdateVRE(stringID, whp, wcut, wellModel, recordedDate, vreConn);
 			} else {
-				LOGGER.severe(threadName + " : Exception in calling VRE1 - " + wellModel.getErrors());
+				LOGGER.severe(threadName + " : Exception in calling VRE - " + wellModel.getErrors());
 			}
 		} else {
-			LOGGER.severe(threadName + " : Something went wrong while calling VRE1 for string - " + stringID);
+			LOGGER.severe(threadName + " : Something went wrong while calling VRE for string - " + stringID);
 		}
 		LOGGER.info(threadName + " Finished VRE for " + this.stringID);
 	}
@@ -326,7 +326,7 @@ public class VREExeWorker implements Runnable {
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE_QUERY);) {
 			statement.setInt(1, stringID);
 			statement.setTimestamp(2, recordedDate);
-			statement.setInt(3, SOURCE_VRE);
+			statement.setInt(3, SOURCE.VRE.getNumVal());
 			statement.setDouble(4, vre1 != null ? vre1 : 0);
 			statement.setDouble(5, vre2 != null ? vre2 : 0);
 			statement.setDouble(6, vre3 != null ? vre3 : 0);

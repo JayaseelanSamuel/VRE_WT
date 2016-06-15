@@ -82,11 +82,9 @@ public class VREConstants {
 	public static String VRE_EXE_LOC = "D:/Pipesim_Models/VRE.exe";
 
 	// TODO: Revisit
-	/** The VRE6 input folder. */
-	public static String VRE6_INPUT_FOLDER = "D:/Pipesim_Models/VRE6_InputModels/";
 
 	/** The VRE6 output folder. */
-	public static String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
+	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
 
 	// Properties end
 
@@ -119,7 +117,7 @@ public class VREConstants {
 	/**
 	 * The Enum DSIS_JOB_TYPE.
 	 */
-	public enum DSIS_JOB_TYPE {
+	public static enum DSIS_JOB_TYPE {
 		/** The submitted. */
 		SUBMITTED(0),
 		/** The in progress. */
@@ -155,7 +153,7 @@ public class VREConstants {
 	/**
 	 * The Enum DSRTA_JOB_TYPE.
 	 */
-	public enum DSRTA_JOB_TYPE {
+	public static enum DSRTA_JOB_TYPE {
 
 		/** The reset. */
 		INVALID(0),
@@ -187,6 +185,47 @@ public class VREConstants {
 		}
 	}
 
+	/**
+	 * The Enum SOURCE.
+	 */
+	public static enum SOURCE {
+
+		/** The zadco. */
+		ZADCO(1),
+		/** The seabed. */
+		SEABED(2),
+		/** The avocet. */
+		AVOCET(3),
+		/** The phd. */
+		PHD(4),
+		/** The excel. */
+		EXCEL(5),
+		/** The vre. */
+		VRE(6);
+
+		/** The num val. */
+		private int numVal;
+
+		/**
+		 * Instantiates a new source.
+		 *
+		 * @param numVal
+		 *            the num val
+		 */
+		SOURCE(int numVal) {
+			this.numVal = numVal;
+		}
+
+		/**
+		 * Gets the num val.
+		 *
+		 * @return the num val
+		 */
+		public int getNumVal() {
+			return numVal;
+		}
+	}
+
 	// Queries
 
 	/** The well test new query. */
@@ -195,13 +234,14 @@ public class VREConstants {
 	// exclude it in next run) and update QL1 to standard conditions
 	public static final String WELL_TEST_NEW_QUERY = "SELECT STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, TRY_CONVERT(VARCHAR(10), TEST_END_DATE, 120) AS EFFECTIVE_DATE, "
 			+ " TEST_TYPE, VRE_FLAG, ROW_CHANGED_BY, ROW_CHANGED_DATE "
-			+ " FROM WELL_TEST WHERE TEST_TYPE = 'FT' AND VRE_FLAG IS NULL"; // AND
-																				// SOURCE_ID
+			+ " FROM WELL_TEST WHERE TEST_TYPE = 'FT' AND VRE_FLAG IS NULL";
+	// AND SOURCE_ID = 2
 
-	/** The get string tags query. */
-	public static final String GET_STRING_TAGS_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI, S.STRING_TYPE) AS STRING_NAME, P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, "
-			+ " SM.TAG_WHP, SM.TAG_WHT FROM STRING S "
-			+ " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
+	/** The complete string information. */
+	public static final String GET_STRING_METADATA_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, S.STRING_NAME, S.COMPLETION_DATE, S.LATITUDE, S.LONGITUDE, S.CURRENT_STATUS, S.SELECTED_VRE, "
+			+ " P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, P.TAG_WATERCUT, P.TAG_HEADER_PRESSURE, P.TAG_INJ_HEADER_PRESSURE, "
+			+ " TAG_WHP, TAG_WHT, TAG_CHOKE_SIZE, TAG_DOWNHOLE_PRESSURE, TAG_GASLIFT_INJ_RATE, TAG_WATER_VOL_RATE, TAG_OIL_VOL_RATE, TAG_ANN_PRESSURE_A, TAG_ANN_PRESSURE_B, PIPESIM_MODEL_LOC, STABILITY_FLAG "
+			+ " FROM STRING S " + " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
 			+ " LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
 			+ " LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID " + " WHERE S.STRING_ID = ? ";
 
@@ -217,10 +257,9 @@ public class VREConstants {
 	/** The insert well test query. */
 	public static final String INSERT_WELL_TEST_QUERY = "INSERT INTO WELL_TEST (STRING_ID, TEST_TYPE, TEST_START_DATE, TEST_END_DATE, SOURCE_ID, QL1, WHP1, TEST_WATER_CUT, VRE_FLAG, REMARK) "
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	
-	
-	/** The Constant GET_STRING_INFO_QUERY. */
-	public static final String GET_STRING_INFO_QUERY = "SELECT STRING_ID, UWI, STRING_TYPE, CONCAT(UWI, STRING_TYPE) AS STRING_NAME "
+
+	/** The Constant GET_STRING_NAME_QUERY. */
+	public static final String GET_STRING_NAME_QUERY = "SELECT STRING_ID, UWI, STRING_TYPE, S.STRING_NAME "
 			+ " FROM STRING WHERE STRING_ID = ? ";
 
 	/** The Constant VRE_VARIABLE_QUERY. */
@@ -230,7 +269,8 @@ public class VREConstants {
 	 * The Constant VRE1_DATASET_QUERY. TODO : Change TRY_CONVERT(DATETIME,
 	 * '2015-12-02', 102) to getdate() later
 	 */
-	public static final String VRE1_DATASET_QUERY = "SELECT T.*, DM.AVG_WELLHEAD_PRESSURE, DD.WATER_CUT_LAB, DM.AVG_HEADER_PRESSURE, DM.AVG_BH_PRESSURE, DM.AVG_GAS_INJ_RATE, DM.AVG_CHOKE "
+	// FIXME : Use update schema
+	public static final String VRE_DATASET_QUERY = "SELECT T.*, DM.AVG_WELLHEAD_PRESSURE, DD.WATER_CUT_LAB, DM.AVG_HEADER_PRESSURE, DM.AVG_BH_PRESSURE, DM.AVG_GAS_INJ_RATE, DM.AVG_CHOKE "
 			+ " FROM ( "
 			+ "	SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, DATEADD(dd, DATEDIFF(dd, 0, TRY_CONVERT(DATETIME, '2015-12-02', 102)), -1) AS RECORDED_DATE, "
 			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE2, "
@@ -266,17 +306,47 @@ public class VREConstants {
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	/** The Constant VRE_JOBS_QUERY. */
-	public static final String VRE_JOBS_QUERY = "SELECT J.STRING_ID, S.UWI, S.STRING_TYPE, CONCAT(S.UWI,S.STRING_TYPE) AS STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, J.ROW_CHANGED_BY, J.ROW_CHANGED_DATE "
+	public static final String VRE_JOBS_QUERY = "SELECT J.STRING_ID, S.STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, J.ROW_CHANGED_BY, J.ROW_CHANGED_DATE "
 			+ " FROM VRE6_JOBS J " + " LEFT OUTER JOIN STRING S ON J.STRING_ID = S.STRING_ID "
 			+ " WHERE J.STRING_ID = ? ";
 
 	/** The Constant INSERT_VRE_JOBS_QUERY. */
-	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, STRING_NAME, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK, ROW_CREATED_BY) "
-			+ " VALUES (?, ?, ?, ?, ?, ?) ";
-	
+	public static final String INSERT_VRE_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK, ROW_CREATED_BY) "
+			+ " VALUES (?, ?, ?, ?, ?) ";
+
 	/** The Constant VRE_JOBS_IN_PROGRESS_QUERY. */
-	public static final String VRE_JOBS_IN_PROGRESS_QUERY = "SELECT STRING_ID, STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+	public static final String VRE_JOBS_IN_PROGRESS_QUERY = "SELECT STRING_ID, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, ROW_CHANGED_BY, ROW_CHANGED_DATE "
 			+ " FROM VRE6_JOBS WHERE DSIS_STATUS_ID = 1 AND DSRTA_STATUS_ID = 0 ";
+
+	/** The Constant RT_DISTINCT_STRING_FOR_DAY_QUERY. */
+	public static final String RT_DISTINCT_STRING_FOR_DAY_QUERY = "SELECT RT.STRING_ID, START_DATE, END_DATE FROM( "
+			+ " SELECT DISTINCT STRING_ID, CAST(RECORDED_DATE AS DATE) RECORDED_DATE FROM REAL_TIME_DATA WHERE CAST(RECORDED_DATE AS DATE) = ? "
+			+ " ) RT LEFT OUTER JOIN STRING_DOWNTIME SD ON SD.STRING_ID = RT.STRING_ID AND RECORDED_DATE BETWEEN CAST(START_DATE AS DATE) AND END_DATE";
+
+	/** The Constant AVG_WHERE_CLAUSE. */
+	public static final String AVG_WHERE_CLAUSE = " AND RECORDED_DATE NOT BETWEEN '%S' AND '%S' ";
+
+	/** The Constant AVG_MEASUREMENT_QUERY. */
+	public static final String AVG_MEASUREMENT_QUERY = "SELECT * FROM ("
+			+ " SELECT STRING_ID, RECORDED_DATE, CONCAT('AVG_',TAG_TYPE) AS TAG_TYPE, AVERAGE " + " FROM( "
+			+ " SELECT STRING_ID, CAST(RECORDED_DATE AS DATE) AS RECORDED_DATE, TAG_TYPE_ID , AVG(TAGRAWVALUE) AS AVERAGE "
+			+ " FROM REAL_TIME_DATA " + " WHERE CAST(RECORDED_DATE AS DATE) = ? AND STRING_ID = ? " + " %S "
+			+ " GROUP BY STRING_ID, CAST(RECORDED_DATE AS DATE), TAG_TYPE_ID " + " ) RT "
+			+ " LEFT OUTER JOIN TAG_TYPE TT ON TT.TAG_TYPE_ID = RT.TAG_TYPE_ID " + " ) SRC " + " PIVOT ( "
+			+ " SUM(AVERAGE) FOR TAG_TYPE IN ([AVG_WHP], [AVG_WHT], [AVG_CHOKE_SIZE], [AVG_DOWNHOLE_PRESSURE], [AVG_GASLIFT_INJ_RATE], [AVG_WATER_VOL_RATE], "
+			+ " [AVG_OIL_VOL_RATE], [AVG_ANN_PRESSURE_A], [AVG_ANN_PRESSURE_B], [AVG_LIQUID_RATE], [AVG_GAS_RATE], [AVG_WATERCUT], [AVG_HEADER_PRESSURE])"
+			+ " ) PIV ";
+
+	/** The Constant AVG_MEASUREMENT_SELECT_QUERY. */
+	public static final String AVG_MEASUREMENT_SELECT_QUERY = "SELECT STRING_ID, RECORDED_DATE, AVG_WHP, AVG_WHT, AVG_CHOKE_SIZE, AVG_DOWNHOLE_PRESSURE, AVG_GASLIFT_INJ_RATE, "
+			+ " AVG_WATER_VOL_RATE, AVG_OIL_VOL_RATE, AVG_ANN_PRESSURE_A, AVG_ANN_PRESSURE_B, AVG_LIQUID_RATE, AVG_GAS_RATE, AVG_WATERCUT, AVG_HEADER_PRESSURE, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+			+ " FROM DAILY_AVERAGE_MEASUREMENT " + " WHERE STRING_ID = ? AND RECORDED_DATE = ? ";
+
+	/** The Constant INSERT_AVG_MEASUREMENT_QUERY. */
+	public static final String INSERT_AVG_MEASUREMENT_QUERY = "INSERT INTO DAILY_AVERAGE_MEASUREMENT ("
+			+ " STRING_ID, RECORDED_DATE, AVG_WHP, AVG_WHT, AVG_CHOKE_SIZE, AVG_DOWNHOLE_PRESSURE, AVG_GASLIFT_INJ_RATE, AVG_WATER_VOL_RATE, AVG_OIL_VOL_RATE, "
+			+ " AVG_ANN_PRESSURE_A, AVG_ANN_PRESSURE_B, AVG_LIQUID_RATE, AVG_GAS_RATE, AVG_WATERCUT, AVG_HEADER_PRESSURE, REMARK, ROW_CREATED_BY) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
 
 	/** The Constant JOBS_REMARK. */
 	public static final String JOBS_REMARK = "Job %s on %s";
@@ -288,23 +358,26 @@ public class VREConstants {
 	/** The flow test. */
 	public static final String FLOW_TEST = "FT";
 
-	/** The source vre. */
-	public static final int SOURCE_VRE = 6;
-
 	/** The Constant THREAD_POOL_SIZE. */
 	public static final int THREAD_POOL_SIZE = 4;
 
 	/** The date time format. */
 	public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
 
+	/** The Constant DATE_FORMAT. */
+	public static final String DATE_FORMAT = "yyyy-MM-dd";
+
+	/** The Constant AVG_CALC_WORKFLOW. */
+	public static final String AVG_CALC_WORKFLOW = "Average Calculation Workflow";
+
 	/** The Constant WTV_WORKFLOW. */
 	public static final String WTV_WORKFLOW = "WellTestValidation Workflow";
 
 	/** The Constant VRE_WORKFLOW. */
-	public static final String VRE_WORKFLOW = "VRE Automation Workflow";
+	public static final String RECAL_WORKFLOW = "Recalibration Workflow";
 
 	/** The Constant VRE_WORKFLOW. */
-	public static final String RECAL_WORKFLOW = "Recalibration Workflow";
+	public static final String VRE_WORKFLOW = "VRE Automation Workflow";
 
 	/** The Constant FILE_MONITORING_SERVICE. */
 	public static final String FILE_MONITORING_SERVICE = "File Monitoring Service";
@@ -317,7 +390,7 @@ public class VREConstants {
 
 	/** The Constant CSV_EXTENSION. */
 	public static final String CSV_EXTENSION = ".csv";
-	
+
 	/** The Constant JSON_EXTENSION. */
 	public static final String JSON_EXTENSION = ".json";
 
@@ -334,6 +407,18 @@ public class VREConstants {
 
 	/** The Constant STRING_NAME. */
 	public static final String STRING_NAME = "STRING_NAME";
+
+	/** The Constant COMPLETION_DATE. */
+	public static final String COMPLETION_DATE = "COMPLETION_DATE";
+
+	/** The Constant LATITUDE. */
+	public static final String LATITUDE = "LATITUDE";
+
+	/** The Constant LONGITUDE. */
+	public static final String LONGITUDE = "LONGITUDE";
+
+	/** The Constant CURRENT_STATUS. */
+	public static final String CURRENT_STATUS = "CURRENT_STATUS";
 
 	/** The platform id. */
 	public static final String PLATFORM_ID = "PLATFORM_ID";
@@ -376,28 +461,28 @@ public class VREConstants {
 
 	/** The stability flag. */
 	public static final String STABILITY_FLAG = "STABILITY_FLAG";
-	
+
 	/** The Constant TIMESTAMP. */
 	public static final String TIMESTAMP = "timestamp";
 
 	/** The source values. */
 	public static final String SOURCE_VALUES = "sourceValues";
-	
+
 	/** The Constant QUALITY. */
 	public static final String QUALITY = "quality";
-	
+
 	/** The Constant AGGREGATE_ID. */
 	public static final String AGGREGATE_ID = "aggregateId";
-	
+
 	/** The Constant NO_OF_VALUES. */
 	public static final String NO_OF_VALUES = "noOfValues";
-	
+
 	/** The Constant RESAMPLE_INTERVAL. */
 	public static final String RESAMPLE_INTERVAL = "resampleInterval";
-	
+
 	/** The Constant START_TIMESTAMP. */
 	public static final String START_TIMESTAMP = "startTimestamp";
-	
+
 	/** The Constant END_TIMESTAMP. */
 	public static final String END_TIMESTAMP = "endTimestamp";
 
@@ -454,21 +539,6 @@ public class VREConstants {
 
 	/** The Constant RECORDED_DATE. */
 	public static final String RECORDED_DATE = "RECORDED_DATE";
-
-	/** The Constant AVG_WELLHEAD_PRESSURE. */
-	public static final String AVG_WELLHEAD_PRESSURE = "AVG_WELLHEAD_PRESSURE";
-
-	/** The Constant AVG_HEADER_PRESSURE. */
-	public static final String AVG_HEADER_PRESSURE = "AVG_HEADER_PRESSURE";
-
-	/** The Constant AVG_BH_PRESSURE. */
-	public static final String AVG_BH_PRESSURE = "AVG_BH_PRESSURE";
-
-	/** The Constant AVG_GAS_INJ_RATE. */
-	public static final String AVG_GAS_INJ_RATE = "AVG_GAS_INJ_RATE";
-
-	/** The Constant AVG_CHOKE. */
-	public static final String AVG_CHOKE = "AVG_CHOKE";
 
 	/** The Constant RUN_VRE2. */
 	public static final String RUN_VRE2 = "RUN_VRE2";
@@ -533,6 +603,53 @@ public class VREConstants {
 	/** The Constant DSRTA_STATUS_ID. */
 	public static final String DSRTA_STATUS_ID = "DSRTA_STATUS_ID";
 
+	/** The Constant START_DATE. */
+	public static final String START_DATE = "START_DATE";
+
+	/** The Constant END_DATE. */
+	public static final String END_DATE = "END_DATE";
+
+	/** The Constant AVG_WHP. */
+	public static final String AVG_WHP = "AVG_WHP";
+
+	/** The Constant AVG_WHT. */
+	public static final String AVG_WHT = "AVG_WHT";
+
+	/** The Constant AVG_CHOKE_SIZE. */
+	public static final String AVG_CHOKE_SIZE = "AVG_CHOKE_SIZE";
+
+	/** The Constant AVG_DOWNHOLE_PRESSURE. */
+	public static final String AVG_DOWNHOLE_PRESSURE = "AVG_DOWNHOLE_PRESSURE";
+
+	/** The Constant AVG_GASLIFT_INJ_RATE. */
+	public static final String AVG_GASLIFT_INJ_RATE = "AVG_GASLIFT_INJ_RATE";
+
+	/** The Constant AVG_WATER_VOL_RATE. */
+	public static final String AVG_WATER_VOL_RATE = "AVG_WATER_VOL_RATE";
+
+	/** The Constant AVG_OIL_VOL_RATE. */
+	public static final String AVG_OIL_VOL_RATE = "AVG_OIL_VOL_RATE";
+
+	/** The Constant AVG_ANN_PRESSURE_A. */
+	public static final String AVG_ANN_PRESSURE_A = "AVG_ANN_PRESSURE_A";
+
+	/** The Constant AVG_ANN_PRESSURE_B. */
+	public static final String AVG_ANN_PRESSURE_B = "AVG_ANN_PRESSURE_B";
+
+	/** The Constant AVG_LIQUID_RATE. */
+	public static final String AVG_LIQUID_RATE = "AVG_LIQUID_RATE";
+
+	/** The Constant AVG_GAS_RATE. */
+	public static final String AVG_GAS_RATE = "AVG_GAS_RATE";
+
+	/** The Constant AVG_WATERCUT. */
+	public static final String AVG_WATERCUT = "AVG_WATERCUT";
+
+	/** The Constant AVG_HEADER_PRESSURE. */
+	public static final String AVG_HEADER_PRESSURE = "AVG_HEADER_PRESSURE";
+
+	// public static final String AVG_HEADER_PRESSURE = "AVG_HEADER_PRESSURE";
+
 	// arguments
 
 	/** The Constant ARG_VRE1. */
@@ -555,6 +672,9 @@ public class VREConstants {
 
 	/** The Constant ARG_MODEL. */
 	public static final String ARG_MODEL = "-model";
+
+	/** The Constant ARG_OUTPUT_LOC. */
+	public static final String ARG_OUTPUT_LOC = "-o";
 
 	/** The Constant ARG_WHP. */
 	public static final String ARG_WHP = "-whp";
