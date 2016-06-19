@@ -9,6 +9,7 @@ import static com.brownfield.vre.VREConstants.VRE_JNDI_NAME;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,6 +18,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.sql.DataSource;
 
+import com.brownfield.vre.AvgCalculator;
 import com.brownfield.vre.VREConstants;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
@@ -64,6 +66,40 @@ public class InternalVREManager {
 	}
 
 	/**
+	 * Refresh variables.
+	 */
+	public void refreshVariables() {
+		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Refreshing VRE variables started !!!");
+			VREConstants.refreshVariables(vreConn);
+			LOGGER.info("Refreshing VRE variables finished !!!");
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+	}
+
+
+	/**
+	 * Calculate average.
+	 *
+	 * @param recordedDate the recorded date
+	 */
+	public void calculateAverage(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Calculate averages started for - " + recordedDate);
+			AvgCalculator ac = new AvgCalculator();
+			ac.calculateAverage(vreConn, recordedDate);
+			LOGGER.info("Calculate averages finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+	}
+
+	/**
 	 * Validate new tests.
 	 */
 	public void validateWellTests() {
@@ -77,21 +113,6 @@ public class InternalVREManager {
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (ClassNotFoundException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
-		}
-	}
-
-	/**
-	 * Refresh variables.
-	 */
-	public void refreshVariables() {
-		try (Connection vreConn = getVREConnection()) {
-			LOGGER.info("Refreshing VRE variables started !!!");
-			VREConstants.refreshVariables(vreConn);
-			LOGGER.info("Refreshing VRE variables finished !!!");
-		} catch (SQLException e) {
-			LOGGER.log(Level.SEVERE, e.getMessage());
-		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}
 	}
@@ -129,7 +150,7 @@ public class InternalVREManager {
 	}
 
 	/**
-	 * Run vr es.
+	 * Run vres.
 	 */
 	public void runVREs() {
 		try (Connection vreConn = getVREConnection()) {

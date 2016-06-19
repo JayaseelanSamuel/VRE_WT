@@ -218,8 +218,7 @@ public class VREExecutioner {
 									rowCount++;
 								}
 								if (review) {
-									// TODO: Trigger email either here or from
-									// BPM
+									// TODO: Trigger email either here or BPM
 								}
 
 							} else {

@@ -1,11 +1,16 @@
 package com.brownfield.vre.rest;
 
+import java.sql.Timestamp;
+
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Response;
 
-// TODO: Auto-generated Javadoc
+import com.brownfield.vre.Utils;
+import com.brownfield.vre.VREConstants;
+
 /**
  * The Class VREApplicationResource.
  * 
@@ -21,22 +26,7 @@ public class VREBaseResource {
 	 */
 	@GET
 	public Response doNothing() {
-		String result = "Too close but too far !!";
-		return Response.status(200).entity(result).build();
-	}
-
-
-	/**
-	 * Validate well t est.
-	 *
-	 * @return the response
-	 */
-	@GET
-	@Path("/validateWellTests")
-	public Response validateWellTests() {
-		String result = "Well test validation started";
-		InternalVREManager ivm = new InternalVREManager();
-		ivm.validateWellTests();
+		String result = "Almost there !!!<br />Try again with actual resource now.";
 		return Response.status(200).entity(result).build();
 	}
 
@@ -55,6 +45,47 @@ public class VREBaseResource {
 	}
 
 	/**
+	 * Calculate average.
+	 *
+	 * @param date the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/calculateAverage")
+	public Response calculateAverage(@QueryParam("date") String date) {
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			recordedDate = Utils.getYesterdayTimestamp();
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Averages calculated for - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.calculateAverage(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Validate well test.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/validateWellTests")
+	public Response validateWellTests() {
+		String result = "Validated new well tests";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.validateWellTests();
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
 	 * Run calibration.
 	 *
 	 * @return the response
@@ -69,20 +100,6 @@ public class VREBaseResource {
 	}
 
 	/**
-	 * Run vres.
-	 *
-	 * @return the response
-	 */
-	@GET
-	@Path("/runVREs")
-	public Response runVREs() {
-		String result = "Started running VREs";
-		InternalVREManager ivm = new InternalVREManager();
-		ivm.runVREs();
-		return Response.status(200).entity(result).build();
-	}
-
-	/**
 	 * Monitor jobs.
 	 *
 	 * @return the response
@@ -93,6 +110,20 @@ public class VREBaseResource {
 		String result = "Monitored and updated current jobs";
 		InternalVREManager ivm = new InternalVREManager();
 		ivm.monitorJobs();
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Run vres.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/runVREs")
+	public Response runVREs() {
+		String result = "Started running VREs";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.runVREs();
 		return Response.status(200).entity(result).build();
 	}
 

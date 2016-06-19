@@ -90,10 +90,11 @@ public class Utils {
 				sdf.setTimeZone(utcTZ);
 			}
 			shiftDate = sdf.parse(date);
+			return new Timestamp(shiftDate.getTime());
 		} catch (ParseException e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe("Can not parse " + date + " using format " + format);
 		}
-		return new Timestamp(shiftDate.getTime());
+		return null;
 	}
 
 	/**
@@ -107,6 +108,22 @@ public class Utils {
 	 */
 	public static Timestamp getDateFromString(String date, boolean shiftTimeZone) {
 		return getDateFromString(date, DATE_TIME_FORMAT, shiftTimeZone);
+	}
+	
+	
+	/**
+	 * Parses the date with either date format or date time format
+	 *
+	 * @param date the date
+	 * @return the timestamp
+	 */
+	public static Timestamp parseDate(String date) {
+		Timestamp t = getDateFromString(date, DATE_TIME_FORMAT, Boolean.FALSE);
+		if (t != null) {
+			return t;
+		} else {
+			return getDateFromString(date, DATE_FORMAT, Boolean.FALSE);
+		}
 	}
 
 	/**

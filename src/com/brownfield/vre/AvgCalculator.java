@@ -89,7 +89,7 @@ public class AvgCalculator {
 	 *            the recorded date
 	 * @return true, if successful
 	 */
-	private void calculateAverage(Connection vreConn, Timestamp recordedDate) {
+	public void calculateAverage(Connection vreConn, Timestamp recordedDate) {
 		try (PreparedStatement statement = vreConn.prepareStatement(RT_DISTINCT_STRING_FOR_DAY_QUERY);) {
 			statement.setTimestamp(1, recordedDate);
 			try (ResultSet rset = statement.executeQuery();) {
@@ -115,30 +115,56 @@ public class AvgCalculator {
 							stmt.setTimestamp(1, recordedDate);
 							stmt.setInt(2, stringID);
 							try (ResultSet avgRset = stmt.executeQuery();) {
+								Double whp = null;
+								Double wht = null;
+								Double choke = null;
+								Double pdgp = null;
+								Double gasInjRate = null;
+								Double waterVolRate = null;
+								Double oilVolRate = null;
+								Double annPreA = null;
+								Double annPreB = null;
+								Double liqRate = null;
+								Double gasRate = null;
+								Double wcut = null;
+								Double hp = null;
 								if (avgRset != null && avgRset.next()) {
 									// one row per string
-									Double whp = avgRset.getDouble(AVG_WHP);
-									Double wht = avgRset.getDouble(AVG_WHT);
-									Double choke = avgRset.getDouble(AVG_CHOKE_SIZE);
-									Double pdgp = avgRset.getDouble(AVG_DOWNHOLE_PRESSURE);
-									Double gasInjRate = avgRset.getDouble(AVG_GASLIFT_INJ_RATE);
-									Double waterVolRate = avgRset.getDouble(AVG_WATER_VOL_RATE);
-									Double oilVolRate = avgRset.getDouble(AVG_OIL_VOL_RATE);
-									Double annPreA = avgRset.getDouble(AVG_ANN_PRESSURE_A);
-									Double annPreB = avgRset.getDouble(AVG_ANN_PRESSURE_B);
-									Double liqRate = avgRset.getDouble(AVG_LIQUID_RATE);
-									Double gasRate = avgRset.getDouble(AVG_GAS_RATE);
-									Double wcut = avgRset.getDouble(AVG_WATERCUT);
-									Double hp = avgRset.getDouble(AVG_HEADER_PRESSURE);
-
-									this.insertOrUpdateAvgRecord(vreConn, stringID, recordedDate, whp, wht, choke, pdgp,
-											gasInjRate, waterVolRate, oilVolRate, annPreA, annPreB, liqRate, gasRate,
-											wcut, hp, remark);
+									// getObject instead of getDouble to store
+									// null values instead of default 0.0
+									whp = avgRset.getObject(AVG_WHP) == null ? null : avgRset.getDouble(AVG_WHP);
+									wht = avgRset.getObject(AVG_WHT) == null ? null : avgRset.getDouble(AVG_WHT);
+									choke = avgRset.getObject(AVG_CHOKE_SIZE) == null ? null
+											: avgRset.getDouble(AVG_CHOKE_SIZE);
+									pdgp = avgRset.getObject(AVG_DOWNHOLE_PRESSURE) == null ? null
+											: avgRset.getDouble(AVG_DOWNHOLE_PRESSURE);
+									gasInjRate = avgRset.getObject(AVG_GASLIFT_INJ_RATE) == null ? null
+											: avgRset.getDouble(AVG_GASLIFT_INJ_RATE);
+									waterVolRate = avgRset.getObject(AVG_WATER_VOL_RATE) == null ? null
+											: avgRset.getDouble(AVG_WATER_VOL_RATE);
+									oilVolRate = avgRset.getObject(AVG_OIL_VOL_RATE) == null ? null
+											: avgRset.getDouble(AVG_OIL_VOL_RATE);
+									annPreA = avgRset.getObject(AVG_ANN_PRESSURE_A) == null ? null
+											: avgRset.getDouble(AVG_ANN_PRESSURE_A);
+									annPreB = avgRset.getObject(AVG_ANN_PRESSURE_B) == null ? null
+											: avgRset.getDouble(AVG_ANN_PRESSURE_B);
+									liqRate = avgRset.getObject(AVG_LIQUID_RATE) == null ? null
+											: avgRset.getDouble(AVG_LIQUID_RATE);
+									gasRate = avgRset.getObject(AVG_GAS_RATE) == null ? null
+											: avgRset.getDouble(AVG_GAS_RATE);
+									wcut = avgRset.getObject(AVG_WATERCUT) == null ? null
+											: avgRset.getDouble(AVG_WATERCUT);
+									hp = avgRset.getObject(AVG_HEADER_PRESSURE) == null ? null
+											: avgRset.getDouble(AVG_HEADER_PRESSURE);
 								} else {
 									// no record as downtime overshadows
+									remark = "Downtime overshadows for the day " + startDate + " to " + endDate;
 									LOGGER.severe("Downtime overshadows the average period for String : " + stringID
 											+ " with downtime " + startDate + " to " + endDate);
 								}
+								this.insertOrUpdateAvgRecord(vreConn, stringID, recordedDate, whp, wht, choke, pdgp,
+										gasInjRate, waterVolRate, oilVolRate, annPreA, annPreB, liqRate, gasRate, wcut,
+										hp, remark);
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());
 							}

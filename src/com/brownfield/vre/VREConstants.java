@@ -18,24 +18,24 @@ public class VREConstants {
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "<SERVER_URL>";
+	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
 
 	/** The vre user. */
-	public static String VRE_USER = "<USER>";
+	public static String VRE_USER = "vre";
 
 	/** The vre password. */
-	public static String VRE_PASSWORD = "<PASSWORD>";
+	public static String VRE_PASSWORD = "vre";
 
 	// Properties which will be overridden at the application context load
 
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "<SERVER_URL>";
+	public static String PHD_TEIID_URL = "jdbc:teiid:OPCHD@mm://VWBFAPPT.zadco.ad:31000;version=1;";
 
 	/** The teiid user. */
-	public static String TEIID_USER = "<USER>";
+	public static String TEIID_USER = "dsdsadmin";
 
 	/** The teiid password. */
-	public static String TEIID_PASSWORD = "<PASSWORD>";
+	public static String TEIID_PASSWORD = "dsdsadmin";
 
 	/** The vre jndi name. */
 	public static String VRE_JNDI_NAME = "java:/VRE";
@@ -80,8 +80,6 @@ public class VREConstants {
 
 	/** The vre exe. */
 	public static String VRE_EXE_LOC = "D:/Pipesim_Models/VRE.exe";
-
-	// TODO: Revisit
 
 	/** The VRE6 output folder. */
 	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
@@ -269,21 +267,19 @@ public class VREConstants {
 	 * The Constant VRE1_DATASET_QUERY. TODO : Change TRY_CONVERT(DATETIME,
 	 * '2015-12-02', 102) to getdate() later
 	 */
-	// FIXME : Use update schema
-	public static final String VRE_DATASET_QUERY = "SELECT T.*, DM.AVG_WELLHEAD_PRESSURE, DD.WATER_CUT_LAB, DM.AVG_HEADER_PRESSURE, DM.AVG_BH_PRESSURE, DM.AVG_GAS_INJ_RATE, DM.AVG_CHOKE "
+	public static final String VRE_DATASET_QUERY = "SELECT T.*, DM.AVG_WHP, DD.WATER_CUT_LAB, DM.AVG_DOWNHOLE_PRESSURE, DM.AVG_GASLIFT_INJ_RATE, DM.AVG_CHOKE_SIZE, DM.AVG_HEADER_PRESSURE "
 			+ " FROM ( "
-			+ "	SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, DATEADD(dd, DATEDIFF(dd, 0, TRY_CONVERT(DATETIME, '2015-12-02', 102)), -1) AS RECORDED_DATE, "
-			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE2, "
-			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE3,"
-			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL AND TAG_GASLIFT_INJ_RATE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE4, "
-			+ "	CAST(IIF(SM.TAG_CHOKE_SIZE IS NOT NULL AND P.TAG_HEADER_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE5 "
-			+ "	FROM STRING S " + "	LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
-			+ "	LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
-			+ "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
-			+ "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL AND TAG_WHP IS NOT NULL) T "
+			+ " SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, DATEADD(dd, DATEDIFF(dd, 0, TRY_CONVERT(DATETIME, '2016-03-03', 102)), -1) AS RECORDED_DATE, "
+			+ " CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE2, CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE3, "
+			+ " CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL AND TAG_GASLIFT_INJ_RATE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE4, "
+			+ " CAST(IIF(SM.TAG_CHOKE_SIZE IS NOT NULL AND P.TAG_HEADER_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE5 "
+			+ " FROM STRING S " + " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
+			+ " LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
+			+ " LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
+			+ " WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL AND TAG_WHP IS NOT NULL ) T "
 			+ " INNER JOIN DAILY_AVERAGE_MEASUREMENT DM ON DM.STRING_ID = T.STRING_ID AND DM.RECORDED_DATE = T.RECORDED_DATE "
-			+ " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = T.RECORDED_DATE ";
-
+			+ " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = T.RECORDED_DATE  ";
+	
 	/**
 	 * The Constant WELL_TEST_CALIBRATE_QUERY. identify eligible tests for
 	 * calibration by looking for SR testType, VRE flag = true and Calibrated
