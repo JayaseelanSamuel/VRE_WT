@@ -1,6 +1,7 @@
 package com.brownfield.vre.exe;
 
 import static com.brownfield.vre.VREConstants.ARG_CHOKE;
+import static com.brownfield.vre.VREConstants.ARG_GAS_INJ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_HEADER;
 import static com.brownfield.vre.VREConstants.ARG_MODEL;
 import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
@@ -14,7 +15,7 @@ import static com.brownfield.vre.VREConstants.ARG_VRE5;
 import static com.brownfield.vre.VREConstants.ARG_VRE6;
 import static com.brownfield.vre.VREConstants.ARG_WATERCUT;
 import static com.brownfield.vre.VREConstants.ARG_WHP;
-import static com.brownfield.vre.VREConstants.AVG_CHOKE_SIZE;
+import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
 import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
@@ -22,6 +23,7 @@ import static com.brownfield.vre.VREConstants.AVG_WHP;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
+import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
@@ -133,7 +135,7 @@ public class VREExecutioner {
 				double hp = rset.getDouble(AVG_HEADER_PRESSURE);
 				double pdgp = rset.getDouble(AVG_DOWNHOLE_PRESSURE);
 				double gasInjRate = rset.getDouble(AVG_GASLIFT_INJ_RATE);
-				double choke = rset.getDouble(AVG_CHOKE_SIZE);
+				double choke = rset.getDouble(CHOKE_SETTING);
 				boolean runVRE2 = rset.getBoolean(RUN_VRE2);
 				boolean runVRE3 = rset.getBoolean(RUN_VRE3);
 				boolean runVRE4 = rset.getBoolean(RUN_VRE4);
@@ -150,19 +152,18 @@ public class VREExecutioner {
 				}
 				if (runVRE3) {
 					params.add(ARG_VRE3);
-					params.add(ARG_PDGP + pdgp);
+					//params.add(ARG_PDGP + pdgp); already added by vre2
 				}
 				if (runVRE4) {
 					params.add(ARG_VRE4);
-					params.add(ARG_PDGP + pdgp);
-					params.add("FIXMELATER" + gasInjRate);
+					//params.add(ARG_PDGP + pdgp); already added by vre2
+					params.add(ARG_GAS_INJ_RATE + gasInjRate);
 				}
 				if (runVRE5) {
 					params.add(ARG_VRE5);
 					params.add(ARG_CHOKE + choke);
 					params.add(ARG_HEADER + hp);
 				}
-				// TODO: Add more params for vre2-5 later
 				Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
 				executor.execute(worker);
 				rowCount++;
@@ -172,7 +173,7 @@ public class VREExecutioner {
 			}
 			long end = System.currentTimeMillis();
 			double duration = (end - start) / 1000;
-			LOGGER.info("Finished running VRE1 for " + rowCount + " strings in " + duration + " seconds");
+			LOGGER.info("Finished running VRE for " + rowCount + " strings in " + duration + " seconds");
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 		}
@@ -209,8 +210,7 @@ public class VREExecutioner {
 						if (wellModel.getErrors() == null) {
 							RecalModel recal = wellModel.getRecal();
 							if (recal != null) {
-								isCalibrated = true;
-								// FIXME: recal.getCalibration();
+								isCalibrated = recal.getCalibration();
 								boolean review = recal.isReview();
 								if (isCalibrated) {
 									this.insertOrUpdateJob(vreConn, stringID, executor);
@@ -230,8 +230,7 @@ public class VREExecutioner {
 					} else {
 						LOGGER.severe(" Something went wrong while calling recal for string - " + stringID);
 					}
-					// FIXME:Uncomment later
-					// rset.updateBoolean(IS_CALIBRATED, isCalibrated);
+					rset.updateBoolean(IS_CALIBRATED, isCalibrated);
 					rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
@@ -265,8 +264,8 @@ public class VREExecutioner {
 			StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 			try (ResultSet rset = statement.executeQuery()) {
 				List<String> params = new ArrayList<>();
-				params.add(VRE_EXE_LOC);// executable
-				params.add(ARG_VRE6); // TODO: Check the syntax
+				params.add(VRE_EXE_LOC);
+				params.add(ARG_VRE6);
 				params.add(ARG_MODEL + stringModel.getPipesimModelLoc());
 				params.add(ARG_OUTPUT_LOC + VRE6_OUTPUT_FOLDER);
 				String outputFile = VRE6_OUTPUT_FOLDER + stringModel.getStringName() + JSON_EXTENSION;

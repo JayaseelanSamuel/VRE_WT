@@ -2,6 +2,7 @@ package com.brownfield.vre;
 
 import static com.brownfield.vre.VREConstants.CV_LIQ_RATE_MAX;
 import static com.brownfield.vre.VREConstants.CV_WHP_MAX;
+import static com.brownfield.vre.VREConstants.CV_WATERCUT_MAX;
 import static com.brownfield.vre.VREConstants.DATE_TIME_FORMAT;
 import static com.brownfield.vre.VREConstants.EFFECTIVE_DATE;
 import static com.brownfield.vre.VREConstants.END_OFFSET;
@@ -32,6 +33,7 @@ import static com.brownfield.vre.VREConstants.STRING_TYPE;
 import static com.brownfield.vre.VREConstants.SWITCH_TIME_ZONE;
 import static com.brownfield.vre.VREConstants.TAG_GAS_RATE;
 import static com.brownfield.vre.VREConstants.TAG_LIQUID_RATE;
+import static com.brownfield.vre.VREConstants.TAG_WATERCUT;
 import static com.brownfield.vre.VREConstants.TAG_WHP;
 import static com.brownfield.vre.VREConstants.TAG_WHT;
 import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
@@ -145,7 +147,7 @@ public class ValidateWellTest {
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
 							SWITCH_TIME_ZONE);
 
-					boolean liqRateTabAvailable = true, whpTagAvailable = true;
+					boolean liqRateTabAvailable = true, whpTagAvailable = true, wcutTagAvailable = true;
 					boolean setVRE = false;
 					if (tags.get(TAG_LIQUID_RATE) == null) {
 						sb.append(TAG_LIQUID_RATE + " tag is missing for Platform " + tags.get(PLATFORM_NAME))
@@ -156,15 +158,21 @@ public class ValidateWellTest {
 						sb.append(TAG_WHP + " is missing for String " + tags.get(STRING_NAME)).append("\n");
 						whpTagAvailable = false;
 					}
+					if (tags.get(TAG_WATERCUT) == null) {
+						sb.append(TAG_WATERCUT + " is missing for Platform " + tags.get(PLATFORM_NAME)).append("\n");
+						wcutTagAvailable = false;
+					}
 
-					boolean liqRateHasNulls = false, whpHasNulls = false;
-					boolean isOutOfRangeLiqRate = false, isOutOfRangeWHP = false;
-					boolean isBelowFreezeLiqRate = false, isBelowFreezeWHP = false;
+					boolean liqRateHasNulls = false, whpHasNulls = false, wcutHasNulls = false;
+					boolean isOutOfRangeLiqRate = false, isOutOfRangeWHP = false, isOutOfRangeWCUT = false;
+					boolean isBelowFreezeLiqRate = false, isBelowFreezeWHP = false, isBelowFreezeWCUT = false;
 
-					boolean phdLiqRateDataAvail = true, phdWHPDataAvail = true;
+					boolean phdLiqRateDataAvail = true, phdWHPDataAvail = true, phdWCUTDataAvail = true;
 
-					double meanLiqRate = 0, cvLiqRate = 0, cvWHP = 0;
+					double meanLiqRate = ql1Standard;
 					double meanWHP = whpFT; // default to FT
+					double meanWCUT = watercut; // default to Lab WCUT
+					double cvLiqRate = 0, cvWHP = 0, cvWCUT = 0;
 					double standardLiqRate = ql1Standard; // default to FT
 
 					String startDate = startEndDates.get(TEST_START_DATE);
@@ -189,9 +197,9 @@ public class ValidateWellTest {
 							Statistics stat = new Statistics(liqidRates);
 							meanLiqRate = stat.getMean();
 							cvLiqRate = stat.getCoefficientOfVariation(meanLiqRate);
-							standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, watercut);
 						} else {
 							sb.append("No PHD liquid rate available for " + tags.get(TAG_LIQUID_RATE)).append("\n");
+							phdLiqRateDataAvail = false;
 						}
 					}
 
@@ -216,48 +224,89 @@ public class ValidateWellTest {
 							cvWHP = stat.getCoefficientOfVariation(meanWHP);
 						} else {
 							sb.append("No PHD whp available for " + tags.get(TAG_WHP)).append("\n");
+							phdWHPDataAvail = false;
 						}
 					}
+
+					if (wcutTagAvailable) {
+						List<Double> wcutList = this.getPHDData(phdConn, tags.get(TAG_WATERCUT), startDate, endDate);
+						modifyWaterCutsToFraction(wcutList);
+						if (!wcutList.isEmpty()) {
+							wcutHasNulls = this.hasNullValues(wcutList);
+							isOutOfRangeWCUT = this.hasOutOfRangeData(wcutList, MIN_WHP, MAX_WHP);
+							isBelowFreezeWCUT = this.isSensorFreezed(wcutList, FREEZE_WHP_LIMIT);
+
+							if (wcutHasNulls) {
+								sb.append("Null watercut values for " + tags.get(TAG_WATERCUT)).append("\n");
+							}
+							if (isOutOfRangeWCUT) {
+								sb.append("Out of range watercut for " + tags.get(TAG_WATERCUT)).append("\n");
+							}
+							if (isBelowFreezeWCUT) {
+								sb.append("Watercut sensor frozen for " + tags.get(TAG_WATERCUT)).append("\n");
+							}
+							Statistics stat = new Statistics(wcutList);
+							meanWCUT = stat.getMean();
+							cvWCUT = stat.getCoefficientOfVariation(meanWCUT);
+						} else {
+							sb.append("No PHD watercut available for " + tags.get(TAG_WATERCUT)).append("\n");
+							phdWCUTDataAvail = false;
+						}
+					}
+
+					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, meanWCUT);
 
 					if (isStable) {
 						// No platform/string phd tags; if we don't have any one
 						// of them, still mark the well as stable
-						if (!(liqRateTabAvailable && whpTagAvailable)) {
+						if (!(liqRateTabAvailable && whpTagAvailable && wcutTagAvailable)) {
 							setVRE = true;
-						} else if (phdLiqRateDataAvail && phdWHPDataAvail) {
-							if (!liqRateHasNulls && !whpHasNulls && !isOutOfRangeLiqRate && !isOutOfRangeWHP
-									&& !isBelowFreezeLiqRate && !isBelowFreezeWHP) {
-								if (cvLiqRate <= CV_LIQ_RATE_MAX) {
-									if (cvLiqRate != 0 || meanLiqRate != 0) {
-										if (cvWHP <= CV_WHP_MAX) {
-											if (cvWHP != 0 || meanWHP != 0) {
-												setVRE = true;
-												sb.append("All Good").append("\n");
+						} else if (phdLiqRateDataAvail && phdWHPDataAvail && phdWCUTDataAvail) {
+							if (!(liqRateHasNulls && whpHasNulls && wcutHasNulls)) {
+								if (!(isOutOfRangeLiqRate && isOutOfRangeWHP && isOutOfRangeWCUT)) {
+									if (!(isBelowFreezeLiqRate && isBelowFreezeWHP && isBelowFreezeWCUT)) {
+										if (cvLiqRate <= CV_LIQ_RATE_MAX) {
+											if (cvLiqRate != 0 || meanLiqRate != 0) {
+												if (cvWHP <= CV_WHP_MAX) {
+													if (cvWHP != 0 || meanWHP != 0) {
+														if (cvWCUT <= CV_WATERCUT_MAX) {
+															if (cvWCUT != 0 || meanWCUT != 0) {
+																setVRE = true;
+																sb.append("All Good").append("\n");
+															} else {
+																sb.append("Watercut is 0").append("\r\n");
+															}
+														} else {
+															sb.append("Stability test failed. Watercut coefficient " + cvWCUT
+																	+ " exceeds max limit " + CV_WATERCUT_MAX).append("\r\n");
+														}
+													} else {
+														sb.append("WHP is 0").append("\r\n");
+													}
+												} else {
+													sb.append("Stability test failed. WHP coefficient " + cvWHP
+															+ " exceeds max limit " + CV_WHP_MAX).append("\r\n");
+												}
 											} else {
-												sb.append("WHP is 0").append("\r\n");
+												sb.append("Liquid rate is 0").append("\r\n");
 											}
 										} else {
-											sb.append("Stability test failed. WHP coefficient " + cvWHP
-													+ " exceeds max limit " + CV_WHP_MAX).append("\r\n");
+											sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
+													+ " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
 										}
-									} else {
-										sb.append("Liquid rate is 0").append("\r\n");
 									}
-								} else {
-									sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
-											+ " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
 								}
 							}
 						}
 					} else {
-						if (!(liqRateTabAvailable && whpTagAvailable)) {
-							sb.append("Unstable well. No data avaialbe for " + tags.get(STRING_NAME)).append("\n");
+						if (!(liqRateTabAvailable && whpTagAvailable && wcutTagAvailable)) {
+							sb.append("Unstable well. No data available for " + tags.get(STRING_NAME)).append("\n");
 						} else {
 							sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
 						}
 					}
 					sb.delete(sb.length() - 1, sb.length());
-					this.insertWellTest(vreConn, stringID, startDate, endDate, standardLiqRate, meanWHP, watercut,
+					this.insertWellTest(vreConn, stringID, startDate, endDate, standardLiqRate, meanWHP, meanWCUT,
 							setVRE, sb.toString());
 
 					rset.updateDouble(QL1, ql1Standard);
@@ -329,6 +378,7 @@ public class ValidateWellTest {
 					tags.put(PLATFORM_NAME, rset.getString(PLATFORM_NAME));
 					tags.put(TAG_LIQUID_RATE, rset.getString(TAG_LIQUID_RATE));
 					tags.put(TAG_GAS_RATE, rset.getString(TAG_GAS_RATE));
+					tags.put(TAG_WATERCUT, rset.getString(TAG_WATERCUT));
 					tags.put(TAG_WHP, rset.getString(TAG_WHP));
 					tags.put(TAG_WHT, rset.getString(TAG_WHT));
 				}
@@ -531,6 +581,24 @@ public class ValidateWellTest {
 			return max - min < freezeLimit ? true : false;
 		}
 		return true;
+	}
+	
+	
+	/**
+	 * Modify water cuts to fraction.
+	 *
+	 * @param wcuts the wcuts
+	 */
+	private void modifyWaterCutsToFraction(List<Double> wcuts) {
+		List<Double> values = new ArrayList<>();
+		if (!wcuts.isEmpty()) {
+			for (Double wcut : wcuts) {
+				wcut = wcut / 100;
+				values.add(wcut);
+			}
+		}
+		wcuts.removeAll(wcuts);
+		wcuts.addAll(values);
 	}
 
 }
