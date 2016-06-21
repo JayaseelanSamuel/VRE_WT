@@ -80,11 +80,11 @@ public class InternalVREManager {
 		}
 	}
 
-
 	/**
 	 * Calculate average.
 	 *
-	 * @param recordedDate the recorded date
+	 * @param recordedDate
+	 *            the recorded date
 	 */
 	public void calculateAverage(Timestamp recordedDate) {
 		try (Connection vreConn = getVREConnection()) {
@@ -152,11 +152,11 @@ public class InternalVREManager {
 	/**
 	 * Run vres.
 	 */
-	public void runVREs() {
+	public void runVREs(Timestamp recordedDate) {
 		try (Connection vreConn = getVREConnection()) {
 			LOGGER.info("run VREs started !!!");
 			VREExecutioner vreEx = new VREExecutioner();
-			vreEx.runVREs(vreConn);
+			vreEx.runVREs(vreConn, recordedDate);
 			LOGGER.info("run VREs finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());

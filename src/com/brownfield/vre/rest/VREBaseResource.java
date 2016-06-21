@@ -47,7 +47,8 @@ public class VREBaseResource {
 	/**
 	 * Calculate average.
 	 *
-	 * @param date the date
+	 * @param date
+	 *            the date
 	 * @return the response
 	 */
 	@GET
@@ -120,10 +121,23 @@ public class VREBaseResource {
 	 */
 	@GET
 	@Path("/runVREs")
-	public Response runVREs() {
-		String result = "Started running VREs";
-		InternalVREManager ivm = new InternalVREManager();
-		ivm.runVREs();
+	public Response runVREs(@QueryParam("date") String date) {
+
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			recordedDate = Utils.getYesterdayTimestamp();
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Ran VREs for - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.runVREs(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
 		return Response.status(200).entity(result).build();
 	}
 

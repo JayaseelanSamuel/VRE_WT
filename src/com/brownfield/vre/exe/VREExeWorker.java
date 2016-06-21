@@ -118,19 +118,14 @@ public class VREExeWorker implements Runnable {
 	public void run() {
 		String threadName = Thread.currentThread().getName();
 		if (this.vreType == VRE_TYPE.VRE6) {
-			try {
-				LOGGER.info(threadName + " : Started to run VRE6 for " + this.stringID);
-				Thread.sleep(10000);
-			} catch (InterruptedException e) {
-				LOGGER.severe(e.getMessage());
-			}
+			this.executeVRE6(threadName);
 		} else {
 			this.executeVRE(threadName);
 		}
 	}
 
 	/**
-	 * Execute vre1.
+	 * Execute vres.
 	 *
 	 * @param threadName
 	 *            the thread name
@@ -144,7 +139,7 @@ public class VREExeWorker implements Runnable {
 		LOGGER.info(threadName + " : Time to run VRE : " + duration);
 		if (wellModel != null) {
 			if (wellModel.getErrors() == null) {
-				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getVre1().getTime());
+				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getTime());
 				this.insertOrUpdateVRE(stringID, whp, wcut, wellModel, recordedDate, vreConn);
 			} else {
 				LOGGER.severe(threadName + " : Exception in calling VRE - " + wellModel.getErrors());
@@ -153,6 +148,15 @@ public class VREExeWorker implements Runnable {
 			LOGGER.severe(threadName + " : Something went wrong while calling VRE for string - " + stringID);
 		}
 		LOGGER.info(threadName + " Finished VRE for " + this.stringID);
+	}
+
+	private void executeVRE6(String threadName) {
+		LOGGER.info(threadName + " : Started to run VRE6 for " + this.stringID);
+		long startT = System.currentTimeMillis();
+		runVRE(params);
+		long endT = System.currentTimeMillis();
+		double duration = ((endT - startT) / 1000);
+		LOGGER.info(threadName + " Finished VRE6 for " + this.stringID + " in " + duration + " seconds");
 	}
 
 	/**

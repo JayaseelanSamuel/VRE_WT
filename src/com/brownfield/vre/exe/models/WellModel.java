@@ -11,11 +11,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement(name = "well")
 public class WellModel {
 
-	/** The model name. */
-	private String modelName;
+	/** The model. */
+	private String model;
 
-	/** The model location. */
-	private String modelLocation;
+	/** The time. */
+	private Double time;
 
 	/** The vre1. */
 	private VREModel vre1;
@@ -47,8 +47,8 @@ public class WellModel {
 	 * @return the model name
 	 */
 	@XmlElement(name = "model")
-	public String getModelName() {
-		return modelName;
+	public String getModel() {
+		return model;
 	}
 
 	/**
@@ -57,27 +57,23 @@ public class WellModel {
 	 * @param modelName
 	 *            the new model name
 	 */
-	public void setModelName(String modelName) {
-		this.modelName = modelName;
+	public void setModel(String model) {
+		this.model = model;
 	}
 
 	/**
-	 * Gets the model location.
-	 *
-	 * @return the model location
+	 * @return the time
 	 */
-	public String getModelLocation() {
-		return modelLocation;
+	@XmlElement(name = "time")
+	public Double getTime() {
+		return time;
 	}
 
 	/**
-	 * Sets the model location.
-	 *
-	 * @param modelLocation
-	 *            the new model location
+	 * @param time the time to set
 	 */
-	public void setModelLocation(String modelLocation) {
-		this.modelLocation = modelLocation;
+	public void setTime(Double time) {
+		this.time = time;
 	}
 
 	/**

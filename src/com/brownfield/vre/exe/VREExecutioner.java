@@ -15,11 +15,12 @@ import static com.brownfield.vre.VREConstants.ARG_VRE5;
 import static com.brownfield.vre.VREConstants.ARG_VRE6;
 import static com.brownfield.vre.VREConstants.ARG_WATERCUT;
 import static com.brownfield.vre.VREConstants.ARG_WHP;
-import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
 import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
+import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
+import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
@@ -97,10 +98,13 @@ public class VREExecutioner {
 		try {
 			Class.forName(SQL_DRIVER_NAME);
 			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD)) {
-
+				// Timestamp yesterdayTimestamp = Utils.getYesterdayTimestamp();
+				// System.out.println(yesterdayTimestamp);
+				String recDate = "2016-03-02";
+				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				VREExecutioner vreEx = new VREExecutioner();
-				// vreEx.runVREs(vreConn);
-				vreEx.runCalibration(vreConn);
+				vreEx.runVREs(vreConn,recordedDate);
+				//vreEx.runCalibration(vreConn);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
 			}
@@ -116,64 +120,66 @@ public class VREExecutioner {
 	 * @param vreConn
 	 *            the vre conn
 	 */
-	public void runVREs(Connection vreConn) {
+	public void runVREs(Connection vreConn, Timestamp recordedDate) {
 		int stringID;
-		Timestamp recordedDate = null;
 
-		try (Statement statement = vreConn.createStatement();
-				ResultSet rset = statement.executeQuery(VRE_DATASET_QUERY);) {
-
-			ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-			long start = System.currentTimeMillis();
-			int rowCount = 0;
-			while (rset.next()) {
-				// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
-				stringID = rset.getInt(STRING_ID);
-				recordedDate = rset.getTimestamp(RECORDED_DATE);
-				double whp = rset.getDouble(AVG_WHP);
-				double wcut = rset.getDouble(WATER_CUT_LAB);
-				double hp = rset.getDouble(AVG_HEADER_PRESSURE);
-				double pdgp = rset.getDouble(AVG_DOWNHOLE_PRESSURE);
-				double gasInjRate = rset.getDouble(AVG_GASLIFT_INJ_RATE);
-				double choke = rset.getDouble(CHOKE_SETTING);
-				boolean runVRE2 = rset.getBoolean(RUN_VRE2);
-				boolean runVRE3 = rset.getBoolean(RUN_VRE3);
-				boolean runVRE4 = rset.getBoolean(RUN_VRE4);
-				boolean runVRE5 = rset.getBoolean(RUN_VRE5);
-				List<String> params = new ArrayList<>();
-				params.add(VRE_EXE_LOC);// executable
-				params.add(ARG_VRE1);
-				params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
-				params.add(ARG_WHP + whp);
-				params.add(ARG_WATERCUT + wcut);
-				if (runVRE2) {
-					params.add(ARG_VRE2);
-					params.add(ARG_PDGP + pdgp);
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_DATASET_QUERY);) {
+			statement.setTimestamp(1, recordedDate);
+			try (ResultSet rset = statement.executeQuery();) {
+				ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+				long start = System.currentTimeMillis();
+				int rowCount = 0;
+				while (rset.next()) {
+					// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
+					stringID = rset.getInt(STRING_ID);
+					recordedDate = rset.getTimestamp(RECORDED_DATE);
+					double whp = rset.getDouble(AVG_WHP);
+					double wcut = rset.getDouble(WATER_CUT_LAB);
+					double hp = rset.getDouble(AVG_HEADER_PRESSURE);
+					double pdgp = rset.getDouble(AVG_DOWNHOLE_PRESSURE);
+					double gasInjRate = rset.getDouble(AVG_GASLIFT_INJ_RATE);
+					double choke = rset.getDouble(CHOKE_SETTING);
+					boolean runVRE2 = rset.getBoolean(RUN_VRE2);
+					boolean runVRE3 = rset.getBoolean(RUN_VRE3);
+					boolean runVRE4 = rset.getBoolean(RUN_VRE4);
+					boolean runVRE5 = rset.getBoolean(RUN_VRE5);
+					List<String> params = new ArrayList<>();
+					params.add(VRE_EXE_LOC);// executable
+					params.add(ARG_VRE1);
+					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+					params.add(ARG_WHP + whp);
+					params.add(ARG_WATERCUT + wcut);
+					if (runVRE2) {
+						params.add(ARG_VRE2);
+						params.add(ARG_PDGP + pdgp);
+					}
+					if (runVRE3) {
+						params.add(ARG_VRE3);
+						// params.add(ARG_PDGP + pdgp); already added by vre2
+					}
+					if (runVRE4) {
+						params.add(ARG_VRE4);
+						// params.add(ARG_PDGP + pdgp); already added by vre2
+						params.add(ARG_GAS_INJ_RATE + gasInjRate);
+					}
+					if (runVRE5) {
+						params.add(ARG_VRE5);
+						params.add(ARG_CHOKE + choke);
+						params.add(ARG_HEADER + hp);
+					}
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
+					executor.execute(worker);
+					rowCount++;
 				}
-				if (runVRE3) {
-					params.add(ARG_VRE3);
-					//params.add(ARG_PDGP + pdgp); already added by vre2
+				executor.shutdown();
+				while (!executor.isTerminated()) {
 				}
-				if (runVRE4) {
-					params.add(ARG_VRE4);
-					//params.add(ARG_PDGP + pdgp); already added by vre2
-					params.add(ARG_GAS_INJ_RATE + gasInjRate);
-				}
-				if (runVRE5) {
-					params.add(ARG_VRE5);
-					params.add(ARG_CHOKE + choke);
-					params.add(ARG_HEADER + hp);
-				}
-				Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
-				executor.execute(worker);
-				rowCount++;
+				long end = System.currentTimeMillis();
+				double duration = (end - start) / 1000;
+				LOGGER.info("Finished running VRE for " + rowCount + " strings in " + duration + " seconds");
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
 			}
-			executor.shutdown();
-			while (!executor.isTerminated()) {
-			}
-			long end = System.currentTimeMillis();
-			double duration = (end - start) / 1000;
-			LOGGER.info("Finished running VRE for " + rowCount + " strings in " + duration + " seconds");
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 		}
