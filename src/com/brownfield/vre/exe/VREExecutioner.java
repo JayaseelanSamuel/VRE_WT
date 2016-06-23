@@ -16,6 +16,7 @@ import static com.brownfield.vre.VREConstants.ARG_VRE6;
 import static com.brownfield.vre.VREConstants.ARG_WATERCUT;
 import static com.brownfield.vre.VREConstants.ARG_WHP;
 import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
+import static com.brownfield.vre.VREConstants.ARG_RESERVOIR;
 import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
@@ -28,16 +29,13 @@ import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
+import static com.brownfield.vre.VREConstants.RESERVOIR_MODEL_LOC;
 import static com.brownfield.vre.VREConstants.QL1;
 import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
 import static com.brownfield.vre.VREConstants.RECORDED_DATE;
 import static com.brownfield.vre.VREConstants.REMARK;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
-import static com.brownfield.vre.VREConstants.RUN_VRE2;
-import static com.brownfield.vre.VREConstants.RUN_VRE3;
-import static com.brownfield.vre.VREConstants.RUN_VRE4;
-import static com.brownfield.vre.VREConstants.RUN_VRE5;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STRING_ID;
 import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
@@ -103,8 +101,8 @@ public class VREExecutioner {
 				String recDate = "2016-03-02";
 				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				VREExecutioner vreEx = new VREExecutioner();
-				vreEx.runVREs(vreConn,recordedDate);
-				//vreEx.runCalibration(vreConn);
+				vreEx.runVREs(vreConn, recordedDate);
+				// vreEx.runCalibration(vreConn);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
 			}
@@ -133,40 +131,43 @@ public class VREExecutioner {
 					// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
 					stringID = rset.getInt(STRING_ID);
 					recordedDate = rset.getTimestamp(RECORDED_DATE);
-					double whp = rset.getDouble(AVG_WHP);
-					double wcut = rset.getDouble(WATER_CUT_LAB);
-					double hp = rset.getDouble(AVG_HEADER_PRESSURE);
-					double pdgp = rset.getDouble(AVG_DOWNHOLE_PRESSURE);
-					double gasInjRate = rset.getDouble(AVG_GASLIFT_INJ_RATE);
-					double choke = rset.getDouble(CHOKE_SETTING);
-					boolean runVRE2 = rset.getBoolean(RUN_VRE2);
-					boolean runVRE3 = rset.getBoolean(RUN_VRE3);
-					boolean runVRE4 = rset.getBoolean(RUN_VRE4);
-					boolean runVRE5 = rset.getBoolean(RUN_VRE5);
+					Double whp = rset.getObject(AVG_WHP) == null ? null : rset.getDouble(AVG_WHP);
+					Double wcut = rset.getObject(WATER_CUT_LAB) == null ? null : rset.getDouble(WATER_CUT_LAB);
+					Double pdgp = rset.getObject(AVG_DOWNHOLE_PRESSURE) == null ? null
+							: rset.getDouble(AVG_DOWNHOLE_PRESSURE);
+					Double gasInjRate = rset.getObject(AVG_GASLIFT_INJ_RATE) == null ? null
+							: rset.getDouble(AVG_GASLIFT_INJ_RATE);
+					Double hp = rset.getObject(AVG_HEADER_PRESSURE) == null ? null
+							: rset.getDouble(AVG_HEADER_PRESSURE);
+					Double choke = rset.getObject(CHOKE_SETTING) == null ? null : rset.getDouble(CHOKE_SETTING);
+
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
 					params.add(ARG_VRE1);
 					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
-					if (runVRE2) {
+					// VRE2 , VRE3, VRE4
+					if (pdgp != null) {
 						params.add(ARG_VRE2);
-						params.add(ARG_PDGP + pdgp);
-					}
-					if (runVRE3) {
 						params.add(ARG_VRE3);
-						// params.add(ARG_PDGP + pdgp); already added by vre2
-					}
-					if (runVRE4) {
 						params.add(ARG_VRE4);
-						// params.add(ARG_PDGP + pdgp); already added by vre2
-						params.add(ARG_GAS_INJ_RATE + gasInjRate);
+						params.add(ARG_PDGP + pdgp);
+
+						if (gasInjRate != null) {
+							params.add(ARG_GAS_INJ_RATE + gasInjRate);
+						}
 					}
-					if (runVRE5) {
+					// VRE5
+					if (hp != null) {
 						params.add(ARG_VRE5);
-						params.add(ARG_CHOKE + choke);
 						params.add(ARG_HEADER + hp);
+						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
+						if (choke != null) {
+							params.add(ARG_CHOKE + choke);
+						}
 					}
+
 					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
 					executor.execute(worker);
 					rowCount++;

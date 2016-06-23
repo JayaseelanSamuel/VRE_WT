@@ -74,7 +74,7 @@ public class VREConstants {
 
 	/** The freeze liquid rate limit. */
 	public static double FREEZE_LIQUID_RATE_LIMIT = 6;
-	
+
 	/** The freeze watercut limit. */
 	public static double FREEZE_WATERCUT_LIMIT = 0;
 
@@ -83,7 +83,7 @@ public class VREConstants {
 
 	/** The cv whp max. */
 	public static double CV_WHP_MAX = 0.08;
-	
+
 	/** The cv watercut max. */
 	public static double CV_WATERCUT_MAX = 0.08;
 
@@ -275,20 +275,19 @@ public class VREConstants {
 	/** The Constant VRE_VARIABLE_QUERY. */
 	public static final String VRE_VARIABLE_QUERY = "SELECT NAME, \"VALUE\" FROM VRE_VARIABLES";
 
-
 	/** The Constant VRE_DATASET_QUERY. */
-	public static final String VRE_DATASET_QUERY = "SELECT T.*, DM.RECORDED_DATE, CAST(IIF(DD.CHOKE_SETTING IS NOT NULL AND DM.AVG_HEADER_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE5, "
-			+ " DM.AVG_WHP, DD.WATER_CUT_LAB, DM.AVG_DOWNHOLE_PRESSURE, DM.AVG_GASLIFT_INJ_RATE, DD.CHOKE_SETTING, DM.AVG_HEADER_PRESSURE "
-			+ " FROM ( SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, "
-			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE2, CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE3, "
-			+ "	CAST(IIF(SM.TAG_DOWNHOLE_PRESSURE IS NOT NULL AND TAG_GASLIFT_INJ_RATE IS NOT NULL, 1, 0) AS BIT) AS RUN_VRE4 "
-			+ " FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
-			+ "	LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
-			+ "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
-			+ " WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL AND TAG_WHP IS NOT NULL "
-			+ " ) T "
+	public static final String VRE_DATASET_QUERY = "SELECT T.*, DM.RECORDED_DATE, DM.AVG_WHP, DD.WATER_CUT_LAB, DM.AVG_DOWNHOLE_PRESSURE, DM.AVG_GASLIFT_INJ_RATE, "
+			+ " DM.AVG_HEADER_PRESSURE, (DD.CHOKE_SETTING / 100) AS CHOKE_SETTING " + " FROM ( "
+			+ " SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, R.RESERVOIR_MODEL_LOC "
+			+ " FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
+			+ " LEFT OUTER JOIN WELL W ON W.UWI = S.UWI "
+			+ " LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
+			+ "	LEFT OUTER JOIN STRING_SECTOR_ALLOCATION SSA ON SSA.STRING_ID = S.STRING_ID "
+			+ " LEFT OUTER JOIN SECTOR SC ON SC.SECTOR_ID = SSA.SECTOR_ID "
+			+ "	LEFT OUTER JOIN RESERVOIR R ON R.RESERVOIR_ID = SC.RESERVOIR_ID "
+			+ "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL AND TAG_WHP IS NOT NULL " + " ) T "
 			+ " INNER JOIN DAILY_AVERAGE_MEASUREMENT DM ON DM.STRING_ID = T.STRING_ID AND DM.RECORDED_DATE = ? "
-			+ " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = DM.RECORDED_DATE ";
+			+ " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = DM.RECORDED_DATE  ";
 
 	/**
 	 * The Constant WELL_TEST_CALIBRATE_QUERY. identify eligible tests for
@@ -498,44 +497,47 @@ public class VREConstants {
 	/** The tag gas rate. */
 	public static final String TAG_GAS_RATE = "TAG_GAS_RATE";
 
-	/** The tag watercut. */
+	/** The Constant TAG_WATERCUT. */
 	public static final String TAG_WATERCUT = "TAG_WATERCUT";
 
-	/** The tag header pressure. */
+	/** The Constant TAG_HEADER_PRESSURE. */
 	public static final String TAG_HEADER_PRESSURE = "TAG_HEADER_PRESSURE";
 
-	/** The tag inj header pressure. */
+	/** The Constant TAG_INJ_HEADER_PRESSURE. */
 	public static final String TAG_INJ_HEADER_PRESSURE = "TAG_INJ_HEADER_PRESSURE";
 
-	/** The tag whp. */
+	/** The Constant TAG_WHP. */
 	public static final String TAG_WHP = "TAG_WHP";
 
-	/** The tag wht. */
+	/** The Constant TAG_WHT. */
 	public static final String TAG_WHT = "TAG_WHT";
 
-	/** The tag choke size. */
+	/** The Constant TAG_CHOKE_SIZE. */
 	public static final String TAG_CHOKE_SIZE = "TAG_CHOKE_SIZE";
 
-	/** The tag downhole pressure. */
+	/** The Constant TAG_DOWNHOLE_PRESSURE. */
 	public static final String TAG_DOWNHOLE_PRESSURE = "TAG_DOWNHOLE_PRESSURE";
 
-	/** The tag gaslift inj rate. */
+	/** The Constant TAG_GASLIFT_INJ_RATE. */
 	public static final String TAG_GASLIFT_INJ_RATE = "TAG_GASLIFT_INJ_RATE";
 
-	/** The tag water vol rate. */
+	/** The Constant TAG_WATER_VOL_RATE. */
 	public static final String TAG_WATER_VOL_RATE = "TAG_WATER_VOL_RATE";
 
-	/** The tag oil vol rate. */
+	/** The Constant TAG_OIL_VOL_RATE. */
 	public static final String TAG_OIL_VOL_RATE = "TAG_OIL_VOL_RATE";
 
-	/** The tag ann pressure a. */
+	/** The Constant TAG_ANN_PRESSURE_A. */
 	public static final String TAG_ANN_PRESSURE_A = "TAG_ANN_PRESSURE_A";
 
-	/** The tag ann pressure b. */
+	/** The Constant TAG_ANN_PRESSURE_B. */
 	public static final String TAG_ANN_PRESSURE_B = "TAG_ANN_PRESSURE_B";
 
-	/** The pipesim model loc. */
+	/** The Constant PIPESIM_MODEL_LOC. */
 	public static final String PIPESIM_MODEL_LOC = "PIPESIM_MODEL_LOC";
+
+	/** The Constant RESERVOIR_MODEL_LOC. */
+	public static final String RESERVOIR_MODEL_LOC = "RESERVOIR_MODEL_LOC";
 
 	/** The Constant ROW_CHANGED_BY. */
 	public static final String ROW_CHANGED_BY = "ROW_CHANGED_BY";
@@ -547,16 +549,16 @@ public class VREConstants {
 	public static final String RECORDED_DATE = "RECORDED_DATE";
 
 	/** The Constant RUN_VRE2. */
-	public static final String RUN_VRE2 = "RUN_VRE2";
+	//public static final String RUN_VRE2 = "RUN_VRE2";
 
 	/** The Constant RUN_VRE3. */
-	public static final String RUN_VRE3 = "RUN_VRE3";
+	//public static final String RUN_VRE3 = "RUN_VRE3";
 
 	/** The Constant RUN_VRE4. */
-	public static final String RUN_VRE4 = "RUN_VRE4";
+	//public static final String RUN_VRE4 = "RUN_VRE4";
 
 	/** The Constant RUN_VRE5. */
-	public static final String RUN_VRE5 = "RUN_VRE5";
+	//public static final String RUN_VRE5 = "RUN_VRE5";
 
 	/** The Constant VRE1. */
 	public static final String VRE1 = "VRE1";

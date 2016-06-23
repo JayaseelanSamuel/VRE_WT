@@ -147,12 +147,12 @@ public class ValidateWellTest {
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
 							SWITCH_TIME_ZONE);
 
-					boolean liqRateTabAvailable = true, whpTagAvailable = true, wcutTagAvailable = true;
+					boolean liqRateTagAvailable = true, whpTagAvailable = true, wcutTagAvailable = true;
 					boolean setVRE = false;
 					if (tags.get(TAG_LIQUID_RATE) == null) {
 						sb.append(TAG_LIQUID_RATE + " tag is missing for Platform " + tags.get(PLATFORM_NAME))
 								.append("\n");
-						liqRateTabAvailable = false;
+						liqRateTagAvailable = false;
 					}
 					if (tags.get(TAG_WHP) == null) {
 						sb.append(TAG_WHP + " is missing for String " + tags.get(STRING_NAME)).append("\n");
@@ -177,7 +177,7 @@ public class ValidateWellTest {
 
 					String startDate = startEndDates.get(TEST_START_DATE);
 					String endDate = startEndDates.get(TEST_END_DATE);
-					if (liqRateTabAvailable) {
+					if (liqRateTagAvailable) {
 						List<Double> liqidRates = this.getPHDData(phdConn, tags.get(TAG_LIQUID_RATE), startDate,
 								endDate);
 						if (!liqidRates.isEmpty()) {
@@ -257,11 +257,17 @@ public class ValidateWellTest {
 					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, meanWCUT);
 
 					if (isStable) {
-						// No platform/string phd tags; if we don't have any one
-						// of them, still mark the well as stable
-						if (!(liqRateTabAvailable && whpTagAvailable && wcutTagAvailable)) {
+						if (!(liqRateTagAvailable && whpTagAvailable && wcutTagAvailable)) {
+							// No platform/string phd tags; if we don't have any
+							// one
+							// of them, still mark the well as stable
 							setVRE = true;
-						} else if (phdLiqRateDataAvail && phdWHPDataAvail && phdWCUTDataAvail) {
+							sb.append("Setting well test as valid").append("\n");
+						} else if (!(phdLiqRateDataAvail && phdWHPDataAvail && phdWCUTDataAvail)) {
+							// Tags are present but there's no data in PHD
+							setVRE = true;
+							sb.append("Setting well test as valid").append("\n");
+						} else {
 							if (!(liqRateHasNulls && whpHasNulls && wcutHasNulls)) {
 								if (!(isOutOfRangeLiqRate && isOutOfRangeWHP && isOutOfRangeWCUT)) {
 									if (!(isBelowFreezeLiqRate && isBelowFreezeWHP && isBelowFreezeWCUT)) {
@@ -274,21 +280,22 @@ public class ValidateWellTest {
 																setVRE = true;
 																sb.append("All Good").append("\n");
 															} else {
-																sb.append("Watercut is 0").append("\r\n");
+																sb.append("Watercut is 0").append("\n");
 															}
 														} else {
-															sb.append("Stability test failed. Watercut coefficient " + cvWCUT
-																	+ " exceeds max limit " + CV_WATERCUT_MAX).append("\r\n");
+															sb.append("Stability test failed. Watercut coefficient "
+																	+ cvWCUT + " exceeds max limit " + CV_WATERCUT_MAX)
+																	.append("\n");
 														}
 													} else {
-														sb.append("WHP is 0").append("\r\n");
+														sb.append("WHP is 0").append("\n");
 													}
 												} else {
 													sb.append("Stability test failed. WHP coefficient " + cvWHP
-															+ " exceeds max limit " + CV_WHP_MAX).append("\r\n");
+															+ " exceeds max limit " + CV_WHP_MAX).append("\n");
 												}
 											} else {
-												sb.append("Liquid rate is 0").append("\r\n");
+												sb.append("Liquid rate is 0").append("\n");
 											}
 										} else {
 											sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
@@ -299,7 +306,7 @@ public class ValidateWellTest {
 							}
 						}
 					} else {
-						if (!(liqRateTabAvailable && whpTagAvailable && wcutTagAvailable)) {
+						if (!(liqRateTagAvailable && whpTagAvailable && wcutTagAvailable)) {
 							sb.append("Unstable well. No data available for " + tags.get(STRING_NAME)).append("\n");
 						} else {
 							sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
@@ -582,12 +589,12 @@ public class ValidateWellTest {
 		}
 		return true;
 	}
-	
-	
+
 	/**
 	 * Modify water cuts to fraction.
 	 *
-	 * @param wcuts the wcuts
+	 * @param wcuts
+	 *            the wcuts
 	 */
 	private void modifyWaterCutsToFraction(List<Double> wcuts) {
 		List<Double> values = new ArrayList<>();
