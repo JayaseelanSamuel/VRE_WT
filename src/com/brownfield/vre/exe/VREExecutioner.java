@@ -1,11 +1,12 @@
 package com.brownfield.vre.exe;
 
-import static com.brownfield.vre.VREConstants.ARG_CHOKE;
+import static com.brownfield.vre.VREConstants.ARG_BEANSIZE;
 import static com.brownfield.vre.VREConstants.ARG_GAS_INJ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_HEADER;
 import static com.brownfield.vre.VREConstants.ARG_MODEL;
 import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
 import static com.brownfield.vre.VREConstants.ARG_PDGP;
+import static com.brownfield.vre.VREConstants.ARG_RESERVOIR;
 import static com.brownfield.vre.VREConstants.ARG_TEST_LIQ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_VRE1;
 import static com.brownfield.vre.VREConstants.ARG_VRE2;
@@ -16,11 +17,11 @@ import static com.brownfield.vre.VREConstants.ARG_VRE6;
 import static com.brownfield.vre.VREConstants.ARG_WATERCUT;
 import static com.brownfield.vre.VREConstants.ARG_WHP;
 import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
-import static com.brownfield.vre.VREConstants.ARG_RESERVOIR;
 import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
 import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
+import static com.brownfield.vre.VREConstants.CONCURRENT_PIPESIM_LICENCES;
 import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
@@ -29,17 +30,16 @@ import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
-import static com.brownfield.vre.VREConstants.RESERVOIR_MODEL_LOC;
 import static com.brownfield.vre.VREConstants.QL1;
 import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
 import static com.brownfield.vre.VREConstants.RECORDED_DATE;
 import static com.brownfield.vre.VREConstants.REMARK;
+import static com.brownfield.vre.VREConstants.RESERVOIR_MODEL_LOC;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STRING_ID;
 import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
-import static com.brownfield.vre.VREConstants.THREAD_POOL_SIZE;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE_DATASET_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
@@ -98,7 +98,7 @@ public class VREExecutioner {
 			try (Connection vreConn = DriverManager.getConnection(VRE_DB_URL, VRE_USER, VRE_PASSWORD)) {
 				// Timestamp yesterdayTimestamp = Utils.getYesterdayTimestamp();
 				// System.out.println(yesterdayTimestamp);
-				String recDate = "2016-03-02";
+				String recDate = "2016-01-01";
 				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				VREExecutioner vreEx = new VREExecutioner();
 				vreEx.runVREs(vreConn, recordedDate);
@@ -124,7 +124,7 @@ public class VREExecutioner {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_DATASET_QUERY);) {
 			statement.setTimestamp(1, recordedDate);
 			try (ResultSet rset = statement.executeQuery();) {
-				ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
 				long start = System.currentTimeMillis();
 				int rowCount = 0;
 				while (rset.next()) {
@@ -159,12 +159,12 @@ public class VREExecutioner {
 						}
 					}
 					// VRE5
-					if (hp != null) {
+					if (hp != null && choke != null) {
 						params.add(ARG_VRE5);
 						params.add(ARG_HEADER + hp);
 						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
 						if (choke != null) {
-							params.add(ARG_CHOKE + choke);
+							params.add(ARG_BEANSIZE + choke);
 						}
 					}
 
@@ -197,7 +197,7 @@ public class VREExecutioner {
 		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery(WELL_TEST_CALIBRATE_QUERY);) {
 			if (rset != null) {
-				ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
 				int rowCount = 0;
 				while (rset.next()) {
 					stringID = rset.getInt(STRING_ID);
@@ -229,13 +229,13 @@ public class VREExecutioner {
 								}
 
 							} else {
-								LOGGER.severe(" No recal tag present in output for string - " + stringID);
+								LOGGER.severe("No recal tag present in output for string - " + stringID);
 							}
 						} else {
-							LOGGER.severe(" Exception in calling recal - " + wellModel.getErrors());
+							LOGGER.severe("Exception in calling recal - " + wellModel.getErrors());
 						}
 					} else {
-						LOGGER.severe(" Something went wrong while calling recal for string - " + stringID);
+						LOGGER.severe("Something went wrong while calling recal for string - " + stringID);
 					}
 					rset.updateBoolean(IS_CALIBRATED, isCalibrated);
 					rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);

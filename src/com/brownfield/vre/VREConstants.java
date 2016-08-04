@@ -92,6 +92,9 @@ public class VREConstants {
 
 	/** The vre exe. */
 	public static String VRE_EXE_LOC = "D:/Pipesim_Models/VRE.exe";
+	
+	/** The Constant THREAD_POOL_SIZE. */
+	public static int CONCURRENT_PIPESIM_LICENCES = 4;
 
 	/** The VRE6 output folder. */
 	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
@@ -297,7 +300,7 @@ public class VREConstants {
 	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CONVERT(date, TEST_END_DATE) AS EFFECTIVE_DATE, "
 			+ " IS_CALIBRATED, TEST_WATER_CUT, SM.PIPESIM_MODEL_LOC, WT.ROW_CHANGED_BY, WT.ROW_CHANGED_DATE "
 			+ " FROM WELL_TEST WT " + " LEFT OUTER JOIN STRING_METADATA SM ON WT.STRING_ID = SM.STRING_ID "
-			+ " WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 1 AND IS_CALIBRATED IS NULL  ";
+			+ " WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 1 AND IS_CALIBRATED IS NULL AND SM.PIPESIM_MODEL_LOC IS NOT NULL ";
 
 	/** The Constant VRE_TABLE_SELECT_QUERY. */
 	public static final String VRE_TABLE_SELECT_QUERY = "SELECT STRING_ID, RECORDED_DATE, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
@@ -362,9 +365,6 @@ public class VREConstants {
 
 	/** The flow test. */
 	public static final String FLOW_TEST = "FT";
-
-	/** The Constant THREAD_POOL_SIZE. */
-	public static final int THREAD_POOL_SIZE = 4;
 
 	/** The date time format. */
 	public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
@@ -699,8 +699,8 @@ public class VREConstants {
 	/** The Constant ARG_PDGP. */
 	public static final String ARG_PDGP = "-pdgp";
 
-	/** The Constant ARG_CHOKE. */
-	public static final String ARG_CHOKE = "-choke";
+	/** The Constant ARG_BEANSIZE. */
+	public static final String ARG_BEANSIZE = "-beansize";
 
 	/** The Constant ARG_GAS_INJ_RATE. */
 	public static final String ARG_GAS_INJ_RATE = "-qgi";
@@ -774,6 +774,9 @@ public class VREConstants {
 						break;
 					case "VRE_EXE_LOC":
 						VRE_EXE_LOC = val;
+						break;
+					case "CONCURRENT_PIPESIM_LICENCES":
+						CONCURRENT_PIPESIM_LICENCES = Integer.parseInt(val);
 						break;
 					}
 				}

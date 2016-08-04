@@ -141,7 +141,7 @@ public class ValidateWellTest {
 					// this will also update watercut
 					boolean isStable = this.isStable(vreConn, stringID, effectiveTestDate);
 					// update the FTQL1 to standard conditions.
-					ql1Standard = Utils.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut);
+					ql1Standard = Utils.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut/100);
 
 					Map<String, String> tags = this.getTags(vreConn, stringID);
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
@@ -230,7 +230,7 @@ public class ValidateWellTest {
 
 					if (wcutTagAvailable) {
 						List<Double> wcutList = this.getPHDData(phdConn, tags.get(TAG_WATERCUT), startDate, endDate);
-						modifyWaterCutsToFraction(wcutList);
+						//modifyWaterCutsToFraction(wcutList);
 						if (!wcutList.isEmpty()) {
 							wcutHasNulls = this.hasNullValues(wcutList);
 							isOutOfRangeWCUT = this.hasOutOfRangeData(wcutList, MIN_WHP, MAX_WHP);
@@ -254,7 +254,7 @@ public class ValidateWellTest {
 						}
 					}
 
-					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, meanWCUT);
+					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, (meanWCUT/100));
 
 					if (isStable) {
 						if (!(liqRateTagAvailable && whpTagAvailable && wcutTagAvailable)) {
@@ -348,7 +348,7 @@ public class ValidateWellTest {
 			try (ResultSet rset = statement.executeQuery();) {
 				if (rset != null && rset.next()) { // always one row per date
 					// set watercut to seabed wc / 100
-					watercut = rset.getDouble(WATER_CUT_LAB) / 100;
+					watercut = rset.getDouble(WATER_CUT_LAB);
 					if (rset.getObject(STABILITY_FLAG) != null) {
 						isStable = rset.getBoolean(STABILITY_FLAG);
 					}
@@ -596,6 +596,7 @@ public class ValidateWellTest {
 	 * @param wcuts
 	 *            the wcuts
 	 */
+	@SuppressWarnings("unused")
 	private void modifyWaterCutsToFraction(List<Double> wcuts) {
 		List<Double> values = new ArrayList<>();
 		if (!wcuts.isEmpty()) {

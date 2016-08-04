@@ -154,10 +154,10 @@ public class InternalVREManager {
 	 */
 	public void runVREs(Timestamp recordedDate) {
 		try (Connection vreConn = getVREConnection()) {
-			LOGGER.info("run VREs started !!!");
+			LOGGER.info("run VREs started for - " + recordedDate);
 			VREExecutioner vreEx = new VREExecutioner();
 			vreEx.runVREs(vreConn, recordedDate);
-			LOGGER.info("run VREs finished !!!");
+			LOGGER.info("run VREs finished for - " + recordedDate);
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		} catch (NamingException e) {
