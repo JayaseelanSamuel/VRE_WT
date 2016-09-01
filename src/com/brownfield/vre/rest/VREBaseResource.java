@@ -1,6 +1,10 @@
 package com.brownfield.vre.rest;
 
+import static com.brownfield.vre.VREConstants.VRE_LIST;
+
 import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -117,6 +121,8 @@ public class VREBaseResource {
 	/**
 	 * Run vres.
 	 *
+	 * @param date
+	 *            the date
 	 * @return the response
 	 */
 	@GET
@@ -134,6 +140,63 @@ public class VREBaseResource {
 			result = "Ran VREs for - " + recordedDate;
 			InternalVREManager ivm = new InternalVREManager();
 			ivm.runVREs(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Run VRE for duration.
+	 *
+	 * @param stringID
+	 *            the string ID
+	 * @param vres
+	 *            the vres
+	 * @param start_date
+	 *            the start date
+	 * @param end_date
+	 *            the end date
+	 * @return the response
+	 */
+	@GET
+	@Path("/runVREForDuration")
+	public Response runVREForDuration(@QueryParam("stringID") Integer stringID, @QueryParam("vres") String vres,
+			@QueryParam("start_date") String start_date, @QueryParam("end_date") String end_date) {
+
+		Timestamp startDate = null, endDate = null;
+		List<String> vresToRun = null;
+		String result = null;
+		if (start_date != null && start_date.length() != 0) {
+			startDate = Utils.parseDate(start_date);
+		} else {
+			result = "Invalid start date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		if (end_date != null && end_date.length() != 0) {
+			endDate = Utils.parseDate(end_date);
+		} else {
+			result = "Invalid end date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		if (vres != null && vres.length() != 0) {
+			String[] vresArr = vres.toUpperCase().split(",");
+			vresToRun = Arrays.asList(vresArr);
+			if (!VRE_LIST.containsAll(vresToRun)) {
+				vresToRun = null;
+				result = "List contains invalid vre option";
+			}
+		} else {
+			result = "Empty list. Please select at least one VRE to run";
+		}
+
+		if (startDate != null && endDate != null) {
+			if (vresToRun != null) {
+				result = "Started running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate;
+				InternalVREManager ivm = new InternalVREManager();
+				ivm.runVREForDuration(stringID, vresToRun, startDate, endDate);
+			}
 		} else {
 			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
 					+ VREConstants.DATE_FORMAT + "}";

@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -151,6 +152,9 @@ public class InternalVREManager {
 
 	/**
 	 * Run vres.
+	 *
+	 * @param recordedDate
+	 *            the recorded date
 	 */
 	public void runVREs(Timestamp recordedDate) {
 		try (Connection vreConn = getVREConnection()) {
@@ -163,6 +167,40 @@ public class InternalVREManager {
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}
+	}
+
+	/**
+	 * Run VRE for duration.
+	 *
+	 * @param stringID
+	 *            the string ID
+	 * @param vresToRun
+	 *            the vres to run
+	 * @param startDate
+	 *            the start date
+	 * @param endDate
+	 *            the end date
+	 */
+	public void runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
+			final Timestamp endDate) {
+
+		Runnable r = new Runnable() {
+			public void run() {
+				LOGGER.info("Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
+				try (final Connection vreConn = getVREConnection()) {
+					VREExecutioner vreEx = new VREExecutioner();
+					vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate);
+					LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate + " to "
+							+ endDate);
+				} catch (SQLException e) {
+					LOGGER.log(Level.SEVERE, e.getMessage());
+				} catch (NamingException e) {
+					LOGGER.log(Level.SEVERE, e.getMessage());
+				}
+			}
+		};
+		new Thread(r).start();
+
 	}
 
 }

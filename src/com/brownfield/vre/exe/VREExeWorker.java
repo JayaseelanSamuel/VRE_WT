@@ -3,6 +3,7 @@ package com.brownfield.vre.exe;
 import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
 import static com.brownfield.vre.VREConstants.DEFAULT_WATER_CUT;
 import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
+import static com.brownfield.vre.VREConstants.GOR;
 import static com.brownfield.vre.VREConstants.HOLDUP;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_QUERY;
 import static com.brownfield.vre.VREConstants.PI;
@@ -130,7 +131,7 @@ public class VREExeWorker implements Runnable {
 	 * @param threadName
 	 *            the thread name
 	 */
-	private void executeVRE(String threadName) {
+	protected void executeVRE(String threadName) {
 		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID);
 		long startT = System.currentTimeMillis();
 		WellModel wellModel = runVRE(params);
@@ -150,6 +151,11 @@ public class VREExeWorker implements Runnable {
 		LOGGER.info(threadName + " Finished VRE for " + this.stringID);
 	}
 
+	/**
+	 * Execute VRE 6.
+	 *
+	 * @param threadName the thread name
+	 */
 	private void executeVRE6(String threadName) {
 		LOGGER.info(threadName + " : Started to run VRE6 for " + this.stringID);
 		long startT = System.currentTimeMillis();
@@ -239,6 +245,7 @@ public class VREExeWorker implements Runnable {
 				double ffv = model.getProperties().getFfv();
 				double resPres = model.getProperties().getReservoirPressure();
 				double holdUPV = model.getProperties().getHoldUPV();
+				double gor = model.getProperties().getGor();
 				double pi = model.getProperties().getPi();
 				double ii = model.getProperties().getIi();
 				// set pi to ii if pi is 0 (e.g. Injector wells)
@@ -263,6 +270,7 @@ public class VREExeWorker implements Runnable {
 					rset.updateString(WATER_CUT_FLAG, DEFAULT_WATER_CUT);
 					rset.updateDouble(PI, pi);
 					rset.updateDouble(HOLDUP, holdUPV);
+					rset.updateDouble(GOR, gor);
 					rset.updateDouble(FRICTION_FACTOR, ffv);
 					rset.updateDouble(RESERVOIR_PRESSURE, resPres);
 
@@ -273,7 +281,7 @@ public class VREExeWorker implements Runnable {
 					LOGGER.info("updated row in VRE table with String : " + stringID + " & Date : " + recordedDate);
 				} else { // insert
 					this.insertVRERecord(vreConn, stringID, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
-							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, null, pi, holdUPV, ffv, resPres,
+							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres,
 							DEFAULT_REMARK);
 				}
 			} catch (Exception e) {

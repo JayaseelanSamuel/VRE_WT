@@ -33,6 +33,7 @@ import static com.brownfield.vre.VREConstants.STRING_TYPE;
 import static com.brownfield.vre.VREConstants.SWITCH_TIME_ZONE;
 import static com.brownfield.vre.VREConstants.TAG_GAS_RATE;
 import static com.brownfield.vre.VREConstants.TAG_LIQUID_RATE;
+import static com.brownfield.vre.VREConstants.TAG_SEPARATOR_PRESSURE;
 import static com.brownfield.vre.VREConstants.TAG_WATERCUT;
 import static com.brownfield.vre.VREConstants.TAG_WHP;
 import static com.brownfield.vre.VREConstants.TAG_WHT;
@@ -49,6 +50,7 @@ import static com.brownfield.vre.VREConstants.VRE_USER;
 import static com.brownfield.vre.VREConstants.WATER_CUT_LAB;
 import static com.brownfield.vre.VREConstants.WCUT_STABILITY_QUERY;
 import static com.brownfield.vre.VREConstants.WELL_TEST_NEW_QUERY;
+import static com.brownfield.vre.VREConstants.WELL_TEST_ID;
 import static com.brownfield.vre.VREConstants.WHP1;
 import static com.brownfield.vre.VREConstants.WTV_WORKFLOW;
 
@@ -123,12 +125,13 @@ public class ValidateWellTest {
 		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery(WELL_TEST_NEW_QUERY);) {
 
-			int stringID;
+			int stringID, ftTestID;
 			Timestamp testDate;
 			String effectiveTestDate;
 
 			if (rset != null) {
 				while (rset.next()) {
+					ftTestID = rset.getInt(WELL_TEST_ID);
 					stringID = rset.getInt(STRING_ID);
 					testDate = rset.getTimestamp(TEST_END_DATE);
 					effectiveTestDate = rset.getString(EFFECTIVE_DATE);
@@ -141,7 +144,7 @@ public class ValidateWellTest {
 					// this will also update watercut
 					boolean isStable = this.isStable(vreConn, stringID, effectiveTestDate);
 					// update the FTQL1 to standard conditions.
-					ql1Standard = Utils.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut/100);
+					ql1Standard = Utils.getStandardConditionRate(ql1Standard, SHRINKAGE_FACTOR, watercut / 100);
 
 					Map<String, String> tags = this.getTags(vreConn, stringID);
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
@@ -172,6 +175,9 @@ public class ValidateWellTest {
 					double meanLiqRate = ql1Standard;
 					double meanWHP = whpFT; // default to FT
 					double meanWCUT = watercut; // default to Lab WCUT
+					double meanSepPressure = 0;
+					double meanGasFlowRate = 0; // FIXME : Defaults and PHD
+												// Stuff later
 					double cvLiqRate = 0, cvWHP = 0, cvWCUT = 0;
 					double standardLiqRate = ql1Standard; // default to FT
 
@@ -230,7 +236,7 @@ public class ValidateWellTest {
 
 					if (wcutTagAvailable) {
 						List<Double> wcutList = this.getPHDData(phdConn, tags.get(TAG_WATERCUT), startDate, endDate);
-						//modifyWaterCutsToFraction(wcutList);
+						// modifyWaterCutsToFraction(wcutList);
 						if (!wcutList.isEmpty()) {
 							wcutHasNulls = this.hasNullValues(wcutList);
 							isOutOfRangeWCUT = this.hasOutOfRangeData(wcutList, MIN_WHP, MAX_WHP);
@@ -254,7 +260,7 @@ public class ValidateWellTest {
 						}
 					}
 
-					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, (meanWCUT/100));
+					standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, (meanWCUT / 100));
 
 					if (isStable) {
 						if (!(liqRateTagAvailable && whpTagAvailable && wcutTagAvailable)) {
@@ -314,7 +320,7 @@ public class ValidateWellTest {
 					}
 					sb.delete(sb.length() - 1, sb.length());
 					this.insertWellTest(vreConn, stringID, startDate, endDate, standardLiqRate, meanWHP, meanWCUT,
-							setVRE, sb.toString());
+							setVRE, sb.toString(), ftTestID, meanGasFlowRate, meanSepPressure);
 
 					rset.updateDouble(QL1, ql1Standard);
 					rset.updateBoolean(VRE_FLAG, Boolean.FALSE);
@@ -386,6 +392,7 @@ public class ValidateWellTest {
 					tags.put(TAG_LIQUID_RATE, rset.getString(TAG_LIQUID_RATE));
 					tags.put(TAG_GAS_RATE, rset.getString(TAG_GAS_RATE));
 					tags.put(TAG_WATERCUT, rset.getString(TAG_WATERCUT));
+					tags.put(TAG_SEPARATOR_PRESSURE, rset.getString(TAG_SEPARATOR_PRESSURE));
 					tags.put(TAG_WHP, rset.getString(TAG_WHP));
 					tags.put(TAG_WHT, rset.getString(TAG_WHT));
 				}
@@ -458,7 +465,8 @@ public class ValidateWellTest {
 	 * @return the int
 	 */
 	private int insertWellTest(Connection conn, int stringID, String startDate, String endDate, double liquidRate,
-			double whp, double watercut, boolean vreFlag, String remark) {
+			double whp, double watercut, boolean vreFlag, String remark, int ftTestID, double gasFlowRate,
+			double separatorPressure) {
 		int rowsInserted = 0;
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_WELL_TEST_QUERY);) {
 			statement.setInt(1, stringID);
@@ -473,6 +481,9 @@ public class ValidateWellTest {
 			statement.setDouble(8, watercut);
 			statement.setBoolean(9, vreFlag);
 			statement.setString(10, remark);
+			statement.setInt(11, ftTestID);
+			statement.setDouble(12, gasFlowRate);
+			statement.setDouble(12, separatorPressure);
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : "
 					+ startDate);

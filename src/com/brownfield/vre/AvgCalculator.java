@@ -11,9 +11,9 @@ import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_QUERY;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_SELECT_QUERY;
-import static com.brownfield.vre.VREConstants.AVG_OIL_VOL_RATE;
+import static com.brownfield.vre.VREConstants.AVG_WATERCUT_HONEYWELL;
 import static com.brownfield.vre.VREConstants.AVG_WATERCUT;
-import static com.brownfield.vre.VREConstants.AVG_WATER_VOL_RATE;
+import static com.brownfield.vre.VREConstants.AVG_WATER_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_WHERE_CLAUSE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
 import static com.brownfield.vre.VREConstants.AVG_WHT;
@@ -120,8 +120,8 @@ public class AvgCalculator {
 								Double choke = null;
 								Double pdgp = null;
 								Double gasInjRate = null;
-								Double waterVolRate = null;
-								Double oilVolRate = null;
+								Double waterInjRate = null;
+								Double wcutHoneyWell = null;
 								Double annPreA = null;
 								Double annPreB = null;
 								Double liqRate = null;
@@ -140,10 +140,10 @@ public class AvgCalculator {
 											: avgRset.getDouble(AVG_DOWNHOLE_PRESSURE);
 									gasInjRate = avgRset.getObject(AVG_GASLIFT_INJ_RATE) == null ? null
 											: avgRset.getDouble(AVG_GASLIFT_INJ_RATE);
-									waterVolRate = avgRset.getObject(AVG_WATER_VOL_RATE) == null ? null
-											: avgRset.getDouble(AVG_WATER_VOL_RATE);
-									oilVolRate = avgRset.getObject(AVG_OIL_VOL_RATE) == null ? null
-											: avgRset.getDouble(AVG_OIL_VOL_RATE);
+									waterInjRate = avgRset.getObject(AVG_WATER_INJ_RATE) == null ? null
+											: avgRset.getDouble(AVG_WATER_INJ_RATE);
+									wcutHoneyWell = avgRset.getObject(AVG_WATERCUT_HONEYWELL) == null ? null
+											: avgRset.getDouble(AVG_WATERCUT_HONEYWELL);
 									annPreA = avgRset.getObject(AVG_ANN_PRESSURE_A) == null ? null
 											: avgRset.getDouble(AVG_ANN_PRESSURE_A);
 									annPreB = avgRset.getObject(AVG_ANN_PRESSURE_B) == null ? null
@@ -163,7 +163,7 @@ public class AvgCalculator {
 											+ " with downtime " + startDate + " to " + endDate);
 								}
 								this.insertOrUpdateAvgRecord(vreConn, stringID, recordedDate, whp, wht, choke, pdgp,
-										gasInjRate, waterVolRate, oilVolRate, annPreA, annPreB, liqRate, gasRate, wcut,
+										gasInjRate, waterInjRate, wcutHoneyWell, annPreA, annPreB, liqRate, gasRate, wcut,
 										hp, remark);
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());
@@ -200,9 +200,9 @@ public class AvgCalculator {
 	 *            the pdgp
 	 * @param gasInjRate
 	 *            the gas inj rate
-	 * @param waterVolRate
+	 * @param waterInjRate
 	 *            the water vol rate
-	 * @param oilVolRate
+	 * @param wcutHoneyWell
 	 *            the oil vol rate
 	 * @param annPreA
 	 *            the ann pre a
@@ -220,7 +220,7 @@ public class AvgCalculator {
 	 *            the remark
 	 */
 	private void insertOrUpdateAvgRecord(Connection conn, int stringID, Timestamp recordedDate, Double whp, Double wht,
-			Double choke, Double pdgp, Double gasInjRate, Double waterVolRate, Double oilVolRate, Double annPreA,
+			Double choke, Double pdgp, Double gasInjRate, Double waterInjRate, Double wcutHoneyWell, Double annPreA,
 			Double annPreB, Double liqRate, Double gasRate, Double wcut, Double hp, String remark) {
 
 		try (PreparedStatement statement = conn.prepareStatement(AVG_MEASUREMENT_SELECT_QUERY,
@@ -235,8 +235,8 @@ public class AvgCalculator {
 					rset.updateObject(AVG_CHOKE_SIZE, choke);
 					rset.updateObject(AVG_DOWNHOLE_PRESSURE, pdgp);
 					rset.updateObject(AVG_GASLIFT_INJ_RATE, gasInjRate);
-					rset.updateObject(AVG_WATER_VOL_RATE, waterVolRate);
-					rset.updateObject(AVG_OIL_VOL_RATE, oilVolRate);
+					rset.updateObject(AVG_WATER_INJ_RATE, waterInjRate);
+					rset.updateObject(AVG_WATERCUT_HONEYWELL, wcutHoneyWell);
 					rset.updateObject(AVG_ANN_PRESSURE_A, annPreA);
 					rset.updateObject(AVG_ANN_PRESSURE_B, annPreB);
 					rset.updateObject(AVG_LIQUID_RATE, liqRate);
@@ -250,7 +250,7 @@ public class AvgCalculator {
 							"updated row in Measurement table with String : " + stringID + " & Date : " + recordedDate);
 				} else { // insert
 					this.insertAverageMeasurementRecord(conn, stringID, recordedDate, whp, wht, choke, pdgp, gasInjRate,
-							waterVolRate, oilVolRate, annPreA, annPreB, liqRate, gasRate, wcut, hp, remark);
+							waterInjRate, wcutHoneyWell, annPreA, annPreB, liqRate, gasRate, wcut, hp, remark);
 
 				}
 			} catch (Exception e) {
