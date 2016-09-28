@@ -40,6 +40,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import com.brownfield.vre.exe.models.StringModel;
@@ -109,12 +110,12 @@ public class Utils {
 	public static Timestamp getDateFromString(String date, boolean shiftTimeZone) {
 		return getDateFromString(date, DATE_TIME_FORMAT, shiftTimeZone);
 	}
-	
-	
+
 	/**
 	 * Parses the date with either date format or date time format
 	 *
-	 * @param date the date
+	 * @param date
+	 *            the date
 	 * @return the timestamp
 	 */
 	public static Timestamp parseDate(String date) {
@@ -133,9 +134,12 @@ public class Utils {
 	 */
 	public static String getYesterdayString() {
 		SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DATE, -1);
-		return dateFormat.format(cal.getTime());
+		/*
+		 * Calendar cal = Calendar.getInstance(); cal.add(Calendar.DATE, -1);
+		 * return dateFormat.format(cal.getTime());
+		 */
+		Timestamp yesterday = Utils.getYesterdayTimestamp();
+		return dateFormat.format(yesterday.getTime());
 	}
 
 	/**
@@ -167,8 +171,7 @@ public class Utils {
 		try (PreparedStatement statement = vreConn.prepareStatement(GET_STRING_NAME_QUERY);) {
 			statement.setInt(1, stringID);
 			try (ResultSet rset = statement.executeQuery();) {
-				if (rset != null && rset.next()) { // always one row per date
-
+				if (rset != null && rset.next()) { // always one row 
 					stringName = rset.getString(STRING_NAME);
 				}
 			} catch (Exception e) {
@@ -194,7 +197,7 @@ public class Utils {
 		try (PreparedStatement statement = vreConn.prepareStatement(GET_STRING_METADATA_QUERY);) {
 			statement.setInt(1, stringID);
 			try (ResultSet rset = statement.executeQuery();) {
-				if (rset != null && rset.next()) { // always one row per date
+				if (rset != null && rset.next()) { // always one row
 					sm = new StringModel();
 					sm.setStringID(rset.getInt(STRING_ID));
 					sm.setUwi(rset.getString(UWI));
@@ -232,6 +235,61 @@ public class Utils {
 			LOGGER.severe(e.getMessage());
 		}
 		return sm;
+	}
+
+	/**
+	 * Gets the next or previous day.
+	 *
+	 * @param testDate
+	 *            the test date
+	 * @param offset
+	 *            the offset
+	 * @return the next or previous day
+	 */
+	public static Timestamp getNextOrPreviousDay(Timestamp testDate, int offset) {
+		// Use the Calendar class to add/subtract days
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(testDate);
+		cal.add(Calendar.DATE, offset);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Checks if is within limit.
+	 *
+	 * @param number1
+	 *            the number1
+	 * @param number2
+	 *            the number2
+	 * @param percentLimit
+	 *            the percent limit
+	 * @return true, if is within limit
+	 */
+	public static boolean isWithinLimit(double number1, double number2, double percentLimit) {
+		if (number2 != 0) {
+			double percentDiff = Math.abs((number1 - number2) * 100 / number2);
+			return percentDiff <= percentLimit;
+		}
+		return false;
+	}
+
+	/**
+	 * Gets the difference between two dates.
+	 *
+	 * @param startDate
+	 *            the start date
+	 * @param endDate
+	 *            the end date
+	 * @return the difference between two dates
+	 */
+	public static long getDifferenceBetweenTwoDates(Timestamp startDate, Timestamp endDate) {
+		long duration = endDate.getTime() - startDate.getTime();
+		long diffInDays = TimeUnit.MILLISECONDS.toDays(duration);
+		return diffInDays + 1;
 	}
 
 }

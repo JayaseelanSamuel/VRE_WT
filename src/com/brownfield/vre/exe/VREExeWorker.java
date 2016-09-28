@@ -17,6 +17,8 @@ import static com.brownfield.vre.VREConstants.VRE4;
 import static com.brownfield.vre.VREConstants.VRE5;
 import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_WORKFLOW;
+import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
+import static com.brownfield.vre.VREConstants.IS_SEABED;
 import static com.brownfield.vre.VREConstants.WATER_CUT;
 import static com.brownfield.vre.VREConstants.WATER_CUT_FLAG;
 
@@ -38,6 +40,7 @@ import com.brownfield.vre.VREConstants.SOURCE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.WellModel;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class VREExecutioner.
  * 
@@ -57,14 +60,17 @@ public class VREExeWorker implements Runnable {
 	/** The string id. */
 	private int stringID;
 
-	/** The whp. */
-	private double whp;
-
 	/** The wcut. */
 	private double wcut;
 
 	/** The recorded date. */
 	private Timestamp recordedDate;
+
+	/** The choke multiplier. */
+	private double chokeMultiplier;
+
+	/** The is seabed. */
+	private boolean isSeabed;
 
 	/** The vre type. */
 	private VRE_TYPE vreType;
@@ -85,14 +91,15 @@ public class VREExeWorker implements Runnable {
 	 * @param recordedDate
 	 *            the recorded date
 	 */
-	public VREExeWorker(Connection vreConn, List<String> params, int stringID, double whp, double wcut,
-			Timestamp recordedDate) {
+	public VREExeWorker(Connection vreConn, List<String> params, int stringID, double wcut,
+			Timestamp recordedDate, double chokeMultiplier, boolean isSeabed) {
 		this.vreConn = vreConn;
 		this.params = params;
 		this.stringID = stringID;
-		this.whp = whp;
 		this.wcut = wcut;
 		this.recordedDate = recordedDate;
+		this.chokeMultiplier = chokeMultiplier;
+		this.isSeabed = isSeabed;
 	}
 
 	/**
@@ -132,7 +139,7 @@ public class VREExeWorker implements Runnable {
 	 *            the thread name
 	 */
 	protected void executeVRE(String threadName) {
-		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID);
+		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID + "\n" + params);
 		long startT = System.currentTimeMillis();
 		WellModel wellModel = runVRE(params);
 		long endT = System.currentTimeMillis();
@@ -141,7 +148,7 @@ public class VREExeWorker implements Runnable {
 		if (wellModel != null) {
 			if (wellModel.getErrors() == null) {
 				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getTime());
-				this.insertOrUpdateVRE(stringID, whp, wcut, wellModel, recordedDate, vreConn);
+				this.insertOrUpdateVRE(stringID, wcut, wellModel, recordedDate, vreConn, chokeMultiplier, isSeabed);
 			} else {
 				LOGGER.severe(threadName + " : Exception in calling VRE - " + wellModel.getErrors());
 			}
@@ -154,7 +161,8 @@ public class VREExeWorker implements Runnable {
 	/**
 	 * Execute VRE 6.
 	 *
-	 * @param threadName the thread name
+	 * @param threadName
+	 *            the thread name
 	 */
 	private void executeVRE6(String threadName) {
 		LOGGER.info(threadName + " : Started to run VRE6 for " + this.stringID);
@@ -203,8 +211,6 @@ public class VREExeWorker implements Runnable {
 	 *
 	 * @param stringID
 	 *            the string id
-	 * @param whp
-	 *            the whp
 	 * @param wcut
 	 *            the wcut
 	 * @param model
@@ -213,9 +219,13 @@ public class VREExeWorker implements Runnable {
 	 *            the recorded date
 	 * @param vreConn
 	 *            the vre conn
+	 * @param chokeMuliplier
+	 *            the choke muliplier
+	 * @param isSeabed
+	 *            the is seabed
 	 */
-	private void insertOrUpdateVRE(int stringID, double whp, double wcut, WellModel model, Timestamp recordedDate,
-			Connection vreConn) {
+	private void insertOrUpdateVRE(int stringID, double wcut, WellModel model, Timestamp recordedDate,
+			Connection vreConn, double chokeMuliplier, boolean isSeabed) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY,
 				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
 
@@ -273,6 +283,8 @@ public class VREExeWorker implements Runnable {
 					rset.updateDouble(GOR, gor);
 					rset.updateDouble(FRICTION_FACTOR, ffv);
 					rset.updateDouble(RESERVOIR_PRESSURE, resPres);
+					rset.updateDouble(CHOKE_MULTIPLIER, chokeMuliplier);
+					rset.updateBoolean(IS_SEABED, isSeabed);
 
 					// rset.updateString(REMARK, DEFAULT_REMARK);
 					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
@@ -281,7 +293,7 @@ public class VREExeWorker implements Runnable {
 					LOGGER.info("updated row in VRE table with String : " + stringID + " & Date : " + recordedDate);
 				} else { // insert
 					this.insertVRERecord(vreConn, stringID, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
-							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres,
+							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres, chokeMuliplier, isSeabed,
 							DEFAULT_REMARK);
 				}
 			} catch (Exception e) {
@@ -333,7 +345,7 @@ public class VREExeWorker implements Runnable {
 	 */
 	private int insertVRERecord(Connection conn, int stringID, Timestamp recordedDate, Double vre1, Double vre2,
 			Double vre3, Double vre4, Double vre5, Double vre6, Double wcut, String wcutFlag, Double gor, Double pi,
-			Double holdUPV, Double ffv, Double resPres, String remark) {
+			Double holdUPV, Double ffv, Double resPres, Double chokeMuliplier, Boolean isSeabed, String remark) {
 		int rowsInserted = 0;
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE_QUERY);) {
 			statement.setInt(1, stringID);
@@ -353,7 +365,9 @@ public class VREExeWorker implements Runnable {
 			statement.setDouble(14, holdUPV != null ? holdUPV : 0);
 			statement.setDouble(15, ffv != null ? ffv : 0);
 			statement.setDouble(16, resPres != null ? resPres : 0);
-			statement.setString(17, remark);
+			statement.setDouble(17, chokeMuliplier != null ? chokeMuliplier : 1);
+			statement.setBoolean(18, isSeabed != null ? isSeabed : false);
+			statement.setString(19, remark);
 
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted in VRE table with String : " + stringID + " & Date : "

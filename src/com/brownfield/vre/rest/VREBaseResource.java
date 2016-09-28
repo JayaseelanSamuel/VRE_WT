@@ -10,6 +10,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.brownfield.vre.Utils;
@@ -163,7 +164,9 @@ public class VREBaseResource {
 	@GET
 	@Path("/runVREForDuration")
 	public Response runVREForDuration(@QueryParam("stringID") Integer stringID, @QueryParam("vres") String vres,
-			@QueryParam("start_date") String start_date, @QueryParam("end_date") String end_date) {
+			@QueryParam("start_date") String start_date, @QueryParam("end_date") String end_date,
+			@QueryParam("pi") double pi, @QueryParam("reservoirPressure") double reservoirPressure,
+			@QueryParam("holdUPV") double holdUPV, @QueryParam("ffv") double ffv, @QueryParam("chokeMultiplier") double chokeMultiplier) {
 
 		Timestamp startDate = null, endDate = null;
 		List<String> vresToRun = null;
@@ -193,15 +196,16 @@ public class VREBaseResource {
 
 		if (startDate != null && endDate != null) {
 			if (vresToRun != null) {
-				result = "Started running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate;
 				InternalVREManager ivm = new InternalVREManager();
-				ivm.runVREForDuration(stringID, vresToRun, startDate, endDate);
+				result = ivm.runVREForDuration(stringID, vresToRun, startDate, endDate, pi, reservoirPressure, holdUPV, ffv, chokeMultiplier);
 			}
 		} else {
 			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
 					+ VREConstants.DATE_FORMAT + "}";
 		}
-		return Response.status(200).entity(result).build();
+		
+		result = "{ \"value\" : [\"" + result + "\"] }" ;
+		return Response.status(200).entity(result).type(MediaType.APPLICATION_JSON).build();
 	}
 
 	/**

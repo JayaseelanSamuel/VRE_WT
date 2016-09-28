@@ -2,7 +2,6 @@ package com.brownfield.vre.exe;
 
 import static com.brownfield.vre.VREConstants.ARG_BEANSIZE;
 import static com.brownfield.vre.VREConstants.ARG_GAS_INJ_RATE;
-import static com.brownfield.vre.VREConstants.ARG_GAS_OIL_RATIO;
 import static com.brownfield.vre.VREConstants.ARG_HEADER;
 import static com.brownfield.vre.VREConstants.ARG_MODEL;
 import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
@@ -13,6 +12,8 @@ import static com.brownfield.vre.VREConstants.ARG_RES_STATIC_PRESSURE;
 import static com.brownfield.vre.VREConstants.ARG_TEST_LIQ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_VERTICAL_FRICTION_FACTOR;
 import static com.brownfield.vre.VREConstants.ARG_VERTICAL_HOLDUP_FACTOR;
+import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_LOW;
+import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_HIGH;
 import static com.brownfield.vre.VREConstants.ARG_VRE1;
 import static com.brownfield.vre.VREConstants.ARG_VRE2;
 import static com.brownfield.vre.VREConstants.ARG_VRE3;
@@ -26,12 +27,13 @@ import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
 import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
+import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
+import static com.brownfield.vre.VREConstants.IS_SEABED;
 import static com.brownfield.vre.VREConstants.CONCURRENT_PIPESIM_LICENCES;
 import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
-import static com.brownfield.vre.VREConstants.GOR;
 import static com.brownfield.vre.VREConstants.HOLDUP;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
@@ -39,6 +41,8 @@ import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.PI;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
+import static com.brownfield.vre.VREConstants.RECALIBRATE_LOW;
+import static com.brownfield.vre.VREConstants.RECALIBRATE_HIGH;
 import static com.brownfield.vre.VREConstants.QL1;
 import static com.brownfield.vre.VREConstants.RECAL;
 import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
@@ -152,7 +156,7 @@ public class VREExecutioner {
 					stringID = rset.getInt(STRING_ID);
 					recordedDate = rset.getTimestamp(RECORDED_DATE);
 					Double whp = rset.getObject(AVG_WHP) == null ? null : rset.getDouble(AVG_WHP);
-					Double wcut = rset.getObject(WATER_CUT_LAB) == null ? null : rset.getDouble(WATER_CUT_LAB);
+					Double wcut = rset.getObject(WATER_CUT_LAB) == null ? 0 : rset.getDouble(WATER_CUT_LAB);
 					Double pdgp = rset.getObject(AVG_DOWNHOLE_PRESSURE) == null ? null
 							: rset.getDouble(AVG_DOWNHOLE_PRESSURE);
 					Double gasInjRate = rset.getObject(AVG_GASLIFT_INJ_RATE) == null ? null
@@ -160,6 +164,9 @@ public class VREExecutioner {
 					Double hp = rset.getObject(AVG_HEADER_PRESSURE) == null ? null
 							: rset.getDouble(AVG_HEADER_PRESSURE);
 					Double choke = rset.getObject(CHOKE_SETTING) == null ? null : rset.getDouble(CHOKE_SETTING);
+					Double chokeMultiplier = rset.getObject(CHOKE_MULTIPLIER) == null ? 1
+							: rset.getDouble(CHOKE_MULTIPLIER);
+					Boolean isSeabed = rset.getObject(IS_SEABED) == null ? null : rset.getBoolean(IS_SEABED);
 
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
@@ -183,12 +190,12 @@ public class VREExecutioner {
 						params.add(ARG_VRE5);
 						params.add(ARG_HEADER + hp);
 						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
-						if (choke != null) {
-							params.add(ARG_BEANSIZE + choke);
-						}
+						params.add(ARG_BEANSIZE + choke);
+						params.add(CHOKE_MULTIPLIER + chokeMultiplier);
 					}
 
-					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate, chokeMultiplier,
+							isSeabed);
 					executor.execute(worker);
 					rowCount++;
 				}
@@ -221,34 +228,28 @@ public class VREExecutioner {
 	 *            the end date
 	 */
 	public void runVREForDuration(Connection vreConn, Integer stringID, List<String> vresToRun, Timestamp startDate,
-			Timestamp endDate) {
+			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv,
+			double chokeMultiplier) {
 
-		// TODO: Model Resetting
-
-		Double startFFV = 0.0, startResPres = 0.0, startHoldUPV = 0.0, startGOR = 0.0, startPI = 0.0;
-		Double endFFV = 0.0, endResPres = 0.0, endHoldUPV = 0.0, endGOR = 0.0, endPI = 0.0;
-		int rowCnt = 0;
-		boolean resetFirst = false;
+		Double endFFV = ffv, endResPres = reservoirPressure, endHoldUPV = holdUPV, endPI = pi;
+		double endWHP = 0, endWcut = 0;
+		boolean firstRecord = true, resetLast = false;
+		String pipesimLoc = null;
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_MODEL_RESET_QUERY)) {
 			statement.setInt(1, stringID);
-			statement.setTimestamp(2, startDate);
-			statement.setInt(3, stringID);
+			// statement.setTimestamp(2, startDate);
+			statement.setInt(2, stringID);
 			try (ResultSet rset = statement.executeQuery()) {
-				while (rset.next()) {
-					rowCnt++;
-					if (rset.getTimestamp(RECORDED_DATE) == startDate) {
-						startFFV = rset.getObject(FRICTION_FACTOR) == null ? 0 : rset.getDouble(FRICTION_FACTOR);
-						startResPres = rset.getObject(RESERVOIR_PRESSURE) == null ? 0
-								: rset.getDouble(RESERVOIR_PRESSURE);
-						startHoldUPV = rset.getObject(HOLDUP) == null ? 0 : rset.getDouble(HOLDUP);
-						startGOR = rset.getObject(GOR) == null ? 0 : rset.getDouble(GOR);
-						startPI = rset.getObject(PI) == null ? 0 : rset.getDouble(PI);
-					} else {
+				if (rset.next()) {
+					Timestamp vreLastDate = rset.getTimestamp(RECORDED_DATE);
+					// reset model to latest value if endDate is less than vre
+					// latest date
+					if (endDate.compareTo(vreLastDate) < 0) {
+						resetLast = true;
 						endFFV = rset.getObject(FRICTION_FACTOR) == null ? 0 : rset.getDouble(FRICTION_FACTOR);
 						endResPres = rset.getObject(RESERVOIR_PRESSURE) == null ? 0
 								: rset.getDouble(RESERVOIR_PRESSURE);
 						endHoldUPV = rset.getObject(HOLDUP) == null ? 0 : rset.getDouble(HOLDUP);
-						endGOR = rset.getObject(GOR) == null ? 0 : rset.getDouble(GOR);
 						endPI = rset.getObject(PI) == null ? 0 : rset.getDouble(PI);
 					}
 				}
@@ -257,12 +258,6 @@ public class VREExecutioner {
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
-		}
-
-		if (rowCnt == 2) {
-			resetFirst = true;
-		} else {
-			LOGGER.severe("Query did not fetch two records for model resetting");
 		}
 
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_DURATION_QUERY);) {
@@ -290,6 +285,7 @@ public class VREExecutioner {
 					Double qLiq = rset.getObject(QL1) == null ? null : rset.getDouble(QL1);
 
 					Boolean recal = rset.getObject(RECAL) == null ? null : rset.getBoolean(RECAL);
+					Boolean isSeabed = rset.getObject(IS_SEABED) == null ? null : rset.getBoolean(IS_SEABED);
 
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
@@ -303,20 +299,29 @@ public class VREExecutioner {
 					if (recal != null && recal) {
 						LOGGER.info("Executing recalibration for " + stringID + " for " + recordedDate);
 						params.add(ARG_TEST_LIQ_RATE + qLiq);
+						params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_LOW);
+						params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_HIGH);
 					}
 
-					if (resetFirst) {
+					if (firstRecord) {
 						// VRE.exe -vre1... -gor270 -resp2090 -ffv1.1 -hhv0.92
 						// -index1.57
-						resetFirst = false;
-						params.add(ARG_VERTICAL_FRICTION_FACTOR + startFFV);
-						params.add(ARG_RES_STATIC_PRESSURE + startResPres);
-						params.add(ARG_VERTICAL_HOLDUP_FACTOR + startHoldUPV);
-						params.add(ARG_GAS_OIL_RATIO + startGOR);
-						params.add(ARG_PRODUCTIVITY_INDEX + startPI);
+						firstRecord = false;
+						params.add(ARG_VERTICAL_FRICTION_FACTOR + ffv);
+						params.add(ARG_RES_STATIC_PRESSURE + reservoirPressure);
+						params.add(ARG_VERTICAL_HOLDUP_FACTOR + holdUPV);
+						// params.add(ARG_GAS_OIL_RATIO + startGOR);
+						params.add(ARG_PRODUCTIVITY_INDEX + pi);
+
+						if (resetLast) {
+							// doesn't matter what whp and wcuts are because
+							// they are just fillers for model reset
+							pipesimLoc = rset.getString(PIPESIM_MODEL_LOC);
+							endWHP = whp;
+							endWcut = wcut;
+						}
 					}
 
-					params = new ArrayList<>();
 					// VRE2 , VRE3, VRE4
 					if (pdgp != null) {
 						if (vresToRun.contains(VRE_TYPE.VRE2.name())) {
@@ -339,14 +344,13 @@ public class VREExecutioner {
 						params.add(ARG_VRE5);
 						params.add(ARG_HEADER + hp);
 						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
-						if (choke != null) {
-							params.add(ARG_BEANSIZE + choke);
-						}
+						params.add(ARG_BEANSIZE + choke);
+						params.add(CHOKE_MULTIPLIER + chokeMultiplier);
 					}
 					rowCount++;
-					// VREExeWorker vreExeWorker =
-					new VREExeWorker(vreConn, params, stringID, whp, wcut, recordedDate);
-					// vreExeWorker.executeVRE("runVREForDuration");
+					VREExeWorker vreExeWorker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate,
+							chokeMultiplier, isSeabed);
+					vreExeWorker.executeVRE("runVREForDuration");
 				}
 				long end = System.currentTimeMillis();
 				double duration = (end - start) / 1000;
@@ -358,7 +362,21 @@ public class VREExecutioner {
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 		} finally {
-			// TODO: Model Resetting
+			// Reset model back to latest values if this is historic
+			// recalculation
+			if (resetLast) {
+				List<String> params = new ArrayList<>();
+				params.add(VRE_EXE_LOC);// executable
+				params.add(ARG_VRE1);
+				params.add(ARG_MODEL + pipesimLoc);
+				params.add(ARG_WHP + endWHP);
+				params.add(ARG_WATERCUT + endWcut);
+				params.add(ARG_VERTICAL_FRICTION_FACTOR + endFFV);
+				params.add(ARG_RES_STATIC_PRESSURE + endResPres);
+				params.add(ARG_VERTICAL_HOLDUP_FACTOR + endHoldUPV);
+				params.add(ARG_PRODUCTIVITY_INDEX + endPI);
+				VREExeWorker.runVRE(params);
+			}
 		}
 	}
 
@@ -387,6 +405,8 @@ public class VREExecutioner {
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
 					params.add(ARG_TEST_LIQ_RATE + qLiq);
+					params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_LOW);
+					params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_HIGH);
 					WellModel wellModel = VREExeWorker.runVRE(params);
 					boolean isCalibrated = false;
 					if (wellModel != null) {
@@ -419,7 +439,8 @@ public class VREExecutioner {
 					rset.updateRow();
 				}
 				executor.shutdown();
-				// don't wait for executor to terminate
+				while (!executor.isTerminated()) {
+				}
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
 				}

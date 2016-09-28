@@ -20,6 +20,7 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import com.brownfield.vre.AvgCalculator;
+import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
@@ -181,25 +182,45 @@ public class InternalVREManager {
 	 * @param endDate
 	 *            the end date
 	 */
-	public void runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
-			final Timestamp endDate) {
+	public String runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
+			final Timestamp endDate, final double pi, final double reservoirPressure, final double holdUPV,
+			final double ffv, final double chokeMultiplier) {
 
-		Runnable r = new Runnable() {
-			public void run() {
-				LOGGER.info("Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
-				try (final Connection vreConn = getVREConnection()) {
-					VREExecutioner vreEx = new VREExecutioner();
-					vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate);
-					LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate + " to "
-							+ endDate);
-				} catch (SQLException e) {
-					LOGGER.log(Level.SEVERE, e.getMessage());
-				} catch (NamingException e) {
-					LOGGER.log(Level.SEVERE, e.getMessage());
-				}
+		String message = "Started running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate;
+
+		try (Connection vreConn = getVREConnection()) {
+			// TODO :StringID is valid and job is not running
+			String stringName = Utils.getStringNameFromID(vreConn, stringID);
+			if (stringName == null) {
+				message = "Invalid stringID";
+			} else {
+
+				Runnable r = new Runnable() {
+					public void run() {
+						LOGGER.info(
+								"Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
+						try (final Connection vreConn = getVREConnection()) {
+							VREExecutioner vreEx = new VREExecutioner();
+							vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate, pi,
+									reservoirPressure, holdUPV, ffv, chokeMultiplier);
+							LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate
+									+ " to " + endDate);
+						} catch (SQLException e) {
+							LOGGER.log(Level.SEVERE, e.getMessage());
+						} catch (NamingException e) {
+							LOGGER.log(Level.SEVERE, e.getMessage());
+						}
+					}
+				};
+				new Thread(r).start();
 			}
-		};
-		new Thread(r).start();
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+		}
+
+		return message;
 
 	}
 
