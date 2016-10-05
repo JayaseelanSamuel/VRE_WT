@@ -171,7 +171,7 @@ public class Utils {
 		try (PreparedStatement statement = vreConn.prepareStatement(GET_STRING_NAME_QUERY);) {
 			statement.setInt(1, stringID);
 			try (ResultSet rset = statement.executeQuery();) {
-				if (rset != null && rset.next()) { // always one row 
+				if (rset != null && rset.next()) { // always one row
 					stringName = rset.getString(STRING_NAME);
 				}
 			} catch (Exception e) {

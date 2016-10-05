@@ -91,8 +91,8 @@ public class VREExeWorker implements Runnable {
 	 * @param recordedDate
 	 *            the recorded date
 	 */
-	public VREExeWorker(Connection vreConn, List<String> params, int stringID, double wcut,
-			Timestamp recordedDate, double chokeMultiplier, boolean isSeabed) {
+	public VREExeWorker(Connection vreConn, List<String> params, int stringID, double wcut, Timestamp recordedDate,
+			double chokeMultiplier, boolean isSeabed) {
 		this.vreConn = vreConn;
 		this.params = params;
 		this.stringID = stringID;
@@ -139,7 +139,7 @@ public class VREExeWorker implements Runnable {
 	 *            the thread name
 	 */
 	protected void executeVRE(String threadName) {
-		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID + "\n" + params);
+		LOGGER.info(threadName + " : Started to run VRE for " + this.stringID);
 		long startT = System.currentTimeMillis();
 		WellModel wellModel = runVRE(params);
 		long endT = System.currentTimeMillis();
@@ -181,6 +181,7 @@ public class VREExeWorker implements Runnable {
 	 * @return the well model
 	 */
 	public static WellModel runVRE(List<String> params) {
+		LOGGER.info(Thread.currentThread().getName() + " : Running VRE with " + "\n" + params);
 		WellModel wellModel = null;
 		try {
 			ProcessBuilder pb = new ProcessBuilder(params);
@@ -197,11 +198,14 @@ public class VREExeWorker implements Runnable {
 		} catch (IOException e) {
 			LOGGER.severe("Exception occurred while exeuting system command");
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		} catch (JAXBException e) {
 			LOGGER.severe("Exception occurred while parsing");
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 		return wellModel;
 	}
@@ -293,14 +297,16 @@ public class VREExeWorker implements Runnable {
 					LOGGER.info("updated row in VRE table with String : " + stringID + " & Date : " + recordedDate);
 				} else { // insert
 					this.insertVRERecord(vreConn, stringID, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
-							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres, chokeMuliplier, isSeabed,
-							DEFAULT_REMARK);
+							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres,
+							chokeMuliplier, isSeabed, DEFAULT_REMARK);
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -374,6 +380,7 @@ public class VREExeWorker implements Runnable {
 					+ recordedDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 		return rowsInserted;
 	}

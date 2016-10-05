@@ -11,7 +11,7 @@ import static com.brownfield.vre.VREConstants.STRING_NAME;
 import static com.brownfield.vre.VREConstants.VRE6_EXE_OUTPUT;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
-import static com.brownfield.vre.VREConstants.VRE_JOBS_IN_PROGRESS_QUERY;
+import static com.brownfield.vre.VREConstants.VRE6_JOBS_IN_PROGRESS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
 import static com.brownfield.vre.VREConstants.VRE_USER;
 
@@ -75,7 +75,7 @@ public class JobsMonitor {
 	 *            the vre conn
 	 */
 	public void monitorJobs(Connection vreConn) {
-		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_IN_PROGRESS_QUERY,
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE6_JOBS_IN_PROGRESS_QUERY,
 				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery()) {
 			if (rset != null) {

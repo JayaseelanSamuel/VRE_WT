@@ -166,7 +166,7 @@ public class VREBaseResource {
 	public Response runVREForDuration(@QueryParam("stringID") Integer stringID, @QueryParam("vres") String vres,
 			@QueryParam("start_date") String start_date, @QueryParam("end_date") String end_date,
 			@QueryParam("pi") double pi, @QueryParam("reservoirPressure") double reservoirPressure,
-			@QueryParam("holdUPV") double holdUPV, @QueryParam("ffv") double ffv, @QueryParam("chokeMultiplier") double chokeMultiplier) {
+			@QueryParam("holdUPV") double holdUPV, @QueryParam("ffv") double ffv, @QueryParam("chokeMultiplier") double chokeMultiplier, @QueryParam("user") String user) {
 
 		Timestamp startDate = null, endDate = null;
 		List<String> vresToRun = null;
@@ -197,7 +197,7 @@ public class VREBaseResource {
 		if (startDate != null && endDate != null) {
 			if (vresToRun != null) {
 				InternalVREManager ivm = new InternalVREManager();
-				result = ivm.runVREForDuration(stringID, vresToRun, startDate, endDate, pi, reservoirPressure, holdUPV, ffv, chokeMultiplier);
+				result = ivm.runVREForDuration(stringID, vresToRun, startDate, endDate, pi, reservoirPressure, holdUPV, ffv, chokeMultiplier, user);
 			}
 		} else {
 			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"

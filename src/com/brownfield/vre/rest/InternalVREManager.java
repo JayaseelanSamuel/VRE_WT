@@ -4,10 +4,18 @@ import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
 import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.TEIID_PASSWORD;
 import static com.brownfield.vre.VREConstants.TEIID_USER;
+import static com.brownfield.vre.VREConstants.VRE_EXE_RUNNING_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_JNDI_NAME;
+import static com.brownfield.vre.VREConstants.FROM_DATE;
+import static com.brownfield.vre.VREConstants.TO_DATE;
+import static com.brownfield.vre.VREConstants.STARTED_ON;
+import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
+import static com.brownfield.vre.VREConstants.ROW_CREATED_BY;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
@@ -184,7 +192,7 @@ public class InternalVREManager {
 	 */
 	public String runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
 			final Timestamp endDate, final double pi, final double reservoirPressure, final double holdUPV,
-			final double ffv, final double chokeMultiplier) {
+			final double ffv, final double chokeMultiplier, final String user) {
 
 		String message = "Started running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate;
 
@@ -194,25 +202,51 @@ public class InternalVREManager {
 			if (stringName == null) {
 				message = "Invalid stringID";
 			} else {
-
-				Runnable r = new Runnable() {
-					public void run() {
-						LOGGER.info(
-								"Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
-						try (final Connection vreConn = getVREConnection()) {
-							VREExecutioner vreEx = new VREExecutioner();
-							vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate, pi,
-									reservoirPressure, holdUPV, ffv, chokeMultiplier);
-							LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate
-									+ " to " + endDate);
-						} catch (SQLException e) {
-							LOGGER.log(Level.SEVERE, e.getMessage());
-						} catch (NamingException e) {
-							LOGGER.log(Level.SEVERE, e.getMessage());
+				boolean isRunning = false;
+				Timestamp fromDate, toDate, startedOn;
+				String currentUser;
+				int currentCounter;
+				try (PreparedStatement statement = vreConn.prepareStatement(VRE_EXE_RUNNING_QUERY);) {
+					statement.setInt(1, stringID);
+					try (ResultSet rset = statement.executeQuery();) {
+						if (rset != null && rset.next()) {
+							isRunning = true;
+							fromDate = rset.getTimestamp(FROM_DATE);
+							toDate = rset.getTimestamp(TO_DATE);
+							startedOn = rset.getTimestamp(STARTED_ON);
+							currentCounter = rset.getInt(CURRENT_COUNTER);
+							currentUser = rset.getString(ROW_CREATED_BY);
+							message = "Another recalculation for " + stringName + " is already running from : " + fromDate +
+									" to : " + toDate + " initiated by user : " + currentUser + " on " + startedOn ;
+							message += ".\n The process has already executed for " + currentCounter + " days. Kindly wait for it to finish and then try again." ;
 						}
+					} catch (Exception e) {
+						LOGGER.severe(e.getMessage()); e.printStackTrace();
 					}
-				};
-				new Thread(r).start();
+				} catch (Exception e) {
+					LOGGER.severe(e.getMessage()); e.printStackTrace();
+				}
+
+				if(!isRunning){
+					Runnable r = new Runnable() {
+						public void run() {
+							LOGGER.info(
+									"Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
+							try (final Connection vreConn = getVREConnection()) {
+								VREExecutioner vreEx = new VREExecutioner();
+								vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate, pi,
+										reservoirPressure, holdUPV, ffv, chokeMultiplier, user);
+								LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate
+										+ " to " + endDate);
+							} catch (SQLException e) {
+								LOGGER.log(Level.SEVERE, e.getMessage());
+							} catch (NamingException e) {
+								LOGGER.log(Level.SEVERE, e.getMessage());
+							}
+						}
+					};
+					new Thread(r).start();
+				}
 			}
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());

@@ -7,13 +7,13 @@ import static com.brownfield.vre.VREConstants.ARG_MODEL;
 import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
 import static com.brownfield.vre.VREConstants.ARG_PDGP;
 import static com.brownfield.vre.VREConstants.ARG_PRODUCTIVITY_INDEX;
+import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_HIGH;
+import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_LOW;
 import static com.brownfield.vre.VREConstants.ARG_RESERVOIR;
 import static com.brownfield.vre.VREConstants.ARG_RES_STATIC_PRESSURE;
 import static com.brownfield.vre.VREConstants.ARG_TEST_LIQ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_VERTICAL_FRICTION_FACTOR;
 import static com.brownfield.vre.VREConstants.ARG_VERTICAL_HOLDUP_FACTOR;
-import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_LOW;
-import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_HIGH;
 import static com.brownfield.vre.VREConstants.ARG_VRE1;
 import static com.brownfield.vre.VREConstants.ARG_VRE2;
 import static com.brownfield.vre.VREConstants.ARG_VRE3;
@@ -26,25 +26,29 @@ import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
-import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
 import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
-import static com.brownfield.vre.VREConstants.IS_SEABED;
+import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
+import static com.brownfield.vre.VREConstants.COMPLETED_ON;
 import static com.brownfield.vre.VREConstants.CONCURRENT_PIPESIM_LICENCES;
+import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
 import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
 import static com.brownfield.vre.VREConstants.HOLDUP;
-import static com.brownfield.vre.VREConstants.INSERT_VRE_JOBS_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE6_JOBS_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE_EXE_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
+import static com.brownfield.vre.VREConstants.IS_RUNNING;
+import static com.brownfield.vre.VREConstants.IS_SEABED;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
 import static com.brownfield.vre.VREConstants.PI;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
-import static com.brownfield.vre.VREConstants.RECALIBRATE_LOW;
-import static com.brownfield.vre.VREConstants.RECALIBRATE_HIGH;
 import static com.brownfield.vre.VREConstants.QL1;
 import static com.brownfield.vre.VREConstants.RECAL;
+import static com.brownfield.vre.VREConstants.RECALIBRATE_HIGH;
+import static com.brownfield.vre.VREConstants.RECALIBRATE_LOW;
 import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
 import static com.brownfield.vre.VREConstants.RECORDED_DATE;
 import static com.brownfield.vre.VREConstants.REMARK;
@@ -55,12 +59,13 @@ import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STRING_ID;
 import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
+import static com.brownfield.vre.VREConstants.VRE6_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE_DATASET_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_DURATION_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_EXE_LOC;
-import static com.brownfield.vre.VREConstants.VRE_JOBS_QUERY;
+import static com.brownfield.vre.VREConstants.VRE_EXE_RUNNING_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_MODEL_RESET_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
 import static com.brownfield.vre.VREConstants.VRE_USER;
@@ -127,10 +132,12 @@ public class VREExecutioner {
 				// vreEx.runCalibration(vreConn);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 
 		} catch (ClassNotFoundException e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -207,9 +214,11 @@ public class VREExecutioner {
 				LOGGER.info("Finished running VRE for " + rowCount + " strings in " + duration + " seconds");
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -228,8 +237,8 @@ public class VREExecutioner {
 	 *            the end date
 	 */
 	public void runVREForDuration(Connection vreConn, Integer stringID, List<String> vresToRun, Timestamp startDate,
-			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv,
-			double chokeMultiplier) {
+			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv, double chokeMultiplier,
+			String user) {
 
 		Double endFFV = ffv, endResPres = reservoirPressure, endHoldUPV = holdUPV, endPI = pi;
 		double endWHP = 0, endWcut = 0;
@@ -255,9 +264,11 @@ public class VREExecutioner {
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_DURATION_QUERY);) {
@@ -268,6 +279,8 @@ public class VREExecutioner {
 
 				long start = System.currentTimeMillis();
 				int rowCount = 0;
+				long durationInDays = Utils.getDifferenceBetweenTwoDates(startDate, endDate);
+				Timestamp startedOn = new Timestamp(new Date().getTime());
 
 				while (rset.next()) {
 					// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
@@ -306,6 +319,8 @@ public class VREExecutioner {
 					if (firstRecord) {
 						// VRE.exe -vre1... -gor270 -resp2090 -ffv1.1 -hhv0.92
 						// -index1.57
+						LOGGER.info(" Resetting model for first day of duration - PI : " + pi + " , ResPressure : "
+								+ reservoirPressure);
 						firstRecord = false;
 						params.add(ARG_VERTICAL_FRICTION_FACTOR + ffv);
 						params.add(ARG_RES_STATIC_PRESSURE + reservoirPressure);
@@ -348,9 +363,12 @@ public class VREExecutioner {
 						params.add(CHOKE_MULTIPLIER + chokeMultiplier);
 					}
 					rowCount++;
+					this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, durationInDays, Boolean.TRUE,
+							0, startedOn, null, "Change me later", user);
 					VREExeWorker vreExeWorker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate,
 							chokeMultiplier, isSeabed);
 					vreExeWorker.executeVRE("runVREForDuration");
+
 				}
 				long end = System.currentTimeMillis();
 				double duration = (end - start) / 1000;
@@ -358,13 +376,22 @@ public class VREExecutioner {
 				// TODO: Trigger BPM Email workflow from here
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		} finally {
+			Timestamp currTime = new Timestamp(new Date().getTime());
+			// mark the job as done
+			this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, 0, Boolean.TRUE, 0, currTime, currTime,
+					"Change me later", user);
+
 			// Reset model back to latest values if this is historic
 			// recalculation
 			if (resetLast) {
+				LOGGER.info(
+						" Resetting model back to latest settings - PI : " + endPI + " , ResPressure : " + endResPres);
 				List<String> params = new ArrayList<>();
 				params.add(VRE_EXE_LOC);// executable
 				params.add(ARG_VRE1);
@@ -415,8 +442,9 @@ public class VREExecutioner {
 							if (recal != null) {
 								isCalibrated = recal.getCalibration();
 								boolean review = recal.isReview();
+								LOGGER.info("Model calibration flag is set as  " + review );
 								if (isCalibrated) {
-									this.insertOrUpdateJob(vreConn, stringID, executor);
+									this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
 									LOGGER.info(" Submitted job for - " + stringID);
 									rowCount++;
 								}
@@ -448,6 +476,7 @@ public class VREExecutioner {
 
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -461,8 +490,8 @@ public class VREExecutioner {
 	 * @param executor
 	 *            the executor
 	 */
-	private void insertOrUpdateJob(Connection vreConn, int stringID, ExecutorService executor) {
-		try (PreparedStatement statement = vreConn.prepareStatement(VRE_JOBS_QUERY, ResultSet.TYPE_SCROLL_SENSITIVE,
+	private void insertOrUpdateVRE6Job(Connection vreConn, int stringID, ExecutorService executor) {
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE6_JOBS_QUERY, ResultSet.TYPE_SCROLL_SENSITIVE,
 				ResultSet.CONCUR_UPDATABLE)) {
 			statement.setInt(1, stringID);
 			StringModel stringModel = Utils.getStringModel(vreConn, stringID);
@@ -486,7 +515,7 @@ public class VREExecutioner {
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
 				} else {
-					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE_JOBS_QUERY);) {
+					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE6_JOBS_QUERY);) {
 						stmt.setInt(1, stringID);
 						stmt.setInt(2, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
 						stmt.setInt(3, DSRTA_JOB_TYPE.INVALID.getNumVal());
@@ -495,13 +524,72 @@ public class VREExecutioner {
 						stmt.executeUpdate();
 					} catch (Exception e) {
 						LOGGER.severe(e.getMessage());
+						e.printStackTrace();
 					}
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
+
+	private void insertOrUpdateVreExeJobs(Connection vreConn, Integer stringID, Timestamp fromDate, Timestamp toDate,
+			long duration, boolean isRunning, int currentCounter, Timestamp startedOn, Timestamp completedOn,
+			String remark, String rowCreatedBy) {
+		int rowsInserted = 0;
+
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_EXE_RUNNING_QUERY,
+				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+			statement.setInt(1, stringID);
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) {
+					int counter = rset.getInt(CURRENT_COUNTER);
+					counter++;
+					rset.updateInt(CURRENT_COUNTER, counter);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+
+					// if there is already a job; update
+					if (completedOn == null) {
+						// running job; update counter
+						LOGGER.info(" Recalculation job in progress for " + stringID + " with current counter =  "
+								+ counter);
+					} else { // finished job
+						LOGGER.info(" Recalculation job finished for " + stringID + " on " + completedOn);
+						rset.updateBoolean(IS_RUNNING, Boolean.FALSE);
+						rset.updateTimestamp(COMPLETED_ON, completedOn);
+					}
+					rset.updateRow();
+				} else {
+					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE_EXE_JOBS_QUERY);) {
+						stmt.setInt(1, stringID);
+						stmt.setTimestamp(2, fromDate);
+						stmt.setTimestamp(3, toDate);
+						stmt.setLong(4, duration);
+						stmt.setBoolean(5, isRunning);
+						stmt.setInt(6, currentCounter);
+						stmt.setTimestamp(7, startedOn);
+						stmt.setString(8, remark);
+						stmt.setString(9, rowCreatedBy);
+						rowsInserted = stmt.executeUpdate();
+						LOGGER.info(rowsInserted + " rows inserted in VRE_EXE_JOBS table with String : " + stringID
+								+ " & fromDate : " + fromDate + " & toDate : " + toDate);
+					} catch (Exception e) {
+						LOGGER.severe(e.getMessage());
+						e.printStackTrace();
+					}
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
 }

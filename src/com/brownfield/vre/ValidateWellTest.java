@@ -109,11 +109,11 @@ public class ValidateWellTest {
 				vw.validateNewWellTests(vreConn, phdConn);
 
 			} catch (SQLException e) {
-				LOGGER.severe(e.getMessage());
+				LOGGER.severe(e.getMessage()); e.printStackTrace();
 			}
 
 		} catch (ClassNotFoundException e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 	}
 
@@ -180,15 +180,16 @@ public class ValidateWellTest {
 					boolean phdLiqRateDataAvail = true, phdWHPDataAvail = true; //, phdWCUTDataAvail = true;
 
 					double standardLiqRate = ql1Standard; // default to FT
-					double phdMeanLiqRate = 0;
+					double liquidRate = ql1Standard;
+					//double phdMeanLiqRate = 0;
 					double whp = whpFT; // default to FT
-					double phdMeanWHP = 0;
+					//double phdMeanWHP = 0;
 					double wcut = watercut; // default to Lab WCUT
-					double phdMeanWCUT = 0;
+					//double phdMeanWCUT = 0;
 					double sepPressure = sepPressureFT; // default to FT
-					double phdMeanSepPressure = 0;
+					//double phdMeanSepPressure = 0;
 					double gasFlowRate = gasFlowRateFT; // default to FT
-					double phdMeanGasFlowRate = 0;
+					//double phdMeanGasFlowRate = 0;
 					double cvLiqRate = 0, cvWHP = 0; //, cvWCUT = 0;
 
 					String startDate = startEndDates.get(TEST_START_DATE);
@@ -199,7 +200,7 @@ public class ValidateWellTest {
 						List<Double> gasRates = this.getPHDData(phdConn, tags.get(TAG_GAS_RATE), startDate, endDate);
 						if (!gasRates.isEmpty()) {
 							Statistics stat = new Statistics(gasRates);
-							phdMeanGasFlowRate = stat.getMean();
+							gasFlowRate = stat.getMean(); //phdMeanGasFlowRate
 						}
 					}
 
@@ -208,7 +209,7 @@ public class ValidateWellTest {
 								startDate, endDate);
 						if (!separatorPressure.isEmpty()) {
 							Statistics stat = new Statistics(separatorPressure);
-							phdMeanSepPressure = stat.getMean();
+							sepPressure = stat.getMean(); //phdMeanSepPressure
 						}
 					}
 					
@@ -217,7 +218,7 @@ public class ValidateWellTest {
 								startDate, endDate);
 						if (!wcuts.isEmpty()) {
 							Statistics stat = new Statistics(wcuts);
-							phdMeanWCUT = stat.getMean();
+							wcut = stat.getMean();
 						}
 					}
 
@@ -239,8 +240,9 @@ public class ValidateWellTest {
 								sb.append("Liquid rate sensor frozen for " + tags.get(TAG_LIQUID_RATE)).append("\n");
 							}
 							Statistics stat = new Statistics(liqidRates);
-							phdMeanLiqRate = stat.getMean();
-							cvLiqRate = stat.getCoefficientOfVariation(phdMeanLiqRate);
+							liquidRate = stat.getMean();
+							cvLiqRate = stat.getCoefficientOfVariation(liquidRate);
+							standardLiqRate = Utils.getStandardConditionRate(liquidRate, SHRINKAGE_FACTOR, (watercut / 100));
 						} else {
 							sb.append("No PHD liquid rate available for " + tags.get(TAG_LIQUID_RATE)).append("\n");
 							phdLiqRateDataAvail = false;
@@ -264,7 +266,7 @@ public class ValidateWellTest {
 								sb.append("WHP sensor frozen for " + tags.get(TAG_WHP)).append("\n");
 							}
 							Statistics stat = new Statistics(whpList);
-							phdMeanWHP = stat.getMean();
+							whp = stat.getMean();
 							cvWHP = stat.getCoefficientOfVariation(whp);
 						} else {
 							sb.append("No PHD whp available for " + tags.get(TAG_WHP)).append("\n");
@@ -306,8 +308,8 @@ public class ValidateWellTest {
 					prevVRE = this.getVREForPreviousDay(vreConn, stringID, prevDay);
 					boolean withinTrend = true;
 					
-					if(prevVRE != -1){ // we have VRE value recorded for previous day
-						withinTrend = Utils.isWithinLimit(phdMeanLiqRate,prevVRE,WT_TREND_LIMIT);
+					if(prevVRE != -1 && phdLiqRateDataAvail){ // we have VRE value recorded for previous day
+						withinTrend = Utils.isWithinLimit(liquidRate,prevVRE,WT_TREND_LIMIT);
 					}
 
 					if (isStable) {
@@ -326,21 +328,20 @@ public class ValidateWellTest {
 								if (!(isOutOfRangeLiqRate || isOutOfRangeWHP /*|| isOutOfRangeWCUT*/)) {
 									if (!(isBelowFreezeLiqRate || isBelowFreezeWHP /*|| isBelowFreezeWCUT*/)) {
 										if (cvLiqRate <= CV_LIQ_RATE_MAX) {
-											if (cvLiqRate != 0 || phdMeanLiqRate != 0) {
+											if (cvLiqRate != 0 || liquidRate != 0) {
 												if (cvWHP <= CV_WHP_MAX) {
-													if (cvWHP != 0 || phdMeanWHP != 0) {
+													if (cvWHP != 0 || whp != 0) {
 														/*if (cvWCUT <= CV_WATERCUT_MAX) {
 															if (cvWCUT != 0 || meanWCUT != 0) {*/
 																if (withinTrend) {
-																	standardLiqRate = Utils.getStandardConditionRate(phdMeanLiqRate, SHRINKAGE_FACTOR, (watercut / 100));
-																	whp = phdMeanWHP ;
+																	/*whp = phdMeanWHP ;
 																	wcut = phdMeanWCUT;
 																	sepPressure = phdMeanSepPressure;
-																	gasFlowRate = phdMeanGasFlowRate;
+																	gasFlowRate = phdMeanGasFlowRate;*/
 																	setVRE = true;
 																	sb.append("All Good").append("\n");
 																} else {
-																	sb.append("Liquid rate " + phdMeanLiqRate + " is not within " + WT_TREND_LIMIT
+																	sb.append("Liquid rate " + liquidRate + " is not within " + WT_TREND_LIMIT
 																			+ "% trend limit of previous days VRE " + prevVRE).append("\n");
 																}
 															/*} else {
@@ -389,7 +390,7 @@ public class ValidateWellTest {
 			}
 
 		} catch (SQLException e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 	}
 
@@ -418,10 +419,10 @@ public class ValidateWellTest {
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
+				LOGGER.severe(e.getMessage()); e.printStackTrace();
 			}
 		} catch (Exception e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 		return isStable;
 	}
@@ -455,10 +456,10 @@ public class ValidateWellTest {
 					tags.put(TAG_WHT, rset.getString(TAG_WHT));
 				}
 			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
+				LOGGER.severe(e.getMessage()); e.printStackTrace();
 			}
 		} catch (Exception e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 
 		return tags;
@@ -491,10 +492,10 @@ public class ValidateWellTest {
 					}
 				}
 			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
+				LOGGER.severe(e.getMessage()); e.printStackTrace();
 			}
 		} catch (Exception e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 		return values;
 	}
@@ -546,7 +547,7 @@ public class ValidateWellTest {
 			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : "
 					+ startDate);
 		} catch (Exception e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 		return rowsInserted;
 	}
@@ -697,10 +698,10 @@ public class ValidateWellTest {
 					vre = rset.getDouble(VRE1);
 				}
 			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
+				LOGGER.severe(e.getMessage()); e.printStackTrace();
 			}
 		} catch (Exception e) {
-			LOGGER.severe(e.getMessage());
+			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}
 		return vre;
 	}
