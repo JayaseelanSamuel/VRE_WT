@@ -119,11 +119,11 @@ public class Utils {
 	 * @return the timestamp
 	 */
 	public static Timestamp parseDate(String date) {
-		Timestamp t = getDateFromString(date, DATE_TIME_FORMAT, Boolean.FALSE);
+		Timestamp t = getDateFromString(date, DATE_FORMAT, Boolean.FALSE);
 		if (t != null) {
 			return t;
 		} else {
-			return getDateFromString(date, DATE_FORMAT, Boolean.FALSE);
+			return getDateFromString(date, DATE_TIME_FORMAT, Boolean.FALSE);
 		}
 	}
 

@@ -34,6 +34,7 @@ import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
 import com.brownfield.vre.jobs.JobsMonitor;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class InternalVREManager.
  * 
@@ -85,8 +86,10 @@ public class InternalVREManager {
 			LOGGER.info("Refreshing VRE variables finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -104,8 +107,10 @@ public class InternalVREManager {
 			LOGGER.info("Calculate averages finished for - " + recordedDate);
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -120,10 +125,13 @@ public class InternalVREManager {
 			LOGGER.info("validate wellTests finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -138,8 +146,10 @@ public class InternalVREManager {
 			LOGGER.info("Run calibrations finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -154,8 +164,10 @@ public class InternalVREManager {
 			LOGGER.info("Monitor jobs finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -173,8 +185,10 @@ public class InternalVREManager {
 			LOGGER.info("run VREs finished for - " + recordedDate);
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -189,12 +203,25 @@ public class InternalVREManager {
 	 *            the start date
 	 * @param endDate
 	 *            the end date
+	 * @param pi
+	 *            the pi
+	 * @param reservoirPressure
+	 *            the reservoir pressure
+	 * @param holdUPV
+	 *            the hold upv
+	 * @param ffv
+	 *            the ffv
+	 * @param chokeMultiplier
+	 *            the choke multiplier
+	 * @param user
+	 *            the user
+	 * @return the string
 	 */
 	public String runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
 			final Timestamp endDate, final double pi, final double reservoirPressure, final double holdUPV,
 			final double ffv, final double chokeMultiplier, final String user) {
 
-		String message = "Started running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate;
+		String message = "Recalculation process started for - " + vresToRun;
 
 		try (Connection vreConn = getVREConnection()) {
 			// TODO :StringID is valid and job is not running
@@ -202,6 +229,8 @@ public class InternalVREManager {
 			if (stringName == null) {
 				message = "Invalid stringID";
 			} else {
+				message = "Started running " + vresToRun + " for " + stringName + " from " + startDate + " to "
+						+ endDate;
 				boolean isRunning = false;
 				Timestamp fromDate, toDate, startedOn;
 				String currentUser;
@@ -216,22 +245,26 @@ public class InternalVREManager {
 							startedOn = rset.getTimestamp(STARTED_ON);
 							currentCounter = rset.getInt(CURRENT_COUNTER);
 							currentUser = rset.getString(ROW_CREATED_BY);
-							message = "Another recalculation for " + stringName + " is already running from : " + fromDate +
-									" to : " + toDate + " initiated by user : " + currentUser + " on " + startedOn ;
-							message += ".\n The process has already executed for " + currentCounter + " days. Kindly wait for it to finish and then try again." ;
+							message = "Another recalculation for " + stringName + " is already running from : "
+									+ fromDate + " to : " + toDate + " initiated by user : " + currentUser + " on "
+									+ startedOn;
+							message += ".\n The process has already executed for " + currentCounter
+									+ " days. Kindly wait for it to finish and then try again.";
 						}
 					} catch (Exception e) {
-						LOGGER.severe(e.getMessage()); e.printStackTrace();
+						LOGGER.severe(e.getMessage());
+						e.printStackTrace();
 					}
 				} catch (Exception e) {
-					LOGGER.severe(e.getMessage()); e.printStackTrace();
+					LOGGER.severe(e.getMessage());
+					e.printStackTrace();
 				}
 
-				if(!isRunning){
+				if (!isRunning) {
 					Runnable r = new Runnable() {
 						public void run() {
-							LOGGER.info(
-									"Running " + vresToRun + " for " + stringID + " from " + startDate + " to " + endDate);
+							LOGGER.info("Running " + vresToRun + " for " + stringID + " from " + startDate + " to "
+									+ endDate);
 							try (final Connection vreConn = getVREConnection()) {
 								VREExecutioner vreEx = new VREExecutioner();
 								vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate, pi,
@@ -250,12 +283,42 @@ public class InternalVREManager {
 			}
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
 		}
 
 		return message;
 
+	}
+
+	/**
+	 * Refresh proxy models.
+	 */
+	public void refreshProxyModels() {
+		try {
+			Runnable r = new Runnable() {
+				public void run() {
+					try (final Connection vreConn = getVREConnection()) {
+						LOGGER.info("Refresh proxy models started !!!");
+						VREExecutioner vreEx = new VREExecutioner();
+						vreEx.refreshProxyModels(vreConn);
+						LOGGER.info("Refresh proxy models finished !!!");
+					} catch (SQLException e) {
+						LOGGER.log(Level.SEVERE, e.getMessage());
+						e.printStackTrace();
+					} catch (NamingException e) {
+						LOGGER.log(Level.SEVERE, e.getMessage());
+						e.printStackTrace();
+					}
+				}
+			};
+			new Thread(r).start();
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 }

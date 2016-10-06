@@ -1,5 +1,8 @@
 package com.brownfield.vre.jobs;
 
+
+import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
+import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.FILE_MONITORING_SERVICE;
 import static com.brownfield.vre.VREConstants.JOBS_REMARK;
 import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
@@ -9,9 +12,9 @@ import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STRING_NAME;
 import static com.brownfield.vre.VREConstants.VRE6_EXE_OUTPUT;
+import static com.brownfield.vre.VREConstants.VRE6_JOBS_IN_PROGRESS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
-import static com.brownfield.vre.VREConstants.VRE6_JOBS_IN_PROGRESS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
 import static com.brownfield.vre.VREConstants.VRE_USER;
 
@@ -33,6 +36,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
+import com.brownfield.vre.VREConstants.DSRTA_JOB_TYPE;
 
 /**
  * The Class JobsMonitor.
@@ -82,21 +86,15 @@ public class JobsMonitor {
 				while (rset.next()) {
 					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME) + JSON_EXTENSION;
 					File f = new File(outputFile);
+					String remark = "Checking job status";
 					if (f.exists() && !f.isDirectory()) {
 						LOGGER.info("Reading - " + outputFile);
 						String content = this.getFileContent(f);
 						if (content != null) {
-							String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.FINISHED, new Date());
+							remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.FINISHED, new Date());
 							// file read successfully
-							// rset.updateInt(DSIS_STATUS_ID,
-							// DSIS_JOB_TYPE.FINISHED.getNumVal());
-							// rset.updateInt(DSRTA_STATUS_ID,
-							// DSRTA_JOB_TYPE.READY.getNumVal());
-							rset.updateString(VRE6_EXE_OUTPUT, content);
-							rset.updateString(REMARK, remark);
-							rset.updateString(ROW_CHANGED_BY, FILE_MONITORING_SERVICE);
-							rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
-							rset.updateRow();
+							rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.FINISHED.getNumVal());
+							rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.READY.getNumVal());
 							// Delete the output file
 							try {
 								FileUtils.forceDelete(f);
@@ -108,7 +106,12 @@ public class JobsMonitor {
 						}
 					} else {
 						LOGGER.info("Waiting for file - " + f.getName());
+						remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.IN_PROGRESS, new Date());
 					}
+					rset.updateString(REMARK, remark);
+					rset.updateString(ROW_CHANGED_BY, FILE_MONITORING_SERVICE);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
 				}
 			}
 		} catch (Exception e) {

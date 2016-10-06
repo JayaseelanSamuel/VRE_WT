@@ -377,6 +377,11 @@ public class ValidateWellTest {
 							sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
 						}
 					}
+					
+					if(!setVRE){
+						// TODO: Set BPM email from here
+					}
+					
 					sb.delete(sb.length() - 1, sb.length());
 					this.insertWellTest(vreConn, stringID, startDate, endDate, standardLiqRate, whp, wcut,
 							setVRE, sb.toString(), ftTestID, gasFlowRate, sepPressure);

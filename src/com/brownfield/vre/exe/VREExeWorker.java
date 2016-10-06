@@ -115,6 +115,7 @@ public class VREExeWorker implements Runnable {
 	public VREExeWorker(List<String> params, int stringID, VRE_TYPE vreType) {
 		this.params = params;
 		this.stringID = stringID;
+		this.vreType = vreType;
 	}
 
 	/*

@@ -11,8 +11,9 @@ import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.AVG_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_QUERY;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_SELECT_QUERY;
-import static com.brownfield.vre.VREConstants.AVG_WATERCUT_HONEYWELL;
+import static com.brownfield.vre.VREConstants.AVG_MEDIAN_QUERY;
 import static com.brownfield.vre.VREConstants.AVG_WATERCUT;
+import static com.brownfield.vre.VREConstants.AVG_WATERCUT_HONEYWELL;
 import static com.brownfield.vre.VREConstants.AVG_WATER_INJ_RATE;
 import static com.brownfield.vre.VREConstants.AVG_WHERE_CLAUSE;
 import static com.brownfield.vre.VREConstants.AVG_WHP;
@@ -31,12 +32,14 @@ import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
 import static com.brownfield.vre.VREConstants.VRE_USER;
 
+import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.logging.Logger;
@@ -68,15 +71,21 @@ public class AvgCalculator {
 				// Timestamp yesterdayTimestamp = Utils.getYesterdayTimestamp();
 				// System.out.println(yesterdayTimestamp);
 				String recDate = "2016-03-02";
+				@SuppressWarnings("unused")
 				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				// System.out.println(recordedDate);
-				ac.calculateAverage(vreConn, recordedDate);
+				//ac.calculateAverage(vreConn, recordedDate);
+
+				double median = ac.getMedian(vreConn, 906, 1, Utils.parseDate("2016-09-06"), null, null);
+				System.out.println(median);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 
 		} catch (ClassNotFoundException e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -133,6 +142,7 @@ public class AvgCalculator {
 									// getObject instead of getDouble to store
 									// null values instead of default 0.0
 									whp = avgRset.getObject(AVG_WHP) == null ? null : avgRset.getDouble(AVG_WHP);
+									whp = this.getMedian(vreConn, stringID, TagType.WHP.getNumVal(), recordedDate, startDate, endDate);
 									wht = avgRset.getObject(AVG_WHT) == null ? null : avgRset.getDouble(AVG_WHT);
 									choke = avgRset.getObject(AVG_CHOKE_SIZE) == null ? null
 											: avgRset.getDouble(AVG_CHOKE_SIZE);
@@ -163,8 +173,8 @@ public class AvgCalculator {
 											+ " with downtime " + startDate + " to " + endDate);
 								}
 								this.insertOrUpdateAvgRecord(vreConn, stringID, recordedDate, whp, wht, choke, pdgp,
-										gasInjRate, waterInjRate, wcutHoneyWell, annPreA, annPreB, liqRate, gasRate, wcut,
-										hp, remark);
+										gasInjRate, waterInjRate, wcutHoneyWell, annPreA, annPreB, liqRate, gasRate,
+										wcut, hp, remark);
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());
 							}
@@ -175,9 +185,11 @@ public class AvgCalculator {
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -255,9 +267,11 @@ public class AvgCalculator {
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -328,8 +342,58 @@ public class AvgCalculator {
 					+ recordedDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 		return rowsInserted;
+	}
+
+	/**
+	 * Gets the median.
+	 *
+	 * @param conn
+	 *            the conn
+	 * @param stringID
+	 *            the string id
+	 * @param tagTypeID
+	 *            the tag type id
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param startDownTime
+	 *            the start down time
+	 * @param endDownTime
+	 *            the end down time
+	 * @return the median
+	 */
+	private double getMedian(Connection conn, int stringID, int tagTypeID, Timestamp recordedDate,
+			Timestamp startDownTime, Timestamp endDownTime) {
+		double median = 0;
+		Timestamp currTime = new Timestamp(new Date().getTime());
+		/*
+		 * set downtime values to current time if they are null as both of them
+		 * are mandatory in sql-procedure
+		 */
+		if (startDownTime == null) {
+			startDownTime = currTime;
+		}
+		if (endDownTime == null) {
+			endDownTime = currTime;
+		}
+		try (CallableStatement statement = conn.prepareCall(AVG_MEDIAN_QUERY);) {
+			statement.setInt(1, stringID);
+			statement.setInt(2, tagTypeID);
+			statement.setTimestamp(3, recordedDate);
+			statement.setTimestamp(4, startDownTime);
+			statement.setTimestamp(5, endDownTime);
+			statement.registerOutParameter(6, Types.DOUBLE);
+
+			statement.executeUpdate();
+
+			median = statement.getDouble(6);
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return median;
 	}
 
 }

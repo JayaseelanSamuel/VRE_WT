@@ -61,6 +61,7 @@ import static com.brownfield.vre.VREConstants.STRING_ID;
 import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
 import static com.brownfield.vre.VREConstants.VRE6_JOBS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
+import static com.brownfield.vre.VREConstants.VRE6_PROXY_MODELS_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_DATASET_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_DURATION_QUERY;
@@ -99,6 +100,7 @@ import com.brownfield.vre.exe.models.RecalModel;
 import com.brownfield.vre.exe.models.StringModel;
 import com.brownfield.vre.exe.models.WellModel;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class VREExecutioner.
  * 
@@ -235,6 +237,18 @@ public class VREExecutioner {
 	 *            the start date
 	 * @param endDate
 	 *            the end date
+	 * @param pi
+	 *            the pi
+	 * @param reservoirPressure
+	 *            the reservoir pressure
+	 * @param holdUPV
+	 *            the hold upv
+	 * @param ffv
+	 *            the ffv
+	 * @param chokeMultiplier
+	 *            the choke multiplier
+	 * @param user
+	 *            the user
 	 */
 	public void runVREForDuration(Connection vreConn, Integer stringID, List<String> vresToRun, Timestamp startDate,
 			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv, double chokeMultiplier,
@@ -418,7 +432,9 @@ public class VREExecutioner {
 		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery(WELL_TEST_CALIBRATE_QUERY);) {
 			if (rset != null) {
-				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				// leave 1 license for main thread which will calibrate the well
+				// model
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
 				int rowCount = 0;
 				while (rset.next()) {
 					stringID = rset.getInt(STRING_ID);
@@ -442,10 +458,10 @@ public class VREExecutioner {
 							if (recal != null) {
 								isCalibrated = recal.getCalibration();
 								boolean review = recal.isReview();
-								LOGGER.info("Model calibration flag is set as  " + review );
+								LOGGER.info("Model calibration flag is set as  " + isCalibrated);
 								if (isCalibrated) {
 									this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
-									LOGGER.info(" Submitted job for - " + stringID);
+									LOGGER.info(" VRE6 job submitted for - " + stringID);
 									rowCount++;
 								}
 								if (review) {
@@ -466,11 +482,11 @@ public class VREExecutioner {
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
 				}
-				executor.shutdown();
-				while (!executor.isTerminated()) {
-				}
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
+				}
+				executor.shutdown();
+				while (!executor.isTerminated()) {
 				}
 			}
 
@@ -537,6 +553,32 @@ public class VREExecutioner {
 		}
 	}
 
+	/**
+	 * Insert or update vre exe jobs.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string id
+	 * @param fromDate
+	 *            the from date
+	 * @param toDate
+	 *            the to date
+	 * @param duration
+	 *            the duration
+	 * @param isRunning
+	 *            the is running
+	 * @param currentCounter
+	 *            the current counter
+	 * @param startedOn
+	 *            the started on
+	 * @param completedOn
+	 *            the completed on
+	 * @param remark
+	 *            the remark
+	 * @param rowCreatedBy
+	 *            the row created by
+	 */
 	private void insertOrUpdateVreExeJobs(Connection vreConn, Integer stringID, Timestamp fromDate, Timestamp toDate,
 			long duration, boolean isRunning, int currentCounter, Timestamp startedOn, Timestamp completedOn,
 			String remark, String rowCreatedBy) {
@@ -590,6 +632,43 @@ public class VREExecutioner {
 			LOGGER.severe(e.getMessage());
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Generate proxy models.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 */
+	public void refreshProxyModels(Connection vreConn) {
+
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE6_PROXY_MODELS_QUERY)) {
+
+			try (ResultSet rset = statement.executeQuery()) {
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				int rowCount = 0;
+				int stringID;
+				while (rset.next()) {
+					stringID = rset.getInt(STRING_ID);
+					this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
+					LOGGER.info("Proxy model generation submitted for - " + stringID);
+					rowCount++;
+				}
+				if (rowCount != 0) {
+					LOGGER.info("Proxy model generation submitted for " + rowCount + " strings in on " + new Date());
+				}
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+
 	}
 
 }

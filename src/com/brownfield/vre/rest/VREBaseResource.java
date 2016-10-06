@@ -207,6 +207,20 @@ public class VREBaseResource {
 		result = "{ \"value\" : [\"" + result + "\"] }" ;
 		return Response.status(200).entity(result).type(MediaType.APPLICATION_JSON).build();
 	}
+	
+	/**
+	 * Monitor jobs.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/refreshProxyModels")
+	public Response refreshProxyModels() {
+		String result = "Refreshing proxy models started...";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.refreshProxyModels();
+		return Response.status(200).entity(result).build();
+	}
 
 	/**
 	 * Prints the message.
