@@ -20,24 +20,24 @@ public class VREConstants {
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
+	public static String VRE_DB_URL = "<SERVER_URL>";
 
 	/** The vre user. */
-	public static String VRE_USER = "vre";
+	public static String VRE_USER = "<USER>";
 
 	/** The vre password. */
-	public static String VRE_PASSWORD = "vre";
+	public static String VRE_PASSWORD = "<PASSWORD>";
 
 	// Properties which will be overridden at the application context load
 
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "jdbc:teiid:OPCHD@mm://VWBFAPPT.zadco.ad:31000;version=1;";
+	public static String PHD_TEIID_URL = "<SERVER_URL>";
 
 	/** The teiid user. */
-	public static String TEIID_USER = "dsdsadmin";
+	public static String TEIID_USER = "<USER>";
 
 	/** The teiid password. */
-	public static String TEIID_PASSWORD = "dsdsadmin";
+	public static String TEIID_PASSWORD = "<PASSWORD>";
 
 	/** The vre jndi name. */
 	public static String VRE_JNDI_NAME = "java:/VRE";
