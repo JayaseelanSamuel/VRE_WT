@@ -6,7 +6,6 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class VREConstants.
  *
@@ -21,24 +20,24 @@ public class VREConstants {
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "<SERVER_URL>";
+	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
 
 	/** The vre user. */
-	public static String VRE_USER = "<USER>";
+	public static String VRE_USER = "vre";
 
 	/** The vre password. */
-	public static String VRE_PASSWORD = "<PASSWORD>";
+	public static String VRE_PASSWORD = "vre";
 
 	// Properties which will be overridden at the application context load
 
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "<SERVER_URL>";
+	public static String PHD_TEIID_URL = "jdbc:teiid:OPCHD@mm://VWBFAPPT.zadco.ad:31000;version=1;";
 
 	/** The teiid user. */
-	public static String TEIID_USER = "<USER>";
+	public static String TEIID_USER = "dsdsadmin";
 
 	/** The teiid password. */
-	public static String TEIID_PASSWORD = "<PASSWORD>";
+	public static String TEIID_PASSWORD = "dsdsadmin";
 
 	/** The vre jndi name. */
 	public static String VRE_JNDI_NAME = "java:/VRE";
@@ -113,6 +112,9 @@ public class VREConstants {
 
 	/** The max inj rate press. */
 	public static double MAX_INJ_RATE_PRESS = 10;
+
+	/** The recal date diff. */
+	public static double RECAL_DATE_DIFF = 7;
 
 	/** The VRE6 output folder. */
 	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
@@ -260,9 +262,6 @@ public class VREConstants {
 			return numVal;
 		}
 	}
-	
-	
-	
 
 	// Queries
 
@@ -272,14 +271,15 @@ public class VREConstants {
 	// exclude it in next run) and update QL1 to standard conditions
 	public static final String WELL_TEST_NEW_QUERY = "SELECT WELL_TEST_ID, STRING_ID, QL1, WHP1, FT_TEST_ID, GAS_FLOW_RATE, TEST_SEPARATOR_PRESSURE, TEST_START_DATE, TEST_END_DATE, TRY_CONVERT(VARCHAR(10), TEST_END_DATE, 120) AS EFFECTIVE_DATE, "
 			+ " TEST_TYPE, VRE_FLAG, ROW_CHANGED_BY, ROW_CHANGED_DATE "
-			+ " FROM WELL_TEST WHERE TEST_TYPE = 'FT' AND VRE_FLAG IS NULL";
+			+ " FROM WELL_TEST WHERE TEST_TYPE IN ('FT','MRT')  AND VRE_FLAG IS NULL";
 	// AND SOURCE_ID = 2
 
 	/** The complete string information. */
-	public static final String GET_STRING_METADATA_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, S.STRING_NAME, S.COMPLETION_DATE, S.LATITUDE, S.LONGITUDE, S.CURRENT_STATUS, S.SELECTED_VRE, "
+	public static final String GET_STRING_METADATA_QUERY = "SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, S.STRING_NAME, S.STRING_CATEGORY_ID, S.COMPLETION_DATE, S.LATITUDE, S.LONGITUDE, S.CURRENT_STATUS, S.SELECTED_VRE, "
 			+ " P.PLATFORM_ID, P.PLATFORM_NAME, P.TAG_LIQUID_RATE, P.TAG_GAS_RATE, P.TAG_WATERCUT, P.TAG_HEADER_PRESSURE, P.TAG_INJ_HEADER_PRESSURE, TAG_SEPARATOR_PRESSURE, "
-			+ " TAG_WHP, TAG_WHT, TAG_CHOKE_SIZE, TAG_DOWNHOLE_PRESSURE, TAG_WATER_INJ_RATE, TAG_GASLIFT_INJ_RATE, TAG_WATERCUT_HONEYWELL, TAG_WATER_VOL_RATE, TAG_OIL_VOL_RATE, TAG_ANN_PRESSURE_A, TAG_ANN_PRESSURE_B, PIPESIM_MODEL_LOC, STABILITY_FLAG "
-			+ " FROM STRING S " + " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
+			+ " TAG_WHP, TAG_WHT, TAG_CHOKE_SIZE, TAG_DOWNHOLE_PRESSURE, TAG_WATER_INJ_RATE, TAG_GASLIFT_INJ_RATE, TAG_WATERCUT_HONEYWELL, TAG_WATER_VOL_RATE, TAG_OIL_VOL_RATE, TAG_ANN_PRESSURE_A, TAG_ANN_PRESSURE_B, "
+			+ " PIPESIM_MODEL_LOC, STABILITY_FLAG, KEY_WELL_FLAG, IS_ACTIVE " + " FROM STRING S "
+			+ " LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID "
 			+ " LEFT OUTER JOIN WELL W ON S.UWI = W.UWI "
 			+ " LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID " + " WHERE S.STRING_ID = ? ";
 
@@ -289,7 +289,7 @@ public class VREConstants {
 			+ " WHERE ((((\"tagid\" = ? ) AND (\"timestamp\" >= ? )) AND (\"timestamp\" < ?)) AND (\"noOfValues\" = 1000))";
 
 	/** The wcut stability query. */
-	public static final String WCUT_STABILITY_QUERY = "SELECT DD.STRING_ID, ISNULL(VR.WATER_CUT, DD.WATER_CUT_LAB) AS WATER_CUT, STABILITY_FLAG, DD.RECORDED_DATE FROM DAILY_ALLOCATED_DATA DD"
+	public static final String WCUT_STABILITY_QUERY = "SELECT DD.STRING_ID, ISNULL(VR.WATER_CUT, ISNULL(DD.WATER_CUT_LAB,0)) AS WATER_CUT, STABILITY_FLAG, DD.RECORDED_DATE FROM DAILY_ALLOCATED_DATA DD"
 			+ " LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VR ON VR.RECORDED_DATE = DD.RECORDED_DATE AND VR.STRING_ID = DD.STRING_ID "
 			+ " WHERE DD.STRING_ID = ? AND DD.RECORDED_DATE = TRY_CONVERT(DATETIME, ?, 102)";
 
@@ -446,8 +446,14 @@ public class VREConstants {
 
 	/** The Constant INSERT_VRE_QUERY. */
 	public static final String INSERT_VRE_QUERY = "INSERT INTO VIRTUAL_RATE_ESTIMATION (STRING_ID, RECORDED_DATE, SOURCE_ID, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
-			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, CHOKE_MULTIPLIER, IS_SEABED, REMARK) "
-			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, CHOKE_MULTIPLIER, IS_SEABED, REMARK, ROW_CREATED_BY) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+	public static final String VRE_TABLE_SELECT_QUERY_VRE6 = "SELECT STRING_ID, RECORDED_DATE, VRE6, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+			+ " FROM VIRTUAL_RATE_ESTIMATION " + " WHERE RECORDED_DATE = ? AND STRING_ID = ? ";
+
+	/** The Constant INSERT_VRE6_QUERY. */
+	public static final String INSERT_VRE6_QUERY = "INSERT INTO VIRTUAL_RATE_ESTIMATION (STRING_ID, RECORDED_DATE, VRE6, ROW_CREATED_BY) VALUES (?, ?, ?, ?)";
 
 	/** The Constant VRE_JOBS_QUERY. */
 	public static final String VRE6_JOBS_QUERY = "SELECT J.STRING_ID, S.STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, J.ROW_CHANGED_BY, J.ROW_CHANGED_DATE "
@@ -455,8 +461,8 @@ public class VREConstants {
 			+ " WHERE J.STRING_ID = ? ";
 
 	/** The Constant INSERT_VRE_JOBS_QUERY. */
-	public static final String INSERT_VRE6_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK, ROW_CREATED_BY) "
-			+ " VALUES (?, ?, ?, ?, ?) ";
+	public static final String INSERT_VRE6_JOBS_QUERY = "INSERT INTO VRE6_JOBS (STRING_ID, STRING_CATEGORY_ID, DSIS_STATUS_ID, DSRTA_STATUS_ID, REMARK, ROW_CREATED_BY) "
+			+ " VALUES (?, ?, ?, ?, ?, ?) ";
 
 	/** The Constant VRE_JOBS_IN_PROGRESS_QUERY. */
 	public static final String VRE6_JOBS_IN_PROGRESS_QUERY = "SELECT V6.STRING_ID, S.STRING_NAME, DSIS_STATUS_ID, VRE6_EXE_OUTPUT, DSRTA_STATUS_ID, REMARK, V6.ROW_CHANGED_BY, V6.ROW_CHANGED_DATE "
@@ -479,7 +485,7 @@ public class VREConstants {
 			+ " GROUP BY STRING_ID, CAST(RECORDED_DATE AS DATE), TAG_TYPE_ID " + " ) RT "
 			+ " LEFT OUTER JOIN TAG_TYPE TT ON TT.TAG_TYPE_ID = RT.TAG_TYPE_ID " + " ) SRC " + " PIVOT ( "
 			+ " SUM(AVERAGE) FOR TAG_TYPE IN ([AVG_WHP], [AVG_WHT], [AVG_CHOKE_SIZE], [AVG_DOWNHOLE_PRESSURE], [AVG_GASLIFT_INJ_RATE], [AVG_WATER_INJ_RATE], "
-			+ " [AVG_WATERCUT_HONEYWELL], [AVG_ANN_PRESSURE_A], [AVG_ANN_PRESSURE_B], [AVG_LIQUID_RATE], [AVG_GAS_RATE], [AVG_WATERCUT], [AVG_HEADER_PRESSURE])"
+			+ " [AVG_WATERCUT_HONEYWELL], [AVG_ANN_PRESSURE_A], [AVG_ANN_PRESSURE_B], [AVG_LIQUID_RATE], [AVG_GAS_RATE], [AVG_WATERCUT], [AVG_HEADER_PRESSURE], [AVG_VRE6_CALC])"
 			+ " ) PIV ";
 
 	/** The Constant AVG_MEDIAN_QUERY. */
@@ -503,11 +509,17 @@ public class VREConstants {
 	public static final String JOBS_REMARK = "Job %s on %s";
 	// other constants
 
+	/** The flow test. */
+	public static final String FLOW_TEST = "FT";
+
 	/** The single rate test. */
 	public static final String SINGLE_RATE_TEST = "SR";
 
-	/** The flow test. */
-	public static final String FLOW_TEST = "FT";
+	/** The Constant MULTI_RATE_FLOW_TEST. */
+	public static final String MULTI_RATE_FLOW_TEST = "MRT";
+
+	/** The Constant MULTI_RATE_TEST. */
+	public static final String MULTI_RATE_TEST = "MR";
 
 	/** The date time format. */
 	public static final String DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss.S";
@@ -556,6 +568,9 @@ public class VREConstants {
 	/** The Constant STRING_NAME. */
 	public static final String STRING_NAME = "STRING_NAME";
 
+	/** The Constant STRING_CATEGORY_ID. */
+	public static final String STRING_CATEGORY_ID = "STRING_CATEGORY_ID";
+
 	/** The Constant COMPLETION_DATE. */
 	public static final String COMPLETION_DATE = "COMPLETION_DATE";
 
@@ -567,6 +582,9 @@ public class VREConstants {
 
 	/** The Constant CURRENT_STATUS. */
 	public static final String CURRENT_STATUS = "CURRENT_STATUS";
+
+	/** The Constant SELECTED_VRE. */
+	public static final String SELECTED_VRE = "SELECTED_VRE";
 
 	/** The platform id. */
 	public static final String PLATFORM_ID = "PLATFORM_ID";
@@ -585,6 +603,9 @@ public class VREConstants {
 
 	/** The Constant FT_TEST_ID. */
 	public static final String FT_TEST_ID = "FT_TEST_ID";
+
+	/** The Constant TEST_TYPE. */
+	public static final String TEST_TYPE = "TEST_TYPE";
 
 	/** The Constant GAS_FLOW_RATE. */
 	public static final String GAS_FLOW_RATE = "GAS_FLOW_RATE";
@@ -853,6 +874,15 @@ public class VREConstants {
 	/** The Constant AVG_HEADER_PRESSURE. */
 	public static final String AVG_HEADER_PRESSURE = "AVG_HEADER_PRESSURE";
 
+	/** The Constant AVG_VRE6_CALC. */
+	public static final String AVG_VRE6_CALC = "AVG_VRE6_CALC";
+
+	/** The Constant RECALIBRATE_FORCE_LOW. */
+	public static final int RECALIBRATE_FORCE_LOW = 0;
+
+	/** The Constant RECALIBRATE_FORCE_HIGH. */
+	public static final int RECALIBRATE_FORCE_HIGH = 100;
+
 	// arguments
 
 	/** The Constant ARG_VRE1. */
@@ -926,6 +956,10 @@ public class VREConstants {
 
 	/** The Constant ARG_RECALIBRATE_HIGH. */
 	public static final String ARG_RECALIBRATE_HIGH = "-e";
+
+	public static final String ARG_MULTI_LIQ_RATE = "-tq";
+
+	public static final String ARG_MULTI_WHP = "-twhp";
 
 	/**
 	 * Refresh variables.
@@ -1008,6 +1042,9 @@ public class VREConstants {
 						break;
 					case "MAX_INJ_RATE_PRESS":
 						MAX_INJ_RATE_PRESS = Double.parseDouble(val);
+						break;
+					case "RECAL_DATE_DIFF":
+						RECAL_DATE_DIFF = Integer.parseInt(val);
 						break;
 					}
 				}

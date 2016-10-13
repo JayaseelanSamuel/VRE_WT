@@ -14,6 +14,8 @@ import static com.brownfield.vre.VREConstants.MAX_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.MAX_WHP;
 import static com.brownfield.vre.VREConstants.MIN_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.MIN_WHP;
+import static com.brownfield.vre.VREConstants.MULTI_RATE_FLOW_TEST;
+import static com.brownfield.vre.VREConstants.MULTI_RATE_TEST;
 import static com.brownfield.vre.VREConstants.PHD_QUERY;
 import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
 import static com.brownfield.vre.VREConstants.PLATFORM_ID;
@@ -43,6 +45,7 @@ import static com.brownfield.vre.VREConstants.TEIID_USER;
 import static com.brownfield.vre.VREConstants.TEST_END_DATE;
 import static com.brownfield.vre.VREConstants.TEST_SEPARATOR_PRESSURE;
 import static com.brownfield.vre.VREConstants.TEST_START_DATE;
+import static com.brownfield.vre.VREConstants.TEST_TYPE;
 import static com.brownfield.vre.VREConstants.UWI;
 import static com.brownfield.vre.VREConstants.VRE1;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
@@ -76,6 +79,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.logging.Logger;
+
+import org.teiid.core.util.StringUtil;
 
 import com.brownfield.vre.VREConstants.SOURCE;
 
@@ -132,7 +137,7 @@ public class ValidateWellTest {
 			int stringID, ftTestID;
 			Timestamp testDate, prevDay;
 			double prevVRE;
-			String effectiveTestDate;
+			String effectiveTestDate, testType, vreTestType;
 
 			if (rset != null) {
 				while (rset.next()) {
@@ -140,10 +145,12 @@ public class ValidateWellTest {
 					stringID = rset.getInt(STRING_ID);
 					testDate = rset.getTimestamp(TEST_END_DATE);
 					effectiveTestDate = rset.getString(EFFECTIVE_DATE);
+					testType = rset.getString(TEST_TYPE);
 					double ql1Standard = rset.getDouble(QL1);
 					double whpFT = rset.getDouble(WHP1);
 					double gasFlowRateFT = rset.getDouble(GAS_FLOW_RATE);
 					double sepPressureFT = rset.getDouble(TEST_SEPARATOR_PRESSURE);
+					vreTestType = SINGLE_RATE_TEST;
 
 					StringBuilder sb = new StringBuilder();
 
@@ -157,21 +164,6 @@ public class ValidateWellTest {
 					Map<String, String> startEndDates = this.getStartEndDates(testDate, START_OFFSET, END_OFFSET,
 							SWITCH_TIME_ZONE);
 
-					boolean liqRateTagAvailable = true, whpTagAvailable = true; //, wcutTagAvailable = true;
-					boolean setVRE = false;
-					if (tags.get(TAG_LIQUID_RATE) == null) {
-						sb.append(TAG_LIQUID_RATE + " tag is missing for Platform " + tags.get(PLATFORM_NAME))
-								.append("\n");
-						liqRateTagAvailable = false;
-					}
-					if (tags.get(TAG_WHP) == null) {
-						sb.append(TAG_WHP + " is missing for String " + tags.get(STRING_NAME)).append("\n");
-						whpTagAvailable = false;
-					}
-					/*if (tags.get(TAG_WATERCUT) == null) {
-						sb.append(TAG_WATERCUT + " is missing for Platform " + tags.get(PLATFORM_NAME)).append("\n");
-						wcutTagAvailable = false;
-					}*/
 
 					boolean liqRateHasNulls = false, whpHasNulls = false; //, wcutHasNulls = false;
 					boolean isOutOfRangeLiqRate = false, isOutOfRangeWHP = false; //, isOutOfRangeWCUT = false;
@@ -194,196 +186,224 @@ public class ValidateWellTest {
 
 					String startDate = startEndDates.get(TEST_START_DATE);
 					String endDate = startEndDates.get(TEST_END_DATE);
-
-					// get GAS_RATE and SEPARATOR_PRESSURE data w/o validation
-					if (tags.get(TAG_GAS_RATE) != null) {
-						List<Double> gasRates = this.getPHDData(phdConn, tags.get(TAG_GAS_RATE), startDate, endDate);
-						if (!gasRates.isEmpty()) {
-							Statistics stat = new Statistics(gasRates);
-							gasFlowRate = stat.getMean(); //phdMeanGasFlowRate
-						}
-					}
-
-					if (tags.get(TAG_SEPARATOR_PRESSURE) != null) {
-						List<Double> separatorPressure = this.getPHDData(phdConn, tags.get(TAG_SEPARATOR_PRESSURE),
-								startDate, endDate);
-						if (!separatorPressure.isEmpty()) {
-							Statistics stat = new Statistics(separatorPressure);
-							sepPressure = stat.getMean(); //phdMeanSepPressure
-						}
-					}
 					
-					if (tags.get(TAG_WATERCUT) != null) {
-						List<Double> wcuts = this.getPHDData(phdConn, tags.get(TAG_WATERCUT),
-								startDate, endDate);
-						if (!wcuts.isEmpty()) {
-							Statistics stat = new Statistics(wcuts);
-							wcut = stat.getMean();
-						}
-					}
-
-					if (liqRateTagAvailable) {
-						List<Double> liqidRates = this.getPHDData(phdConn, tags.get(TAG_LIQUID_RATE), startDate,
-								endDate);
-						if (!liqidRates.isEmpty()) {
-							liqRateHasNulls = this.hasNullValues(liqidRates);
-							isOutOfRangeLiqRate = this.hasOutOfRangeData(liqidRates, MIN_LIQUID_RATE, MAX_LIQUID_RATE);
-							isBelowFreezeLiqRate = this.isSensorFreezed(liqidRates, FREEZE_LIQUID_RATE_LIMIT);
-
-							if (liqRateHasNulls) {
-								sb.append("Null liquid rate values for " + tags.get(TAG_LIQUID_RATE)).append("\n");
-							}
-							if (isOutOfRangeLiqRate) {
-								sb.append("Out of range liquid rate for " + tags.get(TAG_LIQUID_RATE)).append("\n");
-							}
-							if (isBelowFreezeLiqRate) {
-								sb.append("Liquid rate sensor frozen for " + tags.get(TAG_LIQUID_RATE)).append("\n");
-							}
-							Statistics stat = new Statistics(liqidRates);
-							liquidRate = stat.getMean();
-							cvLiqRate = stat.getCoefficientOfVariation(liquidRate);
-							standardLiqRate = Utils.getStandardConditionRate(liquidRate, SHRINKAGE_FACTOR, (watercut / 100));
-						} else {
-							sb.append("No PHD liquid rate available for " + tags.get(TAG_LIQUID_RATE)).append("\n");
-							phdLiqRateDataAvail = false;
-						}
-					}
-
-					if (whpTagAvailable) {
-						List<Double> whpList = this.getPHDData(phdConn, tags.get(TAG_WHP), startDate, endDate);
-						if (!whpList.isEmpty()) {
-							whpHasNulls = this.hasNullValues(whpList);
-							isOutOfRangeWHP = this.hasOutOfRangeData(whpList, MIN_WHP, MAX_WHP);
-							isBelowFreezeWHP = this.isSensorFreezed(whpList, FREEZE_WHP_LIMIT);
-
-							if (whpHasNulls) {
-								sb.append("Null WHP values for " + tags.get(TAG_WHP)).append("\n");
-							}
-							if (isOutOfRangeWHP) {
-								sb.append("Out of range WHP for " + tags.get(TAG_WHP)).append("\n");
-							}
-							if (isBelowFreezeWHP) {
-								sb.append("WHP sensor frozen for " + tags.get(TAG_WHP)).append("\n");
-							}
-							Statistics stat = new Statistics(whpList);
-							whp = stat.getMean();
-							cvWHP = stat.getCoefficientOfVariation(whp);
-						} else {
-							sb.append("No PHD whp available for " + tags.get(TAG_WHP)).append("\n");
-							phdWHPDataAvail = false;
-						}
-					}
-
-					/*if (wcutTagAvailable) {
-						List<Double> wcutList = this.getPHDData(phdConn, tags.get(TAG_WATERCUT), startDate, endDate);
-						// modifyWaterCutsToFraction(wcutList);
-						if (!wcutList.isEmpty()) {
-							wcutHasNulls = this.hasNullValues(wcutList);
-							isOutOfRangeWCUT = this.hasOutOfRangeData(wcutList, MIN_WATERCUT, MAX_WATERCUT);
-							isBelowFreezeWCUT = this.isSensorFreezed(wcutList, FREEZE_WATERCUT_LIMIT);
-
-							if (wcutHasNulls) {
-								sb.append("Null watercut values for " + tags.get(TAG_WATERCUT)).append("\n");
-							}
-							if (isOutOfRangeWCUT) {
-								sb.append("Out of range watercut for " + tags.get(TAG_WATERCUT)).append("\n");
-							}
-							if (isBelowFreezeWCUT) {
-								sb.append("Watercut sensor frozen for " + tags.get(TAG_WATERCUT)).append("\n");
-							}
-							Statistics stat = new Statistics(wcutList);
-							meanWCUT = stat.getMean();
-							//cvWCUT = stat.getCoefficientOfVariation(meanWCUT);
-						} else {
-							sb.append("No PHD watercut available for " + tags.get(TAG_WATERCUT)).append("\n");
-							phdWCUTDataAvail = false;
-						}
-					}
-
-					if(phdLiqRateDataAvail && phdWCUTDataAvail){
-						standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, (watercut / 100));	
-					}*/
+					boolean liqRateTagAvailable = true, whpTagAvailable = true; //, wcutTagAvailable = true;
+					boolean setVRE = false;
 					
-					prevDay = Utils.getNextOrPreviousDay(testDate, -1);
-					prevVRE = this.getVREForPreviousDay(vreConn, stringID, prevDay);
-					boolean withinTrend = true;
+					if (StringUtil.equalsIgnoreCase(testType, MULTI_RATE_FLOW_TEST)) {
+						/*
+						 * this is multi-rate well test. Don't do validation and
+						 * just set the data to FT err MT data.
+						 */
+						sb.append("Multirate test. Skipping validation").append("\n");
+						vreTestType = MULTI_RATE_TEST;
+					} else {
 					
-					if(prevVRE != -1 && phdLiqRateDataAvail){ // we have VRE value recorded for previous day
-						withinTrend = Utils.isWithinLimit(liquidRate,prevVRE,WT_TREND_LIMIT);
-					}
-
-					if (isStable) {
-						if (!(liqRateTagAvailable && whpTagAvailable /*&& wcutTagAvailable*/)) {
-							// No platform/string phd tags; if we don't have any
-							// one
-							// of them, still mark the well as stable
-							setVRE = true;
-							sb.append("Setting well test as valid").append("\n");
-						} else if (!(phdLiqRateDataAvail && phdWHPDataAvail /*&& phdWCUTDataAvail*/)) {
-							// Tags are present but there's no data in PHD
-							setVRE = true;
-							sb.append("Setting well test as valid").append("\n");
-						} else {
-							if (!(liqRateHasNulls || whpHasNulls /*|| wcutHasNulls*/)) {
-								if (!(isOutOfRangeLiqRate || isOutOfRangeWHP /*|| isOutOfRangeWCUT*/)) {
-									if (!(isBelowFreezeLiqRate || isBelowFreezeWHP /*|| isBelowFreezeWCUT*/)) {
-										if (cvLiqRate <= CV_LIQ_RATE_MAX) {
-											if (cvLiqRate != 0 || liquidRate != 0) {
-												if (cvWHP <= CV_WHP_MAX) {
-													if (cvWHP != 0 || whp != 0) {
-														/*if (cvWCUT <= CV_WATERCUT_MAX) {
-															if (cvWCUT != 0 || meanWCUT != 0) {*/
-																if (withinTrend) {
-																	/*whp = phdMeanWHP ;
-																	wcut = phdMeanWCUT;
-																	sepPressure = phdMeanSepPressure;
-																	gasFlowRate = phdMeanGasFlowRate;*/
-																	setVRE = true;
-																	sb.append("All Good").append("\n");
-																} else {
-																	sb.append("Liquid rate " + liquidRate + " is not within " + WT_TREND_LIMIT
-																			+ "% trend limit of previous days VRE " + prevVRE).append("\n");
-																}
+						if (tags.get(TAG_LIQUID_RATE) == null) {
+							sb.append(TAG_LIQUID_RATE + " tag is missing for Platform " + tags.get(PLATFORM_NAME))
+									.append("\n");
+							liqRateTagAvailable = false;
+						}
+						if (tags.get(TAG_WHP) == null) {
+							sb.append(TAG_WHP + " is missing for String " + tags.get(STRING_NAME)).append("\n");
+							whpTagAvailable = false;
+						}
+						/*if (tags.get(TAG_WATERCUT) == null) {
+							sb.append(TAG_WATERCUT + " is missing for Platform " + tags.get(PLATFORM_NAME)).append("\n");
+							wcutTagAvailable = false;
+						}*/
+	
+	
+						// get GAS_RATE and SEPARATOR_PRESSURE data w/o validation
+						if (tags.get(TAG_GAS_RATE) != null) {
+							List<Double> gasRates = this.getPHDData(phdConn, tags.get(TAG_GAS_RATE), startDate, endDate);
+							if (!gasRates.isEmpty()) {
+								Statistics stat = new Statistics(gasRates);
+								gasFlowRate = stat.getMean(); //phdMeanGasFlowRate
+							}
+						}
+	
+						if (tags.get(TAG_SEPARATOR_PRESSURE) != null) {
+							List<Double> separatorPressure = this.getPHDData(phdConn, tags.get(TAG_SEPARATOR_PRESSURE),
+									startDate, endDate);
+							if (!separatorPressure.isEmpty()) {
+								Statistics stat = new Statistics(separatorPressure);
+								sepPressure = stat.getMean(); //phdMeanSepPressure
+							}
+						}
+						
+						if (tags.get(TAG_WATERCUT) != null) {
+							List<Double> wcuts = this.getPHDData(phdConn, tags.get(TAG_WATERCUT),
+									startDate, endDate);
+							if (!wcuts.isEmpty()) {
+								Statistics stat = new Statistics(wcuts);
+								wcut = stat.getMean();
+							}
+						}
+	
+						if (liqRateTagAvailable) {
+							List<Double> liqidRates = this.getPHDData(phdConn, tags.get(TAG_LIQUID_RATE), startDate,
+									endDate);
+							if (!liqidRates.isEmpty()) {
+								liqRateHasNulls = this.hasNullValues(liqidRates);
+								isOutOfRangeLiqRate = this.hasOutOfRangeData(liqidRates, MIN_LIQUID_RATE, MAX_LIQUID_RATE);
+								isBelowFreezeLiqRate = this.isSensorFreezed(liqidRates, FREEZE_LIQUID_RATE_LIMIT);
+	
+								if (liqRateHasNulls) {
+									sb.append("Null liquid rate values for " + tags.get(TAG_LIQUID_RATE)).append("\n");
+								}
+								if (isOutOfRangeLiqRate) {
+									sb.append("Out of range liquid rate for " + tags.get(TAG_LIQUID_RATE)).append("\n");
+								}
+								if (isBelowFreezeLiqRate) {
+									sb.append("Liquid rate sensor frozen for " + tags.get(TAG_LIQUID_RATE)).append("\n");
+								}
+								Statistics stat = new Statistics(liqidRates);
+								liquidRate = stat.getMean();
+								cvLiqRate = stat.getCoefficientOfVariation(liquidRate);
+								standardLiqRate = Utils.getStandardConditionRate(liquidRate, SHRINKAGE_FACTOR, (watercut / 100));
+							} else {
+								sb.append("No PHD liquid rate available for " + tags.get(TAG_LIQUID_RATE)).append("\n");
+								phdLiqRateDataAvail = false;
+							}
+						}
+	
+						if (whpTagAvailable) {
+							List<Double> whpList = this.getPHDData(phdConn, tags.get(TAG_WHP), startDate, endDate);
+							if (!whpList.isEmpty()) {
+								whpHasNulls = this.hasNullValues(whpList);
+								isOutOfRangeWHP = this.hasOutOfRangeData(whpList, MIN_WHP, MAX_WHP);
+								isBelowFreezeWHP = this.isSensorFreezed(whpList, FREEZE_WHP_LIMIT);
+	
+								if (whpHasNulls) {
+									sb.append("Null WHP values for " + tags.get(TAG_WHP)).append("\n");
+								}
+								if (isOutOfRangeWHP) {
+									sb.append("Out of range WHP for " + tags.get(TAG_WHP)).append("\n");
+								}
+								if (isBelowFreezeWHP) {
+									sb.append("WHP sensor frozen for " + tags.get(TAG_WHP)).append("\n");
+								}
+								Statistics stat = new Statistics(whpList);
+								whp = stat.getMean();
+								cvWHP = stat.getCoefficientOfVariation(whp);
+							} else {
+								sb.append("No PHD whp available for " + tags.get(TAG_WHP)).append("\n");
+								phdWHPDataAvail = false;
+							}
+						}
+	
+						/*if (wcutTagAvailable) {
+							List<Double> wcutList = this.getPHDData(phdConn, tags.get(TAG_WATERCUT), startDate, endDate);
+							// modifyWaterCutsToFraction(wcutList);
+							if (!wcutList.isEmpty()) {
+								wcutHasNulls = this.hasNullValues(wcutList);
+								isOutOfRangeWCUT = this.hasOutOfRangeData(wcutList, MIN_WATERCUT, MAX_WATERCUT);
+								isBelowFreezeWCUT = this.isSensorFreezed(wcutList, FREEZE_WATERCUT_LIMIT);
+	
+								if (wcutHasNulls) {
+									sb.append("Null watercut values for " + tags.get(TAG_WATERCUT)).append("\n");
+								}
+								if (isOutOfRangeWCUT) {
+									sb.append("Out of range watercut for " + tags.get(TAG_WATERCUT)).append("\n");
+								}
+								if (isBelowFreezeWCUT) {
+									sb.append("Watercut sensor frozen for " + tags.get(TAG_WATERCUT)).append("\n");
+								}
+								Statistics stat = new Statistics(wcutList);
+								meanWCUT = stat.getMean();
+								//cvWCUT = stat.getCoefficientOfVariation(meanWCUT);
+							} else {
+								sb.append("No PHD watercut available for " + tags.get(TAG_WATERCUT)).append("\n");
+								phdWCUTDataAvail = false;
+							}
+						}
+	
+						if(phdLiqRateDataAvail && phdWCUTDataAvail){
+							standardLiqRate = Utils.getStandardConditionRate(meanLiqRate, SHRINKAGE_FACTOR, (watercut / 100));	
+						}*/
+						
+						prevDay = Utils.getNextOrPreviousDay(testDate, -1);
+						prevVRE = this.getVREForPreviousDay(vreConn, stringID, prevDay);
+						boolean withinTrend = true;
+						
+						if(prevVRE != -1 && phdLiqRateDataAvail){ // we have VRE value recorded for previous day
+							withinTrend = Utils.isWithinLimit(liquidRate,prevVRE,WT_TREND_LIMIT);
+						}
+	
+						if (isStable) {
+							if (!(liqRateTagAvailable && whpTagAvailable /*&& wcutTagAvailable*/)) {
+								// No platform/string phd tags; if we don't have any
+								// one
+								// of them, still mark the well as stable
+								setVRE = true;
+								sb.append("Setting well test as valid").append("\n");
+							} else if (!(phdLiqRateDataAvail && phdWHPDataAvail /*&& phdWCUTDataAvail*/)) {
+								// Tags are present but there's no data in PHD
+								setVRE = true;
+								sb.append("Setting well test as valid").append("\n");
+							} else {
+								if (!(liqRateHasNulls || whpHasNulls /*|| wcutHasNulls*/)) {
+									if (!(isOutOfRangeLiqRate || isOutOfRangeWHP /*|| isOutOfRangeWCUT*/)) {
+										if (!(isBelowFreezeLiqRate || isBelowFreezeWHP /*|| isBelowFreezeWCUT*/)) {
+											if (cvLiqRate <= CV_LIQ_RATE_MAX) {
+												if (cvLiqRate != 0 || liquidRate != 0) {
+													if (cvWHP <= CV_WHP_MAX) {
+														if (cvWHP != 0 || whp != 0) {
+															/*if (cvWCUT <= CV_WATERCUT_MAX) {
+																if (cvWCUT != 0 || meanWCUT != 0) {*/
+																	if (withinTrend) {
+																		/*whp = phdMeanWHP ;
+																		wcut = phdMeanWCUT;
+																		sepPressure = phdMeanSepPressure;
+																		gasFlowRate = phdMeanGasFlowRate;*/
+																		setVRE = true;
+																		sb.append("All Good").append("\n");
+																	} else {
+																		sb.append("Liquid rate " + liquidRate + " is not within " + WT_TREND_LIMIT
+																				+ "% trend limit of previous days VRE " + prevVRE).append("\n");
+																	}
+																/*} else {
+																	sb.append("Watercut is 0").append("\n");
+																}*/
 															/*} else {
-																sb.append("Watercut is 0").append("\n");
+																sb.append("Stability test failed. Watercut coefficient "
+																		+ cvWCUT + " exceeds max limit " + CV_WATERCUT_MAX)
+																		.append("\n");
 															}*/
-														/*} else {
-															sb.append("Stability test failed. Watercut coefficient "
-																	+ cvWCUT + " exceeds max limit " + CV_WATERCUT_MAX)
-																	.append("\n");
-														}*/
+														} else {
+															sb.append("WHP is 0").append("\n");
+														}
 													} else {
-														sb.append("WHP is 0").append("\n");
+														sb.append("Stability test failed. WHP coefficient " + cvWHP
+																+ " exceeds max limit " + CV_WHP_MAX).append("\n");
 													}
 												} else {
-													sb.append("Stability test failed. WHP coefficient " + cvWHP
-															+ " exceeds max limit " + CV_WHP_MAX).append("\n");
+													sb.append("Liquid rate is 0").append("\n");
 												}
 											} else {
-												sb.append("Liquid rate is 0").append("\n");
+												sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
+														+ " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
 											}
-										} else {
-											sb.append("Stability test failed. Liq rate coefficient " + cvLiqRate
-													+ " exceeds max limit " + CV_LIQ_RATE_MAX).append("\n");
 										}
 									}
 								}
 							}
-						}
-					} else {
-						if (!(liqRateTagAvailable && whpTagAvailable /*&& wcutTagAvailable*/)) {
-							sb.append("Unstable well. No data available for " + tags.get(STRING_NAME)).append("\n");
 						} else {
-							sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
+							if (!(liqRateTagAvailable && whpTagAvailable /*&& wcutTagAvailable*/)) {
+								sb.append("Unstable well. No data available for " + tags.get(STRING_NAME)).append("\n");
+							} else {
+								sb.append("Unstable well - " + tags.get(STRING_NAME)).append("\n");
+							}
 						}
-					}
-					
-					if(!setVRE){
-						// TODO: Set BPM email from here
+						
+						if(!setVRE){
+							// TODO: Set BPM email from here
+						}
 					}
 					
 					sb.delete(sb.length() - 1, sb.length());
-					this.insertWellTest(vreConn, stringID, startDate, endDate, standardLiqRate, whp, wcut,
+					this.insertWellTest(vreConn, stringID, vreTestType, startDate, endDate, standardLiqRate, whp, wcut,
 							setVRE, sb.toString(), ftTestID, gasFlowRate, sepPressure);
 
 					rset.updateDouble(QL1, ql1Standard);
@@ -528,13 +548,13 @@ public class ValidateWellTest {
 	 *            the remark
 	 * @return the int
 	 */
-	private int insertWellTest(Connection conn, int stringID, String startDate, String endDate, double liquidRate,
+	private int insertWellTest(Connection conn, int stringID, String testType, String startDate, String endDate, double liquidRate,
 			double whp, double watercut, boolean vreFlag, String remark, int ftTestID, double gasFlowRate,
 			double separatorPressure) {
 		int rowsInserted = 0;
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_WELL_TEST_QUERY);) {
 			statement.setInt(1, stringID);
-			statement.setString(2, SINGLE_RATE_TEST);
+			statement.setString(2, testType);
 			Timestamp testStartDate = Utils.getDateFromString(startDate, SWITCH_TIME_ZONE);
 			Timestamp testEndDate = Utils.getDateFromString(endDate, SWITCH_TIME_ZONE);
 			statement.setTimestamp(3, testStartDate);
@@ -550,7 +570,7 @@ public class ValidateWellTest {
 			statement.setDouble(13, separatorPressure);
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted in WELLTEST table with String : " + stringID + " & Date : "
-					+ startDate);
+					+ testStartDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage()); e.printStackTrace();
 		}

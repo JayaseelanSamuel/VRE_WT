@@ -40,7 +40,6 @@ import com.brownfield.vre.VREConstants.SOURCE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.WellModel;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class VREExecutioner.
  * 
@@ -375,6 +374,7 @@ public class VREExeWorker implements Runnable {
 			statement.setDouble(17, chokeMuliplier != null ? chokeMuliplier : 1);
 			statement.setBoolean(18, isSeabed != null ? isSeabed : false);
 			statement.setString(19, remark);
+			statement.setString(20, VRE_WORKFLOW);
 
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted in VRE table with String : " + stringID + " & Date : "

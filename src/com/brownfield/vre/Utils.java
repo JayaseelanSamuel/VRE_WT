@@ -11,7 +11,9 @@ import static com.brownfield.vre.VREConstants.LONGITUDE;
 import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
 import static com.brownfield.vre.VREConstants.PLATFORM_ID;
 import static com.brownfield.vre.VREConstants.PLATFORM_NAME;
+import static com.brownfield.vre.VREConstants.SELECTED_VRE;
 import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
+import static com.brownfield.vre.VREConstants.STRING_CATEGORY_ID;
 import static com.brownfield.vre.VREConstants.STRING_ID;
 import static com.brownfield.vre.VREConstants.STRING_NAME;
 import static com.brownfield.vre.VREConstants.STRING_TYPE;
@@ -25,7 +27,9 @@ import static com.brownfield.vre.VREConstants.TAG_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.TAG_INJ_HEADER_PRESSURE;
 import static com.brownfield.vre.VREConstants.TAG_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.TAG_OIL_VOL_RATE;
+import static com.brownfield.vre.VREConstants.TAG_SEPARATOR_PRESSURE;
 import static com.brownfield.vre.VREConstants.TAG_WATERCUT;
+import static com.brownfield.vre.VREConstants.TAG_WATER_INJ_RATE;
 import static com.brownfield.vre.VREConstants.TAG_WATER_VOL_RATE;
 import static com.brownfield.vre.VREConstants.TAG_WHP;
 import static com.brownfield.vre.VREConstants.TAG_WHT;
@@ -43,6 +47,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.StringModel;
 
 /**
@@ -93,7 +98,7 @@ public class Utils {
 			shiftDate = sdf.parse(date);
 			return new Timestamp(shiftDate.getTime());
 		} catch (ParseException e) {
-			LOGGER.severe("Can not parse " + date + " using format " + format);
+			LOGGER.warning("Can not parse " + date + " using format " + format);
 		}
 		return null;
 	}
@@ -203,10 +208,12 @@ public class Utils {
 					sm.setUwi(rset.getString(UWI));
 					sm.setStringType(rset.getString(STRING_TYPE));
 					sm.setStringName(rset.getString(STRING_NAME));
+					sm.setStringCategoryID(rset.getInt(STRING_CATEGORY_ID));
 					sm.setCompletionDate(rset.getTimestamp(COMPLETION_DATE));
 					sm.setLatitude(rset.getDouble(LATITUDE));
 					sm.setLongitude(rset.getDouble(LONGITUDE));
 					sm.setCurrentStatus(rset.getString(CURRENT_STATUS));
+					sm.setSelectedVRE(VRE_TYPE.valueOf(rset.getString(SELECTED_VRE)));
 					sm.setPlatformID(rset.getInt(PLATFORM_ID));
 					sm.setPlatformName(rset.getString(PLATFORM_NAME));
 					// string tags
@@ -214,6 +221,7 @@ public class Utils {
 					sm.setTagWHT(rset.getString(TAG_WHT));
 					sm.setTagChokeSize(rset.getString(TAG_CHOKE_SIZE));
 					sm.setTagDownholePressure(rset.getString(TAG_DOWNHOLE_PRESSURE));
+					sm.setTagWaterInjRate(rset.getString(TAG_WATER_INJ_RATE));
 					sm.setTagGasliftInjRate(rset.getString(TAG_GASLIFT_INJ_RATE));
 					sm.setTagWaterVolRate(rset.getString(TAG_WATER_VOL_RATE));
 					sm.setTagOilVolRate(rset.getString(TAG_OIL_VOL_RATE));
@@ -227,6 +235,7 @@ public class Utils {
 					sm.setTagWatercut(rset.getString(TAG_WATERCUT));
 					sm.setTagHeaderPressure(rset.getString(TAG_HEADER_PRESSURE));
 					sm.setTagInjHeaderPressure(rset.getString(TAG_INJ_HEADER_PRESSURE));
+					sm.setTagSeparatorPressure(rset.getString(TAG_SEPARATOR_PRESSURE));
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());

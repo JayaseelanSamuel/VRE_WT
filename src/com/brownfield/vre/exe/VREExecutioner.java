@@ -4,6 +4,8 @@ import static com.brownfield.vre.VREConstants.ARG_BEANSIZE;
 import static com.brownfield.vre.VREConstants.ARG_GAS_INJ_RATE;
 import static com.brownfield.vre.VREConstants.ARG_HEADER;
 import static com.brownfield.vre.VREConstants.ARG_MODEL;
+import static com.brownfield.vre.VREConstants.ARG_MULTI_LIQ_RATE;
+import static com.brownfield.vre.VREConstants.ARG_MULTI_WHP;
 import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
 import static com.brownfield.vre.VREConstants.ARG_PDGP;
 import static com.brownfield.vre.VREConstants.ARG_PRODUCTIVITY_INDEX;
@@ -32,6 +34,7 @@ import static com.brownfield.vre.VREConstants.COMPLETED_ON;
 import static com.brownfield.vre.VREConstants.CONCURRENT_PIPESIM_LICENCES;
 import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
 import static com.brownfield.vre.VREConstants.DATE_FORMAT;
+import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
@@ -49,6 +52,7 @@ import static com.brownfield.vre.VREConstants.QL1;
 import static com.brownfield.vre.VREConstants.RECAL;
 import static com.brownfield.vre.VREConstants.RECALIBRATE_HIGH;
 import static com.brownfield.vre.VREConstants.RECALIBRATE_LOW;
+import static com.brownfield.vre.VREConstants.RECAL_DATE_DIFF;
 import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
 import static com.brownfield.vre.VREConstants.RECORDED_DATE;
 import static com.brownfield.vre.VREConstants.REMARK;
@@ -96,11 +100,11 @@ import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
 import com.brownfield.vre.VREConstants.DSRTA_JOB_TYPE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
+import com.brownfield.vre.exe.models.MultiRateTestModel;
 import com.brownfield.vre.exe.models.RecalModel;
 import com.brownfield.vre.exe.models.StringModel;
 import com.brownfield.vre.exe.models.WellModel;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class VREExecutioner.
  * 
@@ -132,6 +136,9 @@ public class VREExecutioner {
 				VREExecutioner vreEx = new VREExecutioner();
 				vreEx.runVREs(vreConn, recordedDate);
 				// vreEx.runCalibration(vreConn);
+
+				vreEx.runMultiRateWellTest(vreConn, 523, new Double[] { 3917.5, 583.2128 },
+						new Double[] { 346.1, 981.5 }, 5);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -250,7 +257,7 @@ public class VREExecutioner {
 	 * @param user
 	 *            the user
 	 */
-	public void runVREForDuration(Connection vreConn, Integer stringID, List<String> vresToRun, Timestamp startDate,
+	public void runVREForDuration(Connection vreConn, int stringID, List<String> vresToRun, Timestamp startDate,
 			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv, double chokeMultiplier,
 			String user) {
 
@@ -258,6 +265,7 @@ public class VREExecutioner {
 		double endWHP = 0, endWcut = 0;
 		boolean firstRecord = true, resetLast = false;
 		String pipesimLoc = null;
+
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_MODEL_RESET_QUERY)) {
 			statement.setInt(1, stringID);
 			// statement.setTimestamp(2, startDate);
@@ -267,7 +275,8 @@ public class VREExecutioner {
 					Timestamp vreLastDate = rset.getTimestamp(RECORDED_DATE);
 					// reset model to latest value if endDate is less than vre
 					// latest date
-					if (endDate.compareTo(vreLastDate) < 0) {
+					// if (endDate.compareTo(vreLastDate) < 0) {
+					if (Utils.getDifferenceBetweenTwoDates(endDate, vreLastDate) > RECAL_DATE_DIFF) {
 						resetLast = true;
 						endFFV = rset.getObject(FRICTION_FACTOR) == null ? 0 : rset.getDouble(FRICTION_FACTOR);
 						endResPres = rset.getObject(RESERVOIR_PRESSURE) == null ? 0
@@ -326,8 +335,8 @@ public class VREExecutioner {
 					if (recal != null && recal) {
 						LOGGER.info("Executing recalibration for " + stringID + " for " + recordedDate);
 						params.add(ARG_TEST_LIQ_RATE + qLiq);
-						params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_LOW);
-						params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_HIGH);
+						params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_LOW);// RECALIBRATE_FORCE_LOW
+						params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_HIGH);// RECALIBRATE_FORCE_LOW
 					}
 
 					if (firstRecord) {
@@ -378,7 +387,7 @@ public class VREExecutioner {
 					}
 					rowCount++;
 					this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, durationInDays, Boolean.TRUE,
-							0, startedOn, null, "Change me later", user);
+							0, startedOn, null, DEFAULT_REMARK, user);
 					VREExeWorker vreExeWorker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate,
 							chokeMultiplier, isSeabed);
 					vreExeWorker.executeVRE("runVREForDuration");
@@ -399,7 +408,7 @@ public class VREExecutioner {
 			Timestamp currTime = new Timestamp(new Date().getTime());
 			// mark the job as done
 			this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, 0, Boolean.TRUE, 0, currTime, currTime,
-					"Change me later", user);
+					DEFAULT_REMARK, user);
 
 			// Reset model back to latest values if this is historic
 			// recalculation
@@ -417,6 +426,13 @@ public class VREExecutioner {
 				params.add(ARG_VERTICAL_HOLDUP_FACTOR + endHoldUPV);
 				params.add(ARG_PRODUCTIVITY_INDEX + endPI);
 				VREExeWorker.runVRE(params);
+			} else {
+				// model might have been calibrated..better update proxy model
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
+				this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+				}
 			}
 		}
 	}
@@ -533,10 +549,11 @@ public class VREExecutioner {
 				} else {
 					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE6_JOBS_QUERY);) {
 						stmt.setInt(1, stringID);
-						stmt.setInt(2, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
-						stmt.setInt(3, DSRTA_JOB_TYPE.INVALID.getNumVal());
-						stmt.setString(4, remark);
-						stmt.setString(5, RECAL_WORKFLOW);
+						stmt.setInt(2, stringModel.getStringCategoryID());
+						stmt.setInt(3, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
+						stmt.setInt(4, DSRTA_JOB_TYPE.INVALID.getNumVal());
+						stmt.setString(5, remark);
+						stmt.setString(6, RECAL_WORKFLOW);
 						stmt.executeUpdate();
 					} catch (Exception e) {
 						LOGGER.severe(e.getMessage());
@@ -669,6 +686,60 @@ public class VREExecutioner {
 			e.printStackTrace();
 		}
 
+	}
+
+	/**
+	 * Run multi rate well test.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string id
+	 * @param liqRates
+	 *            the liq rates
+	 * @param whps
+	 *            the whps
+	 * @param wcut
+	 *            the wcut
+	 */
+	public MultiRateTestModel runMultiRateWellTest(Connection vreConn, Integer stringID, Double[] liqRates,
+			Double[] whps, double wcut) {
+
+		try {
+			StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+			List<String> params = new ArrayList<>();
+			params.add(VRE_EXE_LOC);// executable
+			params.add(ARG_MODEL + stringModel.getPipesimModelLoc());
+			params.add(ARG_WATERCUT + wcut);
+
+			for (int i = 1; i <= liqRates.length; i++) {
+				params.add(ARG_MULTI_LIQ_RATE + i + liqRates[i - 1]);
+			}
+
+			for (int i = 1; i <= whps.length; i++) {
+				params.add(ARG_MULTI_WHP + i + liqRates[i - 1]);
+			}
+
+			WellModel wellModel = VREExeWorker.runVRE(params);
+			if (wellModel != null) {
+				if (wellModel.getErrors() == null) {
+					MultiRateTestModel multiRateTest = wellModel.getMultiRateTest();
+					if (multiRateTest != null) {
+						return multiRateTest;
+					} else {
+						LOGGER.severe("No multirate well test tag present in output for string - " + stringID);
+					}
+				} else {
+					LOGGER.severe("Exception in calling multirate well test - " + wellModel.getErrors());
+				}
+			} else {
+				LOGGER.severe("Something went wrong while calling multirate well test for string - " + stringID);
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 }

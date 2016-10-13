@@ -95,6 +95,7 @@ public class JobsMonitor {
 							// file read successfully
 							rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.FINISHED.getNumVal());
 							rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.READY.getNumVal());
+							rset.updateString(VRE6_EXE_OUTPUT, content);
 							// Delete the output file
 							try {
 								FileUtils.forceDelete(f);

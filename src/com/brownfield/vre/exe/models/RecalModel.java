@@ -8,7 +8,7 @@ import javax.xml.bind.annotation.XmlRootElement;
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-@XmlRootElement(name = "recal")
+@XmlRootElement(name = "calibration")
 public class RecalModel {
 
 	/** The test liquid. */
@@ -63,7 +63,7 @@ public class RecalModel {
 	 *
 	 * @return the calibration
 	 */
-	@XmlElement(name = "calibration")
+	@XmlElement(name = "calibrated")
 	public boolean getCalibration() {
 		return calibration;
 	}

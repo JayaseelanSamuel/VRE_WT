@@ -35,6 +35,9 @@ public class WellModel {
 	/** The recal. */
 	private RecalModel recal;
 
+	/** The multi rate test. */
+	private MultiRateTestModel multiRateTest;
+
 	/** The properties. */
 	private PropertiesModel properties;
 
@@ -70,7 +73,8 @@ public class WellModel {
 	}
 
 	/**
-	 * @param time the time to set
+	 * @param time
+	 *            the time to set
 	 */
 	public void setTime(Double time) {
 		this.time = time;
@@ -181,7 +185,7 @@ public class WellModel {
 	 *
 	 * @return the recal
 	 */
-	@XmlElement(name = "recal", type = RecalModel.class)
+	@XmlElement(name = "calibration", type = RecalModel.class)
 	public RecalModel getRecal() {
 		return recal;
 	}
@@ -194,6 +198,22 @@ public class WellModel {
 	 */
 	public void setRecal(RecalModel recal) {
 		this.recal = recal;
+	}
+
+	/**
+	 * @return the multiRateTest
+	 */
+	@XmlElement(name = "multi-rate_welltest", type = MultiRateTestModel.class)
+	public MultiRateTestModel getMultiRateTest() {
+		return multiRateTest;
+	}
+
+	/**
+	 * @param multiRateTest
+	 *            the multiRateTest to set
+	 */
+	public void setMultiRateTest(MultiRateTestModel multiRateTest) {
+		this.multiRateTest = multiRateTest;
 	}
 
 	/**

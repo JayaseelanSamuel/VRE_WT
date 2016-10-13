@@ -159,14 +159,27 @@ public class VREBaseResource {
 	 *            the start date
 	 * @param end_date
 	 *            the end date
+	 * @param pi
+	 *            the pi
+	 * @param reservoirPressure
+	 *            the reservoir pressure
+	 * @param holdUPV
+	 *            the hold upv
+	 * @param ffv
+	 *            the ffv
+	 * @param chokeMultiplier
+	 *            the choke multiplier
+	 * @param user
+	 *            the user
 	 * @return the response
 	 */
 	@GET
 	@Path("/runVREForDuration")
-	public Response runVREForDuration(@QueryParam("stringID") Integer stringID, @QueryParam("vres") String vres,
+	public Response runVREForDuration(@QueryParam("stringID") int stringID, @QueryParam("vres") String vres,
 			@QueryParam("start_date") String start_date, @QueryParam("end_date") String end_date,
 			@QueryParam("pi") double pi, @QueryParam("reservoirPressure") double reservoirPressure,
-			@QueryParam("holdUPV") double holdUPV, @QueryParam("ffv") double ffv, @QueryParam("chokeMultiplier") double chokeMultiplier, @QueryParam("user") String user) {
+			@QueryParam("holdUPV") double holdUPV, @QueryParam("ffv") double ffv,
+			@QueryParam("chokeMultiplier") double chokeMultiplier, @QueryParam("user") String user) {
 
 		Timestamp startDate = null, endDate = null;
 		List<String> vresToRun = null;
@@ -197,17 +210,18 @@ public class VREBaseResource {
 		if (startDate != null && endDate != null) {
 			if (vresToRun != null) {
 				InternalVREManager ivm = new InternalVREManager();
-				result = ivm.runVREForDuration(stringID, vresToRun, startDate, endDate, pi, reservoirPressure, holdUPV, ffv, chokeMultiplier, user);
+				result = ivm.runVREForDuration(stringID, vresToRun, startDate, endDate, pi, reservoirPressure, holdUPV,
+						ffv, chokeMultiplier, user);
 			}
 		} else {
 			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
 					+ VREConstants.DATE_FORMAT + "}";
 		}
-		
-		result = "{ \"value\" : [\"" + result + "\"] }" ;
+
+		result = "{ \"value\" : [\"" + result + "\"] }";
 		return Response.status(200).entity(result).type(MediaType.APPLICATION_JSON).build();
 	}
-	
+
 	/**
 	 * Monitor jobs.
 	 *
@@ -219,6 +233,29 @@ public class VREBaseResource {
 		String result = "Refreshing proxy models started...";
 		InternalVREManager ivm = new InternalVREManager();
 		ivm.refreshProxyModels();
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Run multi rate well test.
+	 *
+	 * @param stringID
+	 *            the string id
+	 * @param liqRates
+	 *            the liq rates
+	 * @param whps
+	 *            the whps
+	 * @param wcut
+	 *            the wcut
+	 * @return the response
+	 */
+	@GET
+	@Path("/runMultiRateWellTest")
+	public Response runMultiRateWellTest(@QueryParam("stringID") int stringID,
+			@QueryParam("liqRates") Double[] liqRates, @QueryParam("whps") Double[] whps,
+			@QueryParam("wcut") double wcut) {
+		InternalVREManager ivm = new InternalVREManager();
+		String result = ivm.runMultiRateWellTest(stringID, liqRates, whps, wcut);
 		return Response.status(200).entity(result).build();
 	}
 
@@ -235,5 +272,4 @@ public class VREBaseResource {
 		String result = "Invalid Resource : " + msg;
 		return Response.status(200).entity(result).build();
 	}
-
 }

@@ -32,7 +32,9 @@ import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
+import com.brownfield.vre.exe.models.MultiRateTestModel;
 import com.brownfield.vre.jobs.JobsMonitor;
+import com.google.gson.Gson;
 
 // TODO: Auto-generated Javadoc
 /**
@@ -217,7 +219,7 @@ public class InternalVREManager {
 	 *            the user
 	 * @return the string
 	 */
-	public String runVREForDuration(final Integer stringID, final List<String> vresToRun, final Timestamp startDate,
+	public String runVREForDuration(final int stringID, final List<String> vresToRun, final Timestamp startDate,
 			final Timestamp endDate, final double pi, final double reservoirPressure, final double holdUPV,
 			final double ffv, final double chokeMultiplier, final String user) {
 
@@ -319,6 +321,42 @@ public class InternalVREManager {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 			e.printStackTrace();
 		}
+	}
+
+	/**
+	 * Run multi rate well test.
+	 *
+	 * @param stringID
+	 *            the string id
+	 * @param liqRates
+	 *            the liq rates
+	 * @param whps
+	 *            the whps
+	 * @param wcut
+	 *            the wcut
+	 * @return the string
+	 */
+	public String runMultiRateWellTest(int stringID, Double[] liqRates, Double[] whps, double wcut) {
+		String message = "Error calculating multirate well test. Please try again later";
+		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("Started running MultirateWellTest for - " + stringID);
+			VREExecutioner vreEx = new VREExecutioner();
+			MultiRateTestModel multiRateTest = vreEx.runMultiRateWellTest(vreConn, stringID, liqRates, whps, wcut);
+			Gson gson = new Gson();
+			if (multiRateTest != null) {
+				message = gson.toJson(multiRateTest);
+			} else {
+				message = gson.toJson(message);
+			}
+			LOGGER.info(message + " \nMultirateWellTest finished for - " + stringID);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+		return message;
 	}
 
 }

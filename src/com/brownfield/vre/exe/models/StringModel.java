@@ -2,6 +2,9 @@ package com.brownfield.vre.exe.models;
 
 import java.sql.Timestamp;
 
+import com.brownfield.vre.VREConstants.VRE_TYPE;
+
+// TODO: Auto-generated Javadoc
 /**
  * The Class StringModel.
  * 
@@ -21,6 +24,9 @@ public class StringModel {
 	/** The string name. */
 	private String stringName;
 
+	/** The string category id. */
+	private int stringCategoryID;
+
 	/** The completion date. */
 	private Timestamp completionDate;
 
@@ -32,6 +38,9 @@ public class StringModel {
 
 	/** The current status. */
 	private String currentStatus;
+
+	/** The selected vre. */
+	private VRE_TYPE selectedVRE;
 
 	/** The platform id. */
 	private int platformID;
@@ -50,6 +59,9 @@ public class StringModel {
 
 	/** The tag downhole pressure. */
 	private String tagDownholePressure;
+
+	/** The tag water inj rate. */
+	private String tagWaterInjRate;
 
 	/** The tag gaslift inj rate. */
 	private String tagGasliftInjRate;
@@ -86,6 +98,9 @@ public class StringModel {
 
 	/** The tag inj header pressure. */
 	private String tagInjHeaderPressure;
+
+	/** The tag separator pressure. */
+	private String tagSeparatorPressure;
 
 	/**
 	 * Gets the string id.
@@ -164,6 +179,25 @@ public class StringModel {
 	}
 
 	/**
+	 * Gets the string category id.
+	 *
+	 * @return the string category id
+	 */
+	public int getStringCategoryID() {
+		return stringCategoryID;
+	}
+
+	/**
+	 * Sets the string category id.
+	 *
+	 * @param stringCategoryID
+	 *            the new string category id
+	 */
+	public void setStringCategoryID(int stringCategoryID) {
+		this.stringCategoryID = stringCategoryID;
+	}
+
+	/**
 	 * Gets the completion date.
 	 *
 	 * @return the completion date
@@ -237,6 +271,25 @@ public class StringModel {
 	 */
 	public void setCurrentStatus(String currentStatus) {
 		this.currentStatus = currentStatus;
+	}
+
+	/**
+	 * Gets the selected vre.
+	 *
+	 * @return the selected vre
+	 */
+	public VRE_TYPE getSelectedVRE() {
+		return selectedVRE;
+	}
+
+	/**
+	 * Sets the selected vre.
+	 *
+	 * @param selectedVRE
+	 *            the new selected vre
+	 */
+	public void setSelectedVRE(VRE_TYPE selectedVRE) {
+		this.selectedVRE = selectedVRE;
 	}
 
 	/**
@@ -351,6 +404,25 @@ public class StringModel {
 	 */
 	public void setTagDownholePressure(String tagDownholePressure) {
 		this.tagDownholePressure = tagDownholePressure;
+	}
+
+	/**
+	 * Gets the tag water inj rate.
+	 *
+	 * @return the tag water inj rate
+	 */
+	public String getTagWaterInjRate() {
+		return tagWaterInjRate;
+	}
+
+	/**
+	 * Sets the tag water inj rate.
+	 *
+	 * @param tagWaterInjRate
+	 *            the new tag water inj rate
+	 */
+	public void setTagWaterInjRate(String tagWaterInjRate) {
+		this.tagWaterInjRate = tagWaterInjRate;
 	}
 
 	/**
@@ -498,7 +570,8 @@ public class StringModel {
 	/**
 	 * Sets the tag liquid rate.
 	 *
-	 * @param tagLiquidRate the new tag liquid rate
+	 * @param tagLiquidRate
+	 *            the new tag liquid rate
 	 */
 	public void setTagLiquidRate(String tagLiquidRate) {
 		this.tagLiquidRate = tagLiquidRate;
@@ -516,7 +589,8 @@ public class StringModel {
 	/**
 	 * Sets the tag gas rate.
 	 *
-	 * @param tagGasRate the new tag gas rate
+	 * @param tagGasRate
+	 *            the new tag gas rate
 	 */
 	public void setTagGasRate(String tagGasRate) {
 		this.tagGasRate = tagGasRate;
@@ -534,7 +608,8 @@ public class StringModel {
 	/**
 	 * Sets the tag watercut.
 	 *
-	 * @param tagWatercut the new tag watercut
+	 * @param tagWatercut
+	 *            the new tag watercut
 	 */
 	public void setTagWatercut(String tagWatercut) {
 		this.tagWatercut = tagWatercut;
@@ -552,7 +627,8 @@ public class StringModel {
 	/**
 	 * Sets the tag header pressure.
 	 *
-	 * @param tagHeaderPressure the new tag header pressure
+	 * @param tagHeaderPressure
+	 *            the new tag header pressure
 	 */
 	public void setTagHeaderPressure(String tagHeaderPressure) {
 		this.tagHeaderPressure = tagHeaderPressure;
@@ -570,9 +646,29 @@ public class StringModel {
 	/**
 	 * Sets the tag inj header pressure.
 	 *
-	 * @param tagInjHeaderPressure the new tag inj header pressure
+	 * @param tagInjHeaderPressure
+	 *            the new tag inj header pressure
 	 */
 	public void setTagInjHeaderPressure(String tagInjHeaderPressure) {
 		this.tagInjHeaderPressure = tagInjHeaderPressure;
+	}
+
+	/**
+	 * Gets the tag separator pressure.
+	 *
+	 * @return the tag separator pressure
+	 */
+	public String getTagSeparatorPressure() {
+		return tagSeparatorPressure;
+	}
+
+	/**
+	 * Sets the tag separator pressure.
+	 *
+	 * @param tagSeparatorPressure
+	 *            the new tag separator pressure
+	 */
+	public void setTagSeparatorPressure(String tagSeparatorPressure) {
+		this.tagSeparatorPressure = tagSeparatorPressure;
 	}
 }

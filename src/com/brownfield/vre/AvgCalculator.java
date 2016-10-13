@@ -12,6 +12,7 @@ import static com.brownfield.vre.VREConstants.AVG_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_QUERY;
 import static com.brownfield.vre.VREConstants.AVG_MEASUREMENT_SELECT_QUERY;
 import static com.brownfield.vre.VREConstants.AVG_MEDIAN_QUERY;
+import static com.brownfield.vre.VREConstants.AVG_VRE6_CALC;
 import static com.brownfield.vre.VREConstants.AVG_WATERCUT;
 import static com.brownfield.vre.VREConstants.AVG_WATERCUT_HONEYWELL;
 import static com.brownfield.vre.VREConstants.AVG_WATER_INJ_RATE;
@@ -22,14 +23,17 @@ import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DATE_TIME_FORMAT;
 import static com.brownfield.vre.VREConstants.END_DATE;
 import static com.brownfield.vre.VREConstants.INSERT_AVG_MEASUREMENT_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE6_QUERY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.RT_DISTINCT_STRING_FOR_DAY_QUERY;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.START_DATE;
 import static com.brownfield.vre.VREConstants.STRING_ID;
+import static com.brownfield.vre.VREConstants.VRE6;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
+import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY_VRE6;
 import static com.brownfield.vre.VREConstants.VRE_USER;
 
 import java.sql.CallableStatement;
@@ -74,7 +78,7 @@ public class AvgCalculator {
 				@SuppressWarnings("unused")
 				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				// System.out.println(recordedDate);
-				//ac.calculateAverage(vreConn, recordedDate);
+				// ac.calculateAverage(vreConn, recordedDate);
 
 				double median = ac.getMedian(vreConn, 906, 1, Utils.parseDate("2016-09-06"), null, null);
 				System.out.println(median);
@@ -137,12 +141,12 @@ public class AvgCalculator {
 								Double gasRate = null;
 								Double wcut = null;
 								Double hp = null;
+								Double vre6 = null;
 								if (avgRset != null && avgRset.next()) {
 									// one row per string
 									// getObject instead of getDouble to store
 									// null values instead of default 0.0
 									whp = avgRset.getObject(AVG_WHP) == null ? null : avgRset.getDouble(AVG_WHP);
-									whp = this.getMedian(vreConn, stringID, TagType.WHP.getNumVal(), recordedDate, startDate, endDate);
 									wht = avgRset.getObject(AVG_WHT) == null ? null : avgRset.getDouble(AVG_WHT);
 									choke = avgRset.getObject(AVG_CHOKE_SIZE) == null ? null
 											: avgRset.getDouble(AVG_CHOKE_SIZE);
@@ -166,6 +170,18 @@ public class AvgCalculator {
 											: avgRset.getDouble(AVG_WATERCUT);
 									hp = avgRset.getObject(AVG_HEADER_PRESSURE) == null ? null
 											: avgRset.getDouble(AVG_HEADER_PRESSURE);
+									vre6 = avgRset.getObject(AVG_VRE6_CALC) == null ? null
+											: avgRset.getDouble(AVG_VRE6_CALC);
+
+									// calculate medians instead of avg for
+									// pressures
+									whp = this.getMedian(vreConn, stringID, TagType.WHP.getNumVal(), recordedDate,
+											startDate, endDate);
+									pdgp = this.getMedian(vreConn, stringID, TagType.DOWNHOLE_PRESSURE.getNumVal(),
+											recordedDate, startDate, endDate);
+									hp = this.getMedian(vreConn, stringID, TagType.HEADER_PRESSURE.getNumVal(),
+											recordedDate, startDate, endDate);
+
 								} else {
 									// no record as downtime overshadows
 									remark = "Downtime overshadows for the day " + startDate + " to " + endDate;
@@ -175,6 +191,10 @@ public class AvgCalculator {
 								this.insertOrUpdateAvgRecord(vreConn, stringID, recordedDate, whp, wht, choke, pdgp,
 										gasInjRate, waterInjRate, wcutHoneyWell, annPreA, annPreB, liqRate, gasRate,
 										wcut, hp, remark);
+								// insert vre 6
+								if (vre6 != null) {
+									this.insertOrUpdateVRE6(vreConn, stringID, recordedDate, vre6);
+								}
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());
 							}
@@ -394,6 +414,76 @@ public class AvgCalculator {
 			e.printStackTrace();
 		}
 		return median;
+	}
+
+	/**
+	 * Insert or update vr e6.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string id
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param vre6
+	 *            the vre6
+	 */
+	private void insertOrUpdateVRE6(Connection vreConn, int stringID, Timestamp recordedDate, Double vre6) {
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY_VRE6,
+				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+
+			statement.setTimestamp(1, recordedDate);
+			statement.setInt(2, stringID);
+			try (ResultSet rset = statement.executeQuery()) {
+
+				if (rset.next()) { // record present, just update
+					rset.updateDouble(VRE6, vre6);
+					rset.updateString(ROW_CHANGED_BY, AVG_CALC_WORKFLOW);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
+					LOGGER.info("updated row with VRE6 value in VRE table for String : " + stringID + " & Date : "
+							+ recordedDate);
+				} else { // insert
+					this.insertVRE6Record(vreConn, stringID, recordedDate, vre6);
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Insert vr e6 record.
+	 *
+	 * @param conn
+	 *            the conn
+	 * @param stringID
+	 *            the string id
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param vre6
+	 *            the vre6
+	 * @return the int
+	 */
+	private int insertVRE6Record(Connection conn, int stringID, Timestamp recordedDate, Double vre6) {
+		int rowsInserted = 0;
+		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE6_QUERY);) {
+			statement.setInt(1, stringID);
+			statement.setTimestamp(2, recordedDate);
+			statement.setDouble(3, vre6 != null ? vre6 : 0);
+			statement.setString(4, AVG_CALC_WORKFLOW);
+			rowsInserted = statement.executeUpdate();
+			LOGGER.info(rowsInserted + " rows inserted with VRE6 value in VRE table for String : " + stringID
+					+ " & Date : " + recordedDate);
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return rowsInserted;
 	}
 
 }
