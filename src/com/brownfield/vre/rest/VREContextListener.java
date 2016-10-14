@@ -53,12 +53,12 @@ public class VREContextListener implements ServletContextListener {
 	public void contextInitialized(ServletContextEvent event) {
 
 		try {
-			// load PHD connection details
-			PropertyReader.loadProperties(event.getServletContext());
+			PropertyReader.loadProperties();
 			VREConstants.PHD_TEIID_URL = PropertyReader.getProperty("PHD_TEIID_URL");
 			VREConstants.TEIID_USER = PropertyReader.getProperty("TEIID_USER");
 			VREConstants.TEIID_PASSWORD = PropertyReader.getProperty("TEIID_PASSWORD");
 			VREConstants.VRE_JNDI_NAME = PropertyReader.getProperty("VRE_JNDI_NAME");
+			System.out.println();
 
 			// update VRE variables from database by JNDI lookup
 			Context initialContext = new InitialContext();
@@ -72,10 +72,13 @@ public class VREContextListener implements ServletContextListener {
 			}
 		} catch (NamingException ex) {
 			LOGGER.log(Level.SEVERE, "Cannot get connection: " + ex);
+			ex.printStackTrace();
 		} catch (SQLException ex) {
 			LOGGER.log(Level.SEVERE, "Cannot get connection: " + ex);
+			ex.printStackTrace();
 		} catch (IOException ex) {
 			LOGGER.log(Level.SEVERE, "Cannot get connection: " + ex);
+			ex.printStackTrace();
 		}
 
 	}

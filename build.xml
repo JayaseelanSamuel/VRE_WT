@@ -24,6 +24,8 @@
 			<fileset dir="WebContent">
 				<exclude name="WEB-INF/lib/commons-csv-1.2.jar"/>
 				<exclude name="WEB-INF/lib/sqljdbc4.jar"/>
+				<!-- don't include vre.properties in war as we are placing it configuration folder now -->
+				<exclude name="WEB-INF/vre.properties"/>
 			</fileset>
 			<!--lib dir="WebContent/WEB-INF/lib"/-->
 			<classes dir="build/classes"/>
