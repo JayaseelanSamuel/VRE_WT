@@ -42,6 +42,21 @@ public class VREConstants {
 	/** The vre jndi name. */
 	public static String VRE_JNDI_NAME = "java:/VRE";
 
+	/** The dsis host. */
+	public static String DSIS_HOST = "<HOST>";
+
+	/** The dsis port. */
+	public static String DSIS_PORT = "<PORT>";
+
+	/** The dsbpm base url. */
+	public static String DSBPM_BASE_URL = "<SERVER_URL>";
+
+	/** The app base url. */
+	public static String APP_BASE_URL = "<SERVER_URL>";
+
+	/** The email group. */
+	public static String EMAIL_GROUP = "IronMan@mailinator.com;Thor@mailinator.com;Hulk@mailinator.com";
+
 	// VRE Variables
 
 	/** The start offset. */
@@ -118,6 +133,13 @@ public class VREConstants {
 
 	/** The VRE6 output folder. */
 	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
+	
+	/** The Constant DSBPM_PROCESS_NAME. */
+	public static final String DSBPM_PROCESS_NAME = "com.zadco.vre.NotificationEmailProcess";
+
+	/** The Constant DSBPM_WELL_TEST_TEMPLATE. */
+	public static final String DSBPM_EMAIL_TEMPLATE = "notification.ftl";
+	
 
 	// Properties end
 
@@ -449,6 +471,7 @@ public class VREConstants {
 			+ " WATER_CUT, WATER_CUT_FLAG, GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE, CHOKE_MULTIPLIER, IS_SEABED, REMARK, ROW_CREATED_BY) "
 			+ " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, " + " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+	/** The Constant VRE_TABLE_SELECT_QUERY_VRE6. */
 	public static final String VRE_TABLE_SELECT_QUERY_VRE6 = "SELECT STRING_ID, RECORDED_DATE, VRE6, ROW_CHANGED_BY, ROW_CHANGED_DATE "
 			+ " FROM VIRTUAL_RATE_ESTIMATION " + " WHERE RECORDED_DATE = ? AND STRING_ID = ? ";
 
@@ -957,8 +980,10 @@ public class VREConstants {
 	/** The Constant ARG_RECALIBRATE_HIGH. */
 	public static final String ARG_RECALIBRATE_HIGH = "-e";
 
+	/** The Constant ARG_MULTI_LIQ_RATE. */
 	public static final String ARG_MULTI_LIQ_RATE = "-tq";
 
+	/** The Constant ARG_MULTI_WHP. */
 	public static final String ARG_MULTI_WHP = "-twhp";
 
 	/**
