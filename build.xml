@@ -22,8 +22,8 @@
 	<target name="war" depends="compile">
 		<war destfile="dist/VRE.war" webxml="WebContent/WEB-INF/web.xml">
 			<fileset dir="WebContent">
-				<exclude name="WEB-INF/lib/commons-csv-1.2.jar"/>
-				<exclude name="WEB-INF/lib/sqljdbc4.jar"/>
+				<!--exclude name="WEB-INF/lib/commons-csv-1.2.jar"/>
+				<exclude name="WEB-INF/lib/sqljdbc4.jar"/-->
 				<!-- don't include vre.properties in war as we are placing it configuration folder now -->
 				<exclude name="WEB-INF/vre.properties"/>
 			</fileset>

@@ -1,83 +1,6 @@
 package com.brownfield.vre.exe;
 
-import static com.brownfield.vre.VREConstants.ARG_BEANSIZE;
-import static com.brownfield.vre.VREConstants.ARG_GAS_INJ_RATE;
-import static com.brownfield.vre.VREConstants.ARG_HEADER;
-import static com.brownfield.vre.VREConstants.ARG_MODEL;
-import static com.brownfield.vre.VREConstants.ARG_MULTI_LIQ_RATE;
-import static com.brownfield.vre.VREConstants.ARG_MULTI_WHP;
-import static com.brownfield.vre.VREConstants.ARG_OUTPUT_LOC;
-import static com.brownfield.vre.VREConstants.ARG_PDGP;
-import static com.brownfield.vre.VREConstants.ARG_PRODUCTIVITY_INDEX;
-import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_HIGH;
-import static com.brownfield.vre.VREConstants.ARG_RECALIBRATE_LOW;
-import static com.brownfield.vre.VREConstants.ARG_RESERVOIR;
-import static com.brownfield.vre.VREConstants.ARG_RES_STATIC_PRESSURE;
-import static com.brownfield.vre.VREConstants.ARG_TEST_LIQ_RATE;
-import static com.brownfield.vre.VREConstants.ARG_VERTICAL_FRICTION_FACTOR;
-import static com.brownfield.vre.VREConstants.ARG_VERTICAL_HOLDUP_FACTOR;
-import static com.brownfield.vre.VREConstants.ARG_VRE1;
-import static com.brownfield.vre.VREConstants.ARG_VRE2;
-import static com.brownfield.vre.VREConstants.ARG_VRE3;
-import static com.brownfield.vre.VREConstants.ARG_VRE4;
-import static com.brownfield.vre.VREConstants.ARG_VRE5;
-import static com.brownfield.vre.VREConstants.ARG_VRE6;
-import static com.brownfield.vre.VREConstants.ARG_WATERCUT;
-import static com.brownfield.vre.VREConstants.ARG_WHP;
-import static com.brownfield.vre.VREConstants.AVG_DOWNHOLE_PRESSURE;
-import static com.brownfield.vre.VREConstants.AVG_GASLIFT_INJ_RATE;
-import static com.brownfield.vre.VREConstants.AVG_HEADER_PRESSURE;
-import static com.brownfield.vre.VREConstants.AVG_WHP;
-import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
-import static com.brownfield.vre.VREConstants.CHOKE_SETTING;
-import static com.brownfield.vre.VREConstants.COMPLETED_ON;
-import static com.brownfield.vre.VREConstants.CONCURRENT_PIPESIM_LICENCES;
-import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
-import static com.brownfield.vre.VREConstants.DATE_FORMAT;
-import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
-import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
-import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
-import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
-import static com.brownfield.vre.VREConstants.HOLDUP;
-import static com.brownfield.vre.VREConstants.INSERT_VRE6_JOBS_QUERY;
-import static com.brownfield.vre.VREConstants.INSERT_VRE_EXE_JOBS_QUERY;
-import static com.brownfield.vre.VREConstants.IS_CALIBRATED;
-import static com.brownfield.vre.VREConstants.IS_RUNNING;
-import static com.brownfield.vre.VREConstants.IS_SEABED;
-import static com.brownfield.vre.VREConstants.JOBS_REMARK;
-import static com.brownfield.vre.VREConstants.JSON_EXTENSION;
-import static com.brownfield.vre.VREConstants.PI;
-import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
-import static com.brownfield.vre.VREConstants.QL1;
-import static com.brownfield.vre.VREConstants.RECAL;
-import static com.brownfield.vre.VREConstants.RECALIBRATE_HIGH;
-import static com.brownfield.vre.VREConstants.RECALIBRATE_LOW;
-import static com.brownfield.vre.VREConstants.RECAL_DATE_DIFF;
-import static com.brownfield.vre.VREConstants.RECAL_WORKFLOW;
-import static com.brownfield.vre.VREConstants.RECORDED_DATE;
-import static com.brownfield.vre.VREConstants.REMARK;
-import static com.brownfield.vre.VREConstants.RESERVOIR_MODEL_LOC;
-import static com.brownfield.vre.VREConstants.RESERVOIR_PRESSURE;
-import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
-import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
-import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
-import static com.brownfield.vre.VREConstants.STRING_ID;
-import static com.brownfield.vre.VREConstants.TEST_WATER_CUT;
-import static com.brownfield.vre.VREConstants.VRE6_JOBS_QUERY;
-import static com.brownfield.vre.VREConstants.VRE6_OUTPUT_FOLDER;
-import static com.brownfield.vre.VREConstants.VRE6_PROXY_MODELS_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_DATASET_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_DB_URL;
-import static com.brownfield.vre.VREConstants.VRE_DURATION_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_EXE_LOC;
-import static com.brownfield.vre.VREConstants.VRE_EXE_RUNNING_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_MODEL_RESET_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_PASSWORD;
-import static com.brownfield.vre.VREConstants.VRE_USER;
-import static com.brownfield.vre.VREConstants.WATER_CUT;
-import static com.brownfield.vre.VREConstants.WATER_CUT_LAB;
-import static com.brownfield.vre.VREConstants.WELL_TEST_CALIBRATE_QUERY;
-import static com.brownfield.vre.VREConstants.WHP1;
+import static com.brownfield.vre.VREConstants.*;
 
 import java.io.File;
 import java.sql.Connection;
@@ -96,6 +19,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 
+import com.brownfield.vre.AlertHandler;
 import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants.DSIS_JOB_TYPE;
 import com.brownfield.vre.VREConstants.DSRTA_JOB_TYPE;
@@ -137,8 +61,16 @@ public class VREExecutioner {
 				vreEx.runVREs(vreConn, recordedDate);
 				// vreEx.runCalibration(vreConn);
 
-				vreEx.runMultiRateWellTest(vreConn, 523, new Double[] { 3917.5, 583.2128 },
-						new Double[] { 346.1, 981.5 }, 5);
+				/*
+				 * MultiRateTestModel mrTest =
+				 * vreEx.runMultiRateWellTest(vreConn, 953, new Double[] {
+				 * 3917.5, 583.2128 }, new Double[] { 346.1, 981.5 }, 5);
+				 * System.out.println(mrTest);
+				 * System.out.println(mrTest.getBhp1());
+				 * System.out.println(mrTest.getBhp2());
+				 * System.out.println(mrTest.getBhp3());
+				 * System.out.println(mrTest.getBhp4());
+				 */
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -207,7 +139,7 @@ public class VREExecutioner {
 						params.add(ARG_HEADER + hp);
 						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
 						params.add(ARG_BEANSIZE + choke);
-						params.add(CHOKE_MULTIPLIER + chokeMultiplier);
+						params.add(ARG_CHOKE_MULTIPLIER + chokeMultiplier);
 					}
 
 					Runnable worker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate, chokeMultiplier,
@@ -265,6 +197,7 @@ public class VREExecutioner {
 		double endWHP = 0, endWcut = 0;
 		boolean firstRecord = true, resetLast = false;
 		String pipesimLoc = null;
+		StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_MODEL_RESET_QUERY)) {
 			statement.setInt(1, stringID);
@@ -383,7 +316,7 @@ public class VREExecutioner {
 						params.add(ARG_HEADER + hp);
 						params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
 						params.add(ARG_BEANSIZE + choke);
-						params.add(CHOKE_MULTIPLIER + chokeMultiplier);
+						params.add(ARG_CHOKE_MULTIPLIER + chokeMultiplier);
 					}
 					rowCount++;
 					this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, durationInDays, Boolean.TRUE,
@@ -395,8 +328,17 @@ public class VREExecutioner {
 				}
 				long end = System.currentTimeMillis();
 				double duration = (end - start) / 1000;
-				LOGGER.info("Finished running VRE for " + rowCount + " records in " + duration + " seconds");
-				// TODO: Trigger BPM Email workflow from here
+				LOGGER.info("Finished running VREDuration for " + rowCount + " records in " + duration + " seconds");
+
+				String wellMonitorDaily = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_DASHBOARD, stringID,
+						Utils.convertToString(startDate, DATE_FORMAT_DSPM),
+						Utils.convertToString(endDate, DATE_FORMAT_DSPM));
+
+				AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE, APP_BASE_URL + wellMonitorDaily,
+						String.format(DSBPM_VRE_DURATION_SUBJECT, stringModel.getStringName(), startDate, endDate),
+						String.format(DSBPM_VRE_DURATION_BODY, duration, stringModel.getStringName(), startDate,
+								endDate, user));
+
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -429,7 +371,7 @@ public class VREExecutioner {
 			} else {
 				// model might have been calibrated..better update proxy model
 				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
-				this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
+				this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
 				}
@@ -457,6 +399,8 @@ public class VREExecutioner {
 					double whp = rset.getDouble(WHP1);
 					double wcut = rset.getDouble(TEST_WATER_CUT);
 					double qLiq = rset.getDouble(QL1);
+					Date effectiveTestDate = rset.getDate(EFFECTIVE_DATE);
+					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
 					params.add(ARG_VRE1);
@@ -466,6 +410,7 @@ public class VREExecutioner {
 					params.add(ARG_TEST_LIQ_RATE + qLiq);
 					params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_LOW);
 					params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_HIGH);
+					LOGGER.info("Running recalibation for " + stringID);
 					WellModel wellModel = VREExeWorker.runVRE(params);
 					boolean isCalibrated = false;
 					if (wellModel != null) {
@@ -474,14 +419,28 @@ public class VREExecutioner {
 							if (recal != null) {
 								isCalibrated = recal.getCalibration();
 								boolean review = recal.isReview();
-								LOGGER.info("Model calibration flag is set as  " + isCalibrated);
+								LOGGER.info("Model calibration flag " + isCalibrated + " review flag : " + review);
 								if (isCalibrated) {
-									this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
+									this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
 									LOGGER.info(" VRE6 job submitted for - " + stringID);
 									rowCount++;
 								}
 								if (review) {
-									// TODO: Trigger email either here or BPM
+									// TODO: RECAL DONE
+
+									String singleRateWellTest = String.format(WELLS_DASHBOARD_LINK,
+											SINGLE_RATE_WELL_TEST_DASHBOARD, stringID,
+											Utils.convertToString(effectiveTestDate, DATE_FORMAT_DSPM),
+											Utils.convertToString(effectiveTestDate, DATE_FORMAT_DSPM));
+
+									AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
+											APP_BASE_URL + singleRateWellTest,
+											String.format(DSBPM_WT_CALIBRATION_SUBJECT, stringModel.getStringName()),
+											String.format(DSBPM_WT_CALIBRATION_BODY,
+													DECIMAL_FORMAT.format(recal.getError()),
+													stringModel.getStringName(), effectiveTestDate, RECALIBRATE_LOW,
+													RECALIBRATE_HIGH));
+
 								}
 
 							} else {
@@ -522,11 +481,10 @@ public class VREExecutioner {
 	 * @param executor
 	 *            the executor
 	 */
-	private void insertOrUpdateVRE6Job(Connection vreConn, int stringID, ExecutorService executor) {
+	private void insertOrUpdateVRE6Job(Connection vreConn, StringModel stringModel, ExecutorService executor) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE6_JOBS_QUERY, ResultSet.TYPE_SCROLL_SENSITIVE,
 				ResultSet.CONCUR_UPDATABLE)) {
-			statement.setInt(1, stringID);
-			StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+			statement.setInt(1, stringModel.getStringID());
 			try (ResultSet rset = statement.executeQuery()) {
 				List<String> params = new ArrayList<>();
 				params.add(VRE_EXE_LOC);
@@ -535,7 +493,7 @@ public class VREExecutioner {
 				params.add(ARG_OUTPUT_LOC + VRE6_OUTPUT_FOLDER);
 				String outputFile = VRE6_OUTPUT_FOLDER + stringModel.getStringName() + JSON_EXTENSION;
 				FileUtils.deleteQuietly(new File(outputFile));
-				Runnable worker = new VREExeWorker(params, stringID, VRE_TYPE.VRE6);
+				Runnable worker = new VREExeWorker(params, stringModel.getStringID(), VRE_TYPE.VRE6);
 				executor.execute(worker);
 				String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.IN_PROGRESS, new Date());
 				if (rset.next()) {
@@ -548,7 +506,7 @@ public class VREExecutioner {
 					rset.updateRow();
 				} else {
 					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_VRE6_JOBS_QUERY);) {
-						stmt.setInt(1, stringID);
+						stmt.setInt(1, stringModel.getStringID());
 						stmt.setInt(2, stringModel.getStringCategoryID());
 						stmt.setInt(3, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
 						stmt.setInt(4, DSRTA_JOB_TYPE.INVALID.getNumVal());
@@ -667,7 +625,8 @@ public class VREExecutioner {
 				int stringID;
 				while (rset.next()) {
 					stringID = rset.getInt(STRING_ID);
-					this.insertOrUpdateVRE6Job(vreConn, stringID, executor);
+					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+					this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
 					LOGGER.info("Proxy model generation submitted for - " + stringID);
 					rowCount++;
 				}
@@ -717,7 +676,7 @@ public class VREExecutioner {
 			}
 
 			for (int i = 1; i <= whps.length; i++) {
-				params.add(ARG_MULTI_WHP + i + liqRates[i - 1]);
+				params.add(ARG_MULTI_WHP + i + whps[i - 1]);
 			}
 
 			WellModel wellModel = VREExeWorker.runVRE(params);
@@ -740,6 +699,61 @@ public class VREExecutioner {
 			e.printStackTrace();
 		}
 		return null;
+	}
+
+	/**
+	 * Run model prediction.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 */
+	public void runModelPrediction(Connection vreConn) {
+		Timestamp currTime = Utils.getRoundedOffTime(new Timestamp(new Date().getTime()), PREDICTION_FREQUENCY);
+		String currDate = Utils.convertToString(currTime, DATE_FORMAT);
+
+		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_LATEST_WHP_QUERY)) {
+			statement.setString(1, currDate);
+			try (ResultSet rset = statement.executeQuery()) {
+				ExecutorService executor = Executors.newFixedThreadPool(MODEL_PREDICTION_THREAD_COUNT);
+				int rowCount = 0;
+				int stringID;
+				Timestamp whpDate;
+				Double whp, wcut;
+				while (rset.next()) {
+					stringID = rset.getInt(STRING_ID);
+					whpDate = rset.getTimestamp(RECORDED_DATE);
+					whp = rset.getDouble(TAGRAWVALUE);
+					wcut = rset.getDouble(WATER_CUT_LAB);
+					LOGGER.info("Generating prediction for - " + stringID);
+					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+
+					List<String> params = new ArrayList<>();
+					params.add(VRE_EXE_LOC);
+					params.add(ARG_VRE6);
+					params.add(ARG_MODEL + stringModel.getPipesimModelLoc());
+					params.add(ARG_WHP + whp);
+					params.add(ARG_WATERCUT + wcut);
+
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, whpDate, currTime,
+							VRE_TYPE.MODEL_PREDICTION);
+					executor.execute(worker);
+
+					rowCount++;
+				}
+				if (rowCount != 0) {
+					LOGGER.info("Prediction generation submitted for " + rowCount + " strings in on " + new Date());
+				}
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 }

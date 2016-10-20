@@ -256,8 +256,10 @@ public class VREBaseResource {
 			@QueryParam("wcut") double wcut) {
 		InternalVREManager ivm = new InternalVREManager();
 		String result = ivm.runMultiRateWellTest(stringID, liqRates, whps, wcut);
+		result = "{ \"value\" : [" + result + "] }";
 		return Response.status(200).entity(result).build();
 	}
+
 
 	/**
 	 * Prints the message.

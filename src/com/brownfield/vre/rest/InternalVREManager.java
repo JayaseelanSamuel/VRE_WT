@@ -1,16 +1,16 @@
 package com.brownfield.vre.rest;
 
+import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
+import static com.brownfield.vre.VREConstants.FROM_DATE;
 import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
+import static com.brownfield.vre.VREConstants.ROW_CREATED_BY;
+import static com.brownfield.vre.VREConstants.STARTED_ON;
 import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.TEIID_PASSWORD;
 import static com.brownfield.vre.VREConstants.TEIID_USER;
+import static com.brownfield.vre.VREConstants.TO_DATE;
 import static com.brownfield.vre.VREConstants.VRE_EXE_RUNNING_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_JNDI_NAME;
-import static com.brownfield.vre.VREConstants.FROM_DATE;
-import static com.brownfield.vre.VREConstants.TO_DATE;
-import static com.brownfield.vre.VREConstants.STARTED_ON;
-import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
-import static com.brownfield.vre.VREConstants.ROW_CREATED_BY;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -29,14 +29,12 @@ import javax.sql.DataSource;
 
 import com.brownfield.vre.AvgCalculator;
 import com.brownfield.vre.Utils;
-import com.brownfield.vre.VREConstants;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
 import com.brownfield.vre.exe.models.MultiRateTestModel;
 import com.brownfield.vre.jobs.JobsMonitor;
 import com.google.gson.Gson;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class InternalVREManager.
  * 
@@ -84,7 +82,8 @@ public class InternalVREManager {
 	public void refreshVariables() {
 		try (Connection vreConn = getVREConnection()) {
 			LOGGER.info("Refreshing VRE variables started !!!");
-			VREConstants.refreshVariables(vreConn);
+			Utils.refreshVariables(vreConn);
+			Utils.refreshProperties();
 			LOGGER.info("Refreshing VRE variables finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
@@ -226,7 +225,6 @@ public class InternalVREManager {
 		String message = "Recalculation process started for - " + vresToRun;
 
 		try (Connection vreConn = getVREConnection()) {
-			// TODO :StringID is valid and job is not running
 			String stringName = Utils.getStringNameFromID(vreConn, stringID);
 			if (stringName == null) {
 				message = "Invalid stringID";
@@ -357,6 +355,34 @@ public class InternalVREManager {
 			e.printStackTrace();
 		}
 		return message;
+	}
+
+	/**
+	 * Run model prediction.
+	 */
+	public void runModelPrediction() {
+		try {
+			Runnable r = new Runnable() {
+				public void run() {
+					try (final Connection vreConn = getVREConnection()) {
+						LOGGER.info("Started Running model prediction !!!");
+						VREExecutioner vreEx = new VREExecutioner();
+						vreEx.runModelPrediction(vreConn);
+						LOGGER.info("Model prediction finished !!!");
+					} catch (SQLException e) {
+						LOGGER.log(Level.SEVERE, e.getMessage());
+						e.printStackTrace();
+					} catch (NamingException e) {
+						LOGGER.log(Level.SEVERE, e.getMessage());
+						e.printStackTrace();
+					}
+				}
+			};
+			new Thread(r).start();
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -1,6 +1,5 @@
 package com.brownfield.vre;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,12 +18,6 @@ public class PropertyReader {
 
 	/** The props. */
 	private static Properties props = null;
-
-	/** The Constant CONFIG_DIR. */
-	private static final String CONFIG_DIR = "jboss.server.config.dir";
-
-	/** The Constant propertyFileName. */
-	private static final String PROPERTY_FILE_NAME = "vre.properties";
 
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(PropertyReader.class.getName());
@@ -55,7 +48,7 @@ public class PropertyReader {
 	 *            the servlet context
 	 */
 	public static void loadProperties(ServletContext servletContext) {
-		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/classes/" + PROPERTY_FILE_NAME);) {
+		try (InputStream is = servletContext.getResourceAsStream("/WEB-INF/classes/vre.properties");) {
 			props = new Properties();
 			props.load(is);
 		} catch (IOException e) {
@@ -66,14 +59,14 @@ public class PropertyReader {
 	/**
 	 * Load properties from outside of war.
 	 */
-	public static void loadProperties() {
-		String configDir = System.getProperty(CONFIG_DIR);
+	public static void loadProperties(String propertyFile) {
 
-		try (InputStream is = new FileInputStream(configDir + File.separator + PROPERTY_FILE_NAME);) {
+		try (InputStream is = new FileInputStream(propertyFile);) {
 			props = new Properties();
 			props.load(is);
 		} catch (IOException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 		}
 	}
+
 }

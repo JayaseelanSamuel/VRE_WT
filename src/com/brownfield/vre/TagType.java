@@ -85,24 +85,89 @@ public enum TagType {
 	TECHNICAL_RATE(25);
 
 	/** The num val. */
-	private int numVal;
+	private int tagTypeID;
+
 
 	/**
 	 * Instantiates a new tag type.
 	 *
-	 * @param numVal
-	 *            the num val
+	 * @param tagTypeID the tag type id
 	 */
-	TagType(int numVal) {
-		this.numVal = numVal;
+	TagType(int tagTypeID) {
+		this.tagTypeID = tagTypeID;
 	}
 
+
 	/**
-	 * Gets the num val.
+	 * Gets the tag type id.
 	 *
-	 * @return the num val
+	 * @return the tag type id
 	 */
-	public int getNumVal() {
-		return numVal;
+	public int getTagTypeID() {
+		return tagTypeID;
+	}
+
+
+	/**
+	 * Gets the tag type from id.
+	 *
+	 * @param tagTypeID the tag type id
+	 * @return the tag type from id
+	 */
+	public static TagType getTagTypeFromID(final int tagTypeID) {
+		switch (tagTypeID) {
+		case 1:
+			return WHP;
+		case 2:
+			return WHT;
+		case 3:
+			return CHOKE_SIZE;
+		case 4:
+			return DOWNHOLE_PRESSURE;
+		case 5:
+			return GASLIFT_INJ_RATE;
+		case 6:
+			return WATER_VOL_RATE;
+		case 7:
+			return OIL_VOL_RATE;
+		case 8:
+			return ANN_PRESSURE_A;
+		case 9:
+			return ANN_PRESSURE_B;
+		case 10:
+			return LIQUID_RATE;
+		case 11:
+			return GAS_RATE;
+		case 12:
+			return WATERCUT;
+		case 13:
+			return HEADER_PRESSURE;
+		case 14:
+			return INJ_HEADER_PRESSURE;
+		case 15:
+			return VRE6_CALC;
+		case 16:
+			return SEPARATOR_PRESSURE;
+		case 17:
+			return WATER_INJ_RATE;
+		case 18:
+			return WATERCUT_HONEYWELL;
+		case 19:
+			return GOR;
+		case 20:
+			return PI;
+		case 21:
+			return HOLDUP;
+		case 22:
+			return FRICTION_FACTOR;
+		case 23:
+			return RESERVOIR_PRESSURE;
+		case 24:
+			return CHOKE_SETTING;
+		case 25:
+			return TECHNICAL_RATE;
+		default:
+			return null;
+		}
 	}
 }

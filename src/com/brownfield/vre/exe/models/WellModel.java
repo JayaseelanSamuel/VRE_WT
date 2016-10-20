@@ -31,6 +31,9 @@ public class WellModel {
 
 	/** The vre5. */
 	private VREModel vre5;
+	
+	/** The vre6. */
+	private VREModel vre6;
 
 	/** The recal. */
 	private RecalModel recal;
@@ -178,6 +181,25 @@ public class WellModel {
 	 */
 	public void setVre5(VREModel vre5) {
 		this.vre5 = vre5;
+	}
+
+	/**
+	 * Gets the vre6.
+	 *
+	 * @return the vre6
+	 */
+	@XmlElement(name = "vre6", type = VREModel.class)
+	public VREModel getVre6() {
+		return vre6;
+	}
+
+	/**
+	 * Sets the vre6.
+	 *
+	 * @param vre6 the new vre6
+	 */
+	public void setVre6(VREModel vre6) {
+		this.vre6 = vre6;
 	}
 
 	/**

@@ -1,8 +1,9 @@
+/*
+ * 
+ */
 package com.brownfield.vre;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
@@ -113,6 +114,9 @@ public class VREConstants {
 	/** The concurrent pipesim licences. */
 	public static int CONCURRENT_PIPESIM_LICENCES = 4;
 
+	/** The model prediction thread count. */
+	public static int MODEL_PREDICTION_THREAD_COUNT = 10;
+
 	/** The recalibrate low. */
 	public static double RECALIBRATE_LOW = 5;
 
@@ -131,17 +135,22 @@ public class VREConstants {
 	/** The recal date diff. */
 	public static double RECAL_DATE_DIFF = 7;
 
-	/** The VRE6 output folder. */
-	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
-	
-	/** The Constant DSBPM_PROCESS_NAME. */
-	public static final String DSBPM_PROCESS_NAME = "com.zadco.vre.NotificationEmailProcess";
+	/** The technical rate diff. */
+	public static double TECHNICAL_RATE_DIFF = 300;
 
-	/** The Constant DSBPM_WELL_TEST_TEMPLATE. */
-	public static final String DSBPM_EMAIL_TEMPLATE = "notification.ftl";
-	
+	/** The prediction frequency. */
+	public static int PREDICTION_FREQUENCY = 10;
 
 	// Properties end
+
+	/** The VRE6 output folder. */
+	public static final String VRE6_OUTPUT_FOLDER = "D:/Pipesim_Models/VRE6_OutputModels/";
+
+	/** The Constant CONFIG_DIR. */
+	public static final String CONFIG_DIR = "jboss.server.config.dir";
+
+	/** The Constant propertyFileName. */
+	public static final String PROPERTY_FILE_NAME = "vre.properties";
 
 	/**
 	 * The Enum VRE_TYPE.
@@ -166,7 +175,10 @@ public class VREConstants {
 		VRE5,
 
 		/** The VRE6 execution. */
-		VRE6
+		VRE6,
+
+		/** The model prediction. */
+		MODEL_PREDICTION
 	};
 
 	/** The Constant VRE_LIST. */
@@ -285,14 +297,55 @@ public class VREConstants {
 		}
 	}
 
+	/**
+	 * The Enum ALERT_TYPE.
+	 */
+	public static enum ALERT_TYPE {
+
+		/** The lower. */
+		LOWER(1),
+
+		/** The upper. */
+		UPPER(2),
+
+		/** The invalid. */
+		INVALID(3),
+
+		/** The sensor. */
+		SENSOR_FREEZE(4);
+
+		/** The alert type id. */
+		private int alertTypeID;
+
+		/**
+		 * Instantiates a new alert type.
+		 *
+		 * @param alertTypeID
+		 *            the alert type id
+		 */
+		ALERT_TYPE(int alertTypeID) {
+			this.alertTypeID = alertTypeID;
+		}
+
+		/**
+		 * Gets the alert type id.
+		 *
+		 * @return the alert type id
+		 */
+		public int getAlertTypeID() {
+			return alertTypeID;
+		}
+	}
+
 	// Queries
 
 	/** The well test new query. */
 	// identify new well test by looking for FT testType and Null flag. We will
 	// then update VRE_FLAG to false (to
 	// exclude it in next run) and update QL1 to standard conditions
-	public static final String WELL_TEST_NEW_QUERY = "SELECT WELL_TEST_ID, STRING_ID, QL1, WHP1, FT_TEST_ID, GAS_FLOW_RATE, TEST_SEPARATOR_PRESSURE, TEST_START_DATE, TEST_END_DATE, TRY_CONVERT(VARCHAR(10), TEST_END_DATE, 120) AS EFFECTIVE_DATE, "
-			+ " TEST_TYPE, VRE_FLAG, ROW_CHANGED_BY, ROW_CHANGED_DATE "
+	// TODO:Onkar : Try taking out TRY_CONVERT
+	public static final String WELL_TEST_NEW_QUERY = "SELECT WELL_TEST_ID, STRING_ID, QL1, WHP1, FT_TEST_ID, GAS_FLOW_RATE, TEST_SEPARATOR_PRESSURE, TEST_START_DATE, TEST_END_DATE, "
+			+ " TRY_CONVERT(VARCHAR(10), TEST_END_DATE, 120) AS EFFECTIVE_DATE, TEST_TYPE, VRE_FLAG, ROW_CHANGED_BY, ROW_CHANGED_DATE "
 			+ " FROM WELL_TEST WHERE TEST_TYPE IN ('FT','MRT')  AND VRE_FLAG IS NULL";
 	// AND SOURCE_ID = 2
 
@@ -311,6 +364,7 @@ public class VREConstants {
 			+ " WHERE ((((\"tagid\" = ? ) AND (\"timestamp\" >= ? )) AND (\"timestamp\" < ?)) AND (\"noOfValues\" = 1000))";
 
 	/** The wcut stability query. */
+	// TODO:Onkar : Try taking out TRY_CONVERT
 	public static final String WCUT_STABILITY_QUERY = "SELECT DD.STRING_ID, ISNULL(VR.WATER_CUT, ISNULL(DD.WATER_CUT_LAB,0)) AS WATER_CUT, STABILITY_FLAG, DD.RECORDED_DATE FROM DAILY_ALLOCATED_DATA DD"
 			+ " LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VR ON VR.RECORDED_DATE = DD.RECORDED_DATE AND VR.STRING_ID = DD.STRING_ID "
 			+ " WHERE DD.STRING_ID = ? AND DD.RECORDED_DATE = TRY_CONVERT(DATETIME, ?, 102)";
@@ -328,42 +382,24 @@ public class VREConstants {
 	public static final String VRE_VARIABLE_QUERY = "SELECT NAME, \"VALUE\" FROM VRE_VARIABLES";
 
 	/** The Constant VRE_DATASET_QUERY. */
-	/*
-	 * public static final String VRE_DATASET_QUERY =
-	 * "SELECT T.*, DAM.RECORDED_DATE, ISNULL(DAM.AVG_WHP, DD.WELLHEAD_PRESSURE) AS AVG_WHP, DD.WATER_CUT_LAB, "
-	 * +
-	 * " DAM.AVG_DOWNHOLE_PRESSURE, DAM.AVG_GASLIFT_INJ_RATE, DAM.AVG_HEADER_PRESSURE, DD.CHOKE_SETTING "
-	 * + " FROM ( " +
-	 * " SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, R.RESERVOIR_MODEL_LOC "
-	 * +
-	 * " FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
-	 * + " LEFT OUTER JOIN WELL W ON W.UWI = S.UWI " +
-	 * " LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID " +
-	 * "	LEFT OUTER JOIN STRING_SECTOR_ALLOCATION SSA ON SSA.STRING_ID = S.STRING_ID "
-	 * + " LEFT OUTER JOIN SECTOR SC ON SC.SECTOR_ID = SSA.SECTOR_ID " +
-	 * "	LEFT OUTER JOIN RESERVOIR R ON R.RESERVOIR_ID = SC.RESERVOIR_ID " +
-	 * "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL " +
-	 * " AND P.PLATFORM_NAME IN ('IN') ) T " // AND TAG_WHP IS NOT NULL +
-	 * " INNER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = T.STRING_ID AND DAM.RECORDED_DATE = ? "
-	 * +
-	 * " INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = DAM.RECORDED_DATE "
-	 * +
-	 * " WHERE (DAM.AVG_WHP IS NOT NULL AND DAM.AVG_WHP <> 0) OR (DD.WELLHEAD_PRESSURE IS NOT NULL AND DD.WELLHEAD_PRESSURE <> 0) "
-	 * ;
-	 */
-
-	public static final String VRE_DATASET_QUERY = "SELECT T.*, DAM.RECORDED_DATE, DAM.AVG_WHP AS AVG_WHP_ORI, DD.WELLHEAD_PRESSURE,  "
+	public static final String VRE_DATASET_QUERY = "SELECT T.*, DD.RECORDED_DATE, DAM.AVG_WHP AS AVG_WHP_ORI, DD.WELLHEAD_PRESSURE,  "
 			+ " ISNULL(SAL_WHP.LOW_LIMIT,0) AS WHP_LOW, ISNULL(SAL_WHP.HIGH_LIMIT,3000) AS WHP_HIGH, "
 			+ " CASE WHEN (DAM.AVG_WHP IS NULL OR DAM.AVG_WHP = 0 OR T.TAG_WHP IS NULL OR DAM.AVG_WHP NOT BETWEEN ISNULL(SAL_WHP.LOW_LIMIT,0) AND ISNULL(SAL_WHP.HIGH_LIMIT,3000)) THEN DD.WELLHEAD_PRESSURE ELSE DAM.AVG_WHP END AS AVG_WHP,  "
 			+ " CASE WHEN (DAM.AVG_WHP IS NULL OR DAM.AVG_WHP = 0 OR T.TAG_WHP IS NULL OR DAM.AVG_WHP NOT BETWEEN ISNULL(SAL_WHP.LOW_LIMIT,0) AND ISNULL(SAL_WHP.HIGH_LIMIT,3000)) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IS_SEABED, "
-			+ " DAM.AVG_HEADER_PRESSURE AS AVG_HEADER_PRESSURE_ORI, PHP.HEADER_PRESSURE,  "
-			+ " ISNULL(SAL_HEADER.LOW_LIMIT,0) AS WHP_LOW, ISNULL(SAL_HEADER.HIGH_LIMIT,500) AS WHP_HIGH, "
+			+ " DAM.AVG_HEADER_PRESSURE AS AVG_HEADER_PRESSURE_ORI,  " + " CASE T.STRING_CATEGORY_ID  "
+			+ " WHEN 2 THEN (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK LIKE '%IN%CTOR%' ORDER BY PHP.RECORDED_DATE DESC) "
+			+ " ELSE (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK IS NULL ORDER BY PHP.RECORDED_DATE DESC) END AS HEADER_PRESSURE, "
+			+ " ISNULL(SAL_HEADER.LOW_LIMIT,0) AS HP_LOW, ISNULL(SAL_HEADER.HIGH_LIMIT,500) AS HP_HIGH, "
 			+ " CASE WHEN (DAM.AVG_HEADER_PRESSURE IS NULL OR DAM.AVG_HEADER_PRESSURE = 0 OR T.TAG_HEADER_PRESSURE IS NULL OR DAM.AVG_HEADER_PRESSURE NOT BETWEEN ISNULL(SAL_HEADER.LOW_LIMIT,0) AND ISNULL(SAL_HEADER.HIGH_LIMIT,500))  "
-			+ " THEN PHP.HEADER_PRESSURE ELSE DAM.AVG_HEADER_PRESSURE END AS AVG_HEADER_PRESSURE,  "
-			+ " ISNULL((SELECT TOP 1 CHOKE_MULTIPLIER FROM VIRTUAL_RATE_ESTIMATION AS VR WHERE VR.RECORDED_DATE < DAM.RECORDED_DATE AND VR.STRING_ID = T.STRING_ID ORDER BY VR.RECORDED_DATE DESC), 1) AS CHOKE_MULTIPLIER, "
+			+ " THEN (CASE T.STRING_CATEGORY_ID  "
+			+ "	WHEN 2 THEN (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK LIKE '%IN%CTOR%' ORDER BY PHP.RECORDED_DATE DESC) "
+			+ "	ELSE (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK IS NULL ORDER BY PHP.RECORDED_DATE DESC) END  "
+			+ " ) ELSE DAM.AVG_HEADER_PRESSURE END AS AVG_HEADER_PRESSURE,  "
+			+ " ISNULL((SELECT TOP 1 CHOKE_MULTIPLIER FROM VIRTUAL_RATE_ESTIMATION AS VR WHERE VR.RECORDED_DATE < DD.RECORDED_DATE AND VR.STRING_ID = T.STRING_ID ORDER BY VR.RECORDED_DATE DESC), 1) AS CHOKE_MULTIPLIER, "
 			+ " DAM.AVG_DOWNHOLE_PRESSURE, DAM.AVG_GASLIFT_INJ_RATE, DD.CHOKE_SETTING, ISNULL(DD.WATER_CUT_LAB,0) AS WATER_CUT_LAB "
 			+ " FROM (  "
-			+ "	SELECT DISTINCT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.TAG_WHP, P.TAG_HEADER_PRESSURE, SM.PIPESIM_MODEL_LOC, R.RESERVOIR_MODEL_LOC, P.PLATFORM_ID "
+			+ "	SELECT DISTINCT S.STRING_ID, S.UWI, S.STRING_TYPE, S.STRING_CATEGORY_ID, SM.TAG_WHP, P.TAG_HEADER_PRESSURE, SM.PIPESIM_MODEL_LOC,  "
+			+ "	R.RESERVOIR_MODEL_LOC, R.RESERVOIR_NAME, P.PLATFORM_ID, P.PLATFORM_NAME "
 			+ "	FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
 			+ "	LEFT OUTER JOIN WELL W ON W.UWI = S.UWI "
 			+ "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
@@ -373,52 +409,29 @@ public class VREConstants {
 			+ "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL  " + " ) AS T "
 			+ " LEFT OUTER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = ? "
 			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = T.STRING_ID AND DAM.RECORDED_DATE = DD.RECORDED_DATE  "
-			+ " LEFT OUTER JOIN PLATFORM_HEADER_PRESSURE PHP ON PHP.PLATFORM_ID = T.PLATFORM_ID AND PHP.RECORDED_DATE = DD.RECORDED_DATE "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_WHP ON SAL_WHP.STRING_ID = T.STRING_ID AND SAL_WHP.TAG_TYPE_ID = 1 "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_HEADER ON SAL_HEADER.STRING_ID = T.STRING_ID AND SAL_HEADER.TAG_TYPE_ID = 13 "
-			+ " WHERE ((DAM.AVG_WHP IS NOT NULL AND DAM.AVG_WHP <> 0) OR (DD.WELLHEAD_PRESSURE IS NOT NULL AND DD.WELLHEAD_PRESSURE <> 0)) ";
+			+ " WHERE ((DAM.AVG_WHP IS NOT NULL AND DAM.AVG_WHP <> 0) OR (DD.WELLHEAD_PRESSURE IS NOT NULL AND DD.WELLHEAD_PRESSURE <> 0))  ";
 
 	/** The Constant VRE_DURATION_QUERY. */
-	/*
-	 * public static final String VRE_DURATION_QUERY =
-	 * "SELECT T.*, DAM.RECORDED_DATE, ISNULL(DAM.AVG_WHP, DD.WELLHEAD_PRESSURE) AS AVG_WHP, DD.WATER_CUT_LAB, DAM.AVG_DOWNHOLE_PRESSURE, "
-	 * +
-	 * " DAM.AVG_GASLIFT_INJ_RATE, DAM.AVG_HEADER_PRESSURE, DD.CHOKE_SETTING, WT.QL1, CAST(IIF(WT.TEST_END_DATE IS NOT NULL, 1, 0) AS BIT) AS RECAL, ISNULL(VR.WATER_CUT,0) WATER_CUT "
-	 * + "	FROM (  " +
-	 * "	SELECT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.PIPESIM_MODEL_LOC, R.RESERVOIR_MODEL_LOC  "
-	 * + "	FROM STRING S  " +
-	 * "	LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID  "
-	 * + "	LEFT OUTER JOIN WELL W ON W.UWI = S.UWI  " +
-	 * "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID  " +
-	 * "	LEFT OUTER JOIN STRING_SECTOR_ALLOCATION SSA ON SSA.STRING_ID = S.STRING_ID  "
-	 * + "	LEFT OUTER JOIN SECTOR SC ON SC.SECTOR_ID = SSA.SECTOR_ID  " +
-	 * "	LEFT OUTER JOIN RESERVOIR R ON R.RESERVOIR_ID = SC.RESERVOIR_ID  " +
-	 * "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL " + " ) T  " // AND TAG_WHP
-	 * IS NOT NULL +
-	 * "	INNER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = T.STRING_ID "
-	 * +
-	 * "	INNER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = DAM.RECORDED_DATE "
-	 * +
-	 * "	LEFT OUTER JOIN WELL_TEST WT ON WT.STRING_ID = T.STRING_ID AND DAM.RECORDED_DATE = CAST(WT.TEST_END_DATE AS DATE) AND WT.VRE_FLAG = 'TRUE' "
-	 * +
-	 * "	LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VR ON VR.STRING_ID = T.STRING_ID AND VR.RECORDED_DATE = DAM.RECORDED_DATE "
-	 * + "	WHERE T.STRING_ID = ? AND DAM.RECORDED_DATE BETWEEN ? AND ? " +
-	 * " AND ((DAM.AVG_WHP IS NOT NULL AND DAM.AVG_WHP <> 0) OR (DD.WELLHEAD_PRESSURE IS NOT NULL AND DD.WELLHEAD_PRESSURE <> 0)) "
-	 * ;
-	 */
-
-	public static final String VRE_DURATION_QUERY = "SELECT T.*, DAM.RECORDED_DATE, DAM.AVG_WHP AS AVG_WHP_ORI, DD.WELLHEAD_PRESSURE,  "
+	public static final String VRE_DURATION_QUERY = "SELECT T.*, DD.RECORDED_DATE, DAM.AVG_WHP AS AVG_WHP_ORI, DD.WELLHEAD_PRESSURE,  "
 			+ " ISNULL(SAL_WHP.LOW_LIMIT,0) AS WHP_LOW, ISNULL(SAL_WHP.HIGH_LIMIT,3000) AS WHP_HIGH, "
 			+ " CASE WHEN (DAM.AVG_WHP IS NULL OR DAM.AVG_WHP = 0 OR T.TAG_WHP IS NULL OR DAM.AVG_WHP NOT BETWEEN ISNULL(SAL_WHP.LOW_LIMIT,0) AND ISNULL(SAL_WHP.HIGH_LIMIT,3000)) THEN DD.WELLHEAD_PRESSURE ELSE DAM.AVG_WHP END AS AVG_WHP,  "
 			+ " CASE WHEN (DAM.AVG_WHP IS NULL OR DAM.AVG_WHP = 0 OR T.TAG_WHP IS NULL OR DAM.AVG_WHP NOT BETWEEN ISNULL(SAL_WHP.LOW_LIMIT,0) AND ISNULL(SAL_WHP.HIGH_LIMIT,3000)) THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS IS_SEABED, "
-			+ " DAM.AVG_HEADER_PRESSURE AS AVG_HEADER_PRESSURE_ORI, PHP.HEADER_PRESSURE,  "
-			+ " ISNULL(SAL_HEADER.LOW_LIMIT,0) AS WHP_LOW, ISNULL(SAL_HEADER.HIGH_LIMIT,500) AS WHP_HIGH, "
+			+ " DAM.AVG_HEADER_PRESSURE AS AVG_HEADER_PRESSURE_ORI,  " + " CASE T.STRING_CATEGORY_ID  "
+			+ " WHEN 2 THEN (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK LIKE '%IN%CTOR%' ORDER BY PHP.RECORDED_DATE DESC) "
+			+ " ELSE (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK IS NULL ORDER BY PHP.RECORDED_DATE DESC) END AS HEADER_PRESSURE, "
+			+ " ISNULL(SAL_HEADER.LOW_LIMIT,0) AS HP_LOW, ISNULL(SAL_HEADER.HIGH_LIMIT,500) AS HP_HIGH, "
 			+ " CASE WHEN (DAM.AVG_HEADER_PRESSURE IS NULL OR DAM.AVG_HEADER_PRESSURE = 0 OR T.TAG_HEADER_PRESSURE IS NULL OR DAM.AVG_HEADER_PRESSURE NOT BETWEEN ISNULL(SAL_HEADER.LOW_LIMIT,0) AND ISNULL(SAL_HEADER.HIGH_LIMIT,500))  "
-			+ " THEN PHP.HEADER_PRESSURE ELSE DAM.AVG_HEADER_PRESSURE END AS AVG_HEADER_PRESSURE,  "
+			+ " THEN (CASE T.STRING_CATEGORY_ID  "
+			+ "	WHEN 2 THEN (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK LIKE '%IN%CTOR%' ORDER BY PHP.RECORDED_DATE DESC) "
+			+ "	ELSE (SELECT TOP(1) HEADER_PRESSURE FROM PLATFORM_HEADER_PRESSURE AS PHP WHERE PHP.RECORDED_DATE <= DD.RECORDED_DATE AND PLATFORM_ID = PHP.PLATFORM_ID AND PHP.REMARK IS NULL ORDER BY PHP.RECORDED_DATE DESC) END  "
+			+ " ) ELSE DAM.AVG_HEADER_PRESSURE END AS AVG_HEADER_PRESSURE,  "
 			+ " WT.QL1, CAST(IIF(WT.TEST_END_DATE IS NOT NULL, 1, 0) AS BIT) AS RECAL, "
 			+ " DAM.AVG_DOWNHOLE_PRESSURE, DAM.AVG_GASLIFT_INJ_RATE, DD.CHOKE_SETTING, ISNULL(VR.WATER_CUT,DD.WATER_CUT_LAB) AS WATER_CUT "
 			+ " FROM (  "
-			+ "	SELECT DISTINCT S.STRING_ID, S.UWI, S.STRING_TYPE, SM.TAG_WHP, P.TAG_HEADER_PRESSURE, SM.PIPESIM_MODEL_LOC, R.RESERVOIR_MODEL_LOC, P.PLATFORM_ID "
+			+ "	SELECT DISTINCT S.STRING_ID, S.UWI, S.STRING_TYPE, S.STRING_CATEGORY_ID, SM.TAG_WHP, P.TAG_HEADER_PRESSURE, SM.PIPESIM_MODEL_LOC,  "
+			+ "	R.RESERVOIR_MODEL_LOC, R.RESERVOIR_NAME, P.PLATFORM_ID, P.PLATFORM_NAME "
 			+ "	FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
 			+ "	LEFT OUTER JOIN WELL W ON W.UWI = S.UWI "
 			+ "	LEFT OUTER JOIN PLATFORM P ON P.PLATFORM_ID = W.PLATFORM_ID "
@@ -428,7 +441,6 @@ public class VREConstants {
 			+ "	WHERE SM.PIPESIM_MODEL_LOC IS NOT NULL  " + " ) AS T "
 			+ " LEFT OUTER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = T.STRING_ID  "
 			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = T.STRING_ID AND DAM.RECORDED_DATE = DD.RECORDED_DATE  "
-			+ " LEFT OUTER JOIN PLATFORM_HEADER_PRESSURE PHP ON PHP.PLATFORM_ID = T.PLATFORM_ID AND PHP.RECORDED_DATE = DD.RECORDED_DATE "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_WHP ON SAL_WHP.STRING_ID = T.STRING_ID AND SAL_WHP.TAG_TYPE_ID = 1 "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_HEADER ON SAL_HEADER.STRING_ID = T.STRING_ID AND SAL_HEADER.TAG_TYPE_ID = 13 "
 			+ " LEFT OUTER JOIN WELL_TEST WT ON WT.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = CAST(WT.TEST_END_DATE AS DATE) AND WT.VRE_FLAG = 'TRUE' "
@@ -455,7 +467,7 @@ public class VREConstants {
 	 * calibration by looking for SR testType, VRE flag = true and Calibrated
 	 * flag set to null. We will then update IS_CALIBRATED to true or false.
 	 */
-	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CONVERT(date, TEST_END_DATE) AS EFFECTIVE_DATE, "
+	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CAST(TEST_END_DATE AS DATE) AS EFFECTIVE_DATE, "
 			+ " IS_CALIBRATED, TEST_WATER_CUT, SM.PIPESIM_MODEL_LOC, WT.ROW_CHANGED_BY, WT.ROW_CHANGED_DATE "
 			+ " FROM WELL_TEST WT " + " LEFT OUTER JOIN STRING_METADATA SM ON WT.STRING_ID = SM.STRING_ID "
 			+ " WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 1 AND IS_CALIBRATED IS NULL AND SM.PIPESIM_MODEL_LOC IS NOT NULL ";
@@ -528,8 +540,55 @@ public class VREConstants {
 	/** The Constant VRE6_PROXY_MODELS_QUERY. */
 	public static final String VRE6_PROXY_MODELS_QUERY = "SELECT STRING_ID FROM STRING_METADATA WHERE PIPESIM_MODEL_LOC IS NOT NULL";
 
+	/** The Constant SELECT_ALERT_LIMIT_QUERY. */
+	public static final String SELECT_ALERT_LIMIT_QUERY = "SELECT STRING_ALERT_ID, STRING_ID, TAG_TYPE_ID, PERCENT_LIMIT, RECORDED_DATE, VALUE,  "
+			+ " (VALUE - VALUE * PERCENT_LIMIT/100) LOW_LIMIT, (VALUE + VALUE * PERCENT_LIMIT/100) HIGH_LIMIT, "
+			+ " GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE  " + "FROM " + "( "
+			+ " SELECT SAL.STRING_ALERT_ID, SAL.STRING_ID, SAL.TAG_TYPE_ID, SAL.PERCENT_LIMIT, " + "RECORDED_DATE,  "
+			+ " CASE SAL.TAG_TYPE_ID WHEN 19 THEN GOR WHEN 20 THEN PI WHEN 21 THEN HOLDUP WHEN 22 THEN FRICTION_FACTOR WHEN 23 THEN RESERVOIR_PRESSURE ELSE PI END AS VALUE, "
+			+ " GOR, PI, HOLDUP, FRICTION_FACTOR, RESERVOIR_PRESSURE " + "FROM STRING_ALERT_LIMIT AS SAL "
+			+ " INNER JOIN VIRTUAL_RATE_ESTIMATION AS VR ON VR.VRE_ID =  " + "( "
+			+ "	SELECT TOP(1) VRE_ID FROM VIRTUAL_RATE_ESTIMATION AS VR  "
+			+ "	WHERE VR.RECORDED_DATE < ? AND VR.STRING_ID = SAL.STRING_ID " + "	ORDER BY VR.RECORDED_DATE DESC  "
+			+ ") " + " WHERE SAL.STRING_ID = ? AND TAG_TYPE_ID BETWEEN 20 AND 23 " + ") T";
+
+	/** The Constant SELECT_TECHNICAL_RATE_QUERY. */
+	public static final String SELECT_TECHNICAL_RATE_QUERY = " SELECT TECHNICAL_RATE, RECORDED_DATE, VALUE, TECHNICAL_RATE - CAST(VALUE AS NUMERIC) AS LOW_TECH_RATE, TECHNICAL_RATE + CAST(VALUE AS NUMERIC) AS HIGH_TECH_RATE "
+			+ " FROM STRING_MONTHLY_TARGET_RATE AS SMT "
+			+ " LEFT OUTER JOIN VRE_VARIABLES AS VV ON VV.NAME = 'TECHNICAL_RATE_DIFF' "
+			+ " WHERE STRING_ID = ? AND MONTH(SMT.RECORDED_DATE) = MONTH(?) AND YEAR(SMT.RECORDED_DATE) = YEAR(?)";
+
+	/** The Constant INSERT_ALERTS_QUERY. */
+	public static final String INSERT_ALERTS_QUERY = "INSERT INTO RT_SOLUTION_EVENTS ("
+			+ " EVENT_ID, STRING_ID, ALERT_TYPE_ID, ALERT_SUB_TYPE_ID, MAIN_MESSAGE, SUMMARY_MESSAGE, ADDITIONAL_DATA, DATA_TIMESTAMP, ROW_CHANGED_BY) "
+			+ " VALUES (NEWID(), ?, ?, ?, ?, ?, ?, ?, ?) ";
+
+	/** The Constant SELECT_LATEST_WHP_QUERY. */
+	public static final String SELECT_LATEST_WHP_QUERY = "SELECT RT.STRING_ID, RT.RECORDED_DATE, TAGQUALITY, TAGRAWVALUE, ISNULL(DD.WATER_CUT_LAB, 0) AS WATER_CUT_LAB FROM REAL_TIME_DATA RT "
+			+ " INNER JOIN ( " + " SELECT STRING_ID, MAX(RECORDED_DATE) AS REC_DATE " + " FROM REAL_TIME_DATA  "
+			+ " WHERE TAG_TYPE_ID = 1 " + " GROUP BY STRING_ID " + " ) T "
+			+ " ON RT.STRING_ID = T.STRING_ID AND RT.RECORDED_DATE = T.REC_DATE AND RT.TAG_TYPE_ID = 1 "
+			+ " LEFT OUTER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = RT.STRING_ID AND DD.RECORDED_DATE = ?";
+
+	/** The Constant MODEL_PREDECTION_QUERY. */
+	public static final String MODEL_PREDECTION_QUERY = "SELECT STRING_ID, RECORDED_DATE, TAG_TYPE_ID, TAGQUALITY, TAGPROCESSEDVALUE, TAGRAWVALUE FROM REAL_TIME_DATA "
+			+ " WHERE STRING_ID = ? AND RECORDED_DATE = ? AND TAG_TYPE_ID = 15 ";
+	
+	/** The Constant INSERT_REAL_TIME_DATA_QUERY. */
+	public static final String INSERT_REAL_TIME_DATA_QUERY = "INSERT INTO REAL_TIME_DATA (STRING_ID, RECORDED_DATE, TAG_TYPE_ID, TAGQUALITY, TAGPROCESSEDVALUE, TAGRAWVALUE, ROW_CREATED_BY) "
+			+ " VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+	/** The Constant STRING_ALERT_MESSAGE. */
+	public static final String STRING_ALERT_MESSAGE = "%S value (%S) for Well %S is %S value (%S) at time %S";
+
 	/** The Constant JOBS_REMARK. */
 	public static final String JOBS_REMARK = "Job %s on %s";
+
+	/** The Constant UPPER_LIMIT. */
+	public static final String UPPER_LIMIT = "above limit";
+
+	/** The Constant LOWER_LIMIT. */
+	public static final String LOWER_LIMIT = "below limit";
 	// other constants
 
 	/** The flow test. */
@@ -549,6 +608,12 @@ public class VREConstants {
 
 	/** The Constant DATE_FORMAT. */
 	public static final String DATE_FORMAT = "yyyy-MM-dd";
+
+	/** The Constant DATE_FORMAT_DSPM. */
+	public static final String DATE_FORMAT_DSPM = "MM/dd/yyyy";
+
+	/** The Constant DECIMAL_FORMAT. */
+	public static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat(".##");
 
 	/** The Constant AVG_CALC_WORKFLOW. */
 	public static final String AVG_CALC_WORKFLOW = "Average Calculation Workflow";
@@ -759,6 +824,9 @@ public class VREConstants {
 	/** The Constant RECORDED_DATE. */
 	public static final String RECORDED_DATE = "RECORDED_DATE";
 
+	/** The Constant TAGRAWVALUE. */
+	public static final String TAGRAWVALUE = "TAGRAWVALUE";
+
 	/** The Constant RUN_VRE2. */
 	// public static final String RUN_VRE2 = "RUN_VRE2";
 
@@ -900,6 +968,30 @@ public class VREConstants {
 	/** The Constant AVG_VRE6_CALC. */
 	public static final String AVG_VRE6_CALC = "AVG_VRE6_CALC";
 
+	/** The Constant TAG_TYPE_ID. */
+	public static final String TAG_TYPE_ID = "TAG_TYPE_ID";
+
+	/** The Constant LOW_LIMIT. */
+	public static final String LOW_LIMIT = "LOW_LIMIT";
+
+	/** The Constant HIGH_LIMIT. */
+	public static final String HIGH_LIMIT = "HIGH_LIMIT";
+
+	/** The Constant FREEZE_LIMIT. */
+	public static final String FREEZE_LIMIT = "FREEZE_LIMIT";
+
+	/** The Constant ALERT_SUB_TYPE_ID. */
+	public static final String ALERT_SUB_TYPE_ID = "ALERT_SUB_TYPE_ID";
+
+	/** The Constant TECHNICAL_RATE. */
+	public static final String TECHNICAL_RATE = "TECHNICAL_RATE";
+
+	/** The Constant LOW_TECH_RATE. */
+	public static final String LOW_TECH_RATE = "LOW_TECH_RATE";
+
+	/** The Constant HIGH_TECH_RATE. */
+	public static final String HIGH_TECH_RATE = "HIGH_TECH_RATE";
+
 	/** The Constant RECALIBRATE_FORCE_LOW. */
 	public static final int RECALIBRATE_FORCE_LOW = 0;
 
@@ -986,97 +1078,87 @@ public class VREConstants {
 	/** The Constant ARG_MULTI_WHP. */
 	public static final String ARG_MULTI_WHP = "-twhp";
 
-	/**
-	 * Refresh variables.
-	 *
-	 * @param conn
-	 *            the conn
-	 */
-	public static void refreshVariables(Connection conn) {
-		try (Statement stmt = conn.createStatement(); ResultSet rset = stmt.executeQuery(VRE_VARIABLE_QUERY);) {
-			if (rset != null) {
-				while (rset.next()) {
-					String name = rset.getString(NAME);
-					String val = rset.getString(VALUE);
-					switch (name) {
-					case "START_OFFSET":
-						START_OFFSET = Double.parseDouble(val);
-						break;
-					case "END_OFFSET":
-						END_OFFSET = Double.parseDouble(val);
-						break;
-					case "SWITCH_TIME_ZONE":
-						SWITCH_TIME_ZONE = val.equalsIgnoreCase(Boolean.TRUE.toString()) ? true : false;
-						break;
-					case "MIN_WHP":
-						MIN_WHP = Double.parseDouble(val);
-						break;
-					case "MAX_WHP":
-						MAX_WHP = Double.parseDouble(val);
-						break;
-					case "MIN_LIQUID_RATE":
-						MIN_LIQUID_RATE = Double.parseDouble(val);
-						break;
-					case "MAX_LIQUID_RATE":
-						MAX_LIQUID_RATE = Double.parseDouble(val);
-						break;
-					case "MIN_WATERCUT":
-						MIN_WATERCUT = Double.parseDouble(val);
-						break;
-					case "MAX_WATERCUT":
-						MAX_WATERCUT = Double.parseDouble(val);
-						break;
-					case "FREEZE_WHP_LIMIT":
-						FREEZE_WHP_LIMIT = Double.parseDouble(val);
-						break;
-					case "FREEZE_LIQUID_RATE_LIMIT":
-						FREEZE_LIQUID_RATE_LIMIT = Double.parseDouble(val);
-						break;
-					case "FREEZE_WATERCUT_LIMIT":
-						FREEZE_WATERCUT_LIMIT = Double.parseDouble(val);
-						break;
-					case "CV_WHP_MAX":
-						CV_WHP_MAX = Double.parseDouble(val);
-						break;
-					case "CV_LIQ_RATE_MAX":
-						CV_LIQ_RATE_MAX = Double.parseDouble(val);
-						break;
-					case "CV_WATERCUT_MAX":
-						CV_WATERCUT_MAX = Double.parseDouble(val);
-						break;
-					case "SHRINKAGE_FACTOR":
-						SHRINKAGE_FACTOR = Double.parseDouble(val);
-						break;
-					case "VRE_EXE_LOC":
-						VRE_EXE_LOC = val;
-						break;
-					case "CONCURRENT_PIPESIM_LICENCES":
-						CONCURRENT_PIPESIM_LICENCES = Integer.parseInt(val);
-						break;
-					case "RECALIBRATE_LOW":
-						RECALIBRATE_LOW = Double.parseDouble(val);
-						break;
-					case "RECALIBRATE_HIGH":
-						RECALIBRATE_HIGH = Double.parseDouble(val);
-						break;
-					case "WT_TREND_LIMIT":
-						WT_TREND_LIMIT = Double.parseDouble(val);
-						break;
-					case "MAX_RATE_DIFF":
-						MAX_RATE_DIFF = Double.parseDouble(val);
-						break;
-					case "MAX_INJ_RATE_PRESS":
-						MAX_INJ_RATE_PRESS = Double.parseDouble(val);
-						break;
-					case "RECAL_DATE_DIFF":
-						RECAL_DATE_DIFF = Integer.parseInt(val);
-						break;
-					}
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+	// arguments end
+
+	// BPM constants
+
+	/** The Constant DSBPM_PROCESS_NAME. */
+	public static final String DSBPM_PROCESS_NAME = "com.zadco.vre.NotificationEmailProcess";
+
+	/** The Constant DSBPM_WELL_TEST_TEMPLATE. */
+	public static final String DSBPM_EMAIL_TEMPLATE = "notification.ftl";
+
+	/** The Constant DSBPM_EMAIL_SUBJECT. */
+	public static final String DSBPM_EMAIL_SUBJECT = "It Works!!!";
+
+	/** The Constant DSBPM_EMAIL_BODY. */
+	public static final String DSBPM_EMAIL_BODY = "Sample";
+
+	/** The Constant DSBPM_ALERT_TEMPLATE. */
+	public static final String DSBPM_ALERT_TEMPLATE = "notification.ftl";
+
+	/** The Constant DSBPM_ALERT_SUBJECT. */
+	public static final String DSBPM_ALERT_SUBJECT = "%s alert generated for %s";
+
+	/** The Constant DSBPM_VRE_DURATION_SUBJECT. */
+	public static final String DSBPM_VRE_DURATION_SUBJECT = "Recalulation finished for %s from %s to %s";
+
+	/** The Constant DSBPM_VRE_DURATION_BODY. */
+	public static final String DSBPM_VRE_DURATION_BODY = "Recalulation finished in %s seconds for %s from %s to %S initiated by %s";
+
+	/** The Constant DSBPM_WT_CALIBRATION_SUBJECT. */
+	public static final String DSBPM_WT_CALIBRATION_SUBJECT = "Attention needed for well test calibration of %s ";
+
+	/** The Constant DSBPM_WT_CALIBRATION_BODY. */
+	public static final String DSBPM_WT_CALIBRATION_BODY = "A calibration %s%% of  %s well for date %s is not within the limit %s and %s";
+
+	/** The Constant MONITOR_DAILY_DASHBOARD. */
+	public static final int MONITOR_DAILY_DASHBOARD = 3;
+
+	/** The Constant MONITOR_DAILY_ALERT_DASHBOARD. */
+	public static final int MONITOR_DAILY_ALERT_DASHBOARD = 4;
+
+	/** The Constant SINGLE_RATE_WELL_TEST_DASHBOARD. */
+	public static final int SINGLE_RATE_WELL_TEST_DASHBOARD = 8;
+
+	/** The Constant WELLS_DASHBOARD_LINK. */
+	public static final String WELLS_DASHBOARD_LINK = "?UserFavouriteTab=Wells&upperzakumselectedcategory=1&wellsselectedcategory=%s&string_id=%s&startdate=%s&enddate=%s";
+
+	/** The Constant WELL_TEST_BODY_START. */
+	public static final String WELL_TEST_BODY_START = "The following well tests were read from Seabed and passed to the VRE well test validation"
+			+ " workflow on %S. The validation results are indicated";
+
+	/** The Constant WELL_TEST_SUBJECT. */
+	public static final String WELL_TEST_SUBJECT = "Well test validation summary";
+
+	/** The Constant WELL_TEST_EMAIL_TABLE_BODY. */
+	public static final String WELL_TEST_EMAIL_TABLE_BODY = "<table border=\\\\\\\"1\\\\\\\" width=\\\\\\\"150%%%%\\\\\\\">%s</table>";
+
+	/** The Constant WELL_TEST_EMAIL_TABLE_HEADER. */
+	public static final String WELL_TEST_EMAIL_TABLE_HEADER = "<tr><th>Test Date</th><th>Platform Name</th><th>Well</th><th>Validated ?</th><th>Remark</th></tr>";
+
+	/** The Constant WELL_TEST_EMAIL_TABLE_ROW. */
+	public static final String WELL_TEST_EMAIL_TABLE_ROW = "<tr><td>%s</td><td>%s</td><td>%S</td><td>%s</td><td>%s</td></tr>";
+
+	/** The Constant SINGLE_RATE_WELL_TEST_DASHBOARD_LINK. */
+	public static final String SINGLE_RATE_WELL_TEST_DASHBOARD_LINK = "?UserFavouriteTab=Wells&upperzakumselectedcategory=1&wellsselectedcategory="
+			+ SINGLE_RATE_WELL_TEST_DASHBOARD;
+
+	/** The Constant UNDEFINED. */
+	public static final String UNDEFINED = "undefined";
+
+	/** The Constant VALID. */
+	public static final String VALID = "Valid";
+
+	/** The Constant INVALID. */
+	public static final String INVALID = "Invalid";
+
+	// public static final String DSBPM_WELL_TEST_VALIDATION_TEMPLATE =
+	// "notification.ftl";
+
+	// public static final String DSBPM_RECALCULATION_TEMPLATE =
+	// "notification.ftl";
+
+	// BPM end
 
 }

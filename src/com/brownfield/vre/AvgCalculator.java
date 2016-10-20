@@ -79,8 +79,9 @@ public class AvgCalculator {
 				Timestamp recordedDate = Utils.getDateFromString(recDate, DATE_FORMAT, Boolean.FALSE);
 				// System.out.println(recordedDate);
 				// ac.calculateAverage(vreConn, recordedDate);
-
-				double median = ac.getMedian(vreConn, 906, 1, Utils.parseDate("2016-09-06"), null, null);
+				//1, 4, Utils.parseDate("2016-10-13")
+				//906, 1, Utils.parseDate("2016-09-06")
+				Double median = ac.getMedian(vreConn, 1, 4, Utils.parseDate("2016-09-06"), null, null);
 				System.out.println(median);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
@@ -175,11 +176,13 @@ public class AvgCalculator {
 
 									// calculate medians instead of avg for
 									// pressures
-									whp = this.getMedian(vreConn, stringID, TagType.WHP.getNumVal(), recordedDate,
+									whp = this.getMedian(vreConn, stringID, TagType.WHP.getTagTypeID(), recordedDate,
 											startDate, endDate);
-									pdgp = this.getMedian(vreConn, stringID, TagType.DOWNHOLE_PRESSURE.getNumVal(),
+									pdgp = this.getMedian(vreConn, stringID, TagType.DOWNHOLE_PRESSURE.getTagTypeID(),
 											recordedDate, startDate, endDate);
-									hp = this.getMedian(vreConn, stringID, TagType.HEADER_PRESSURE.getNumVal(),
+									hp = this.getMedian(vreConn, stringID, TagType.HEADER_PRESSURE.getTagTypeID(),
+											recordedDate, startDate, endDate);
+									vre6 = this.getMedian(vreConn, stringID, TagType.VRE6_CALC.getTagTypeID(),
 											recordedDate, startDate, endDate);
 
 								} else {
@@ -384,9 +387,9 @@ public class AvgCalculator {
 	 *            the end down time
 	 * @return the median
 	 */
-	private double getMedian(Connection conn, int stringID, int tagTypeID, Timestamp recordedDate,
+	private Double getMedian(Connection conn, int stringID, int tagTypeID, Timestamp recordedDate,
 			Timestamp startDownTime, Timestamp endDownTime) {
-		double median = 0;
+		Double median = null;
 		Timestamp currTime = new Timestamp(new Date().getTime());
 		/*
 		 * set downtime values to current time if they are null as both of them
@@ -408,7 +411,7 @@ public class AvgCalculator {
 
 			statement.executeUpdate();
 
-			median = statement.getDouble(6);
+			median = (Double) statement.getObject(6);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 			e.printStackTrace();

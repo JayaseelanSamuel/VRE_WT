@@ -4,7 +4,6 @@ import java.sql.Timestamp;
 
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class StringModel.
  * 

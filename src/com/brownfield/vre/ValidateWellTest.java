@@ -1,15 +1,20 @@
 package com.brownfield.vre;
 
+import static com.brownfield.vre.VREConstants.APP_BASE_URL;
 import static com.brownfield.vre.VREConstants.CV_LIQ_RATE_MAX;
 import static com.brownfield.vre.VREConstants.CV_WHP_MAX;
+import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DATE_TIME_FORMAT;
+import static com.brownfield.vre.VREConstants.DSBPM_ALERT_TEMPLATE;
 import static com.brownfield.vre.VREConstants.EFFECTIVE_DATE;
+import static com.brownfield.vre.VREConstants.EMAIL_GROUP;
 import static com.brownfield.vre.VREConstants.END_OFFSET;
 import static com.brownfield.vre.VREConstants.FREEZE_LIQUID_RATE_LIMIT;
 import static com.brownfield.vre.VREConstants.FREEZE_WHP_LIMIT;
 import static com.brownfield.vre.VREConstants.GAS_FLOW_RATE;
 import static com.brownfield.vre.VREConstants.GET_STRING_METADATA_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_WELL_TEST_QUERY;
+import static com.brownfield.vre.VREConstants.INVALID;
 import static com.brownfield.vre.VREConstants.MAX_LIQUID_RATE;
 import static com.brownfield.vre.VREConstants.MAX_WHP;
 import static com.brownfield.vre.VREConstants.MIN_LIQUID_RATE;
@@ -25,6 +30,7 @@ import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.SHRINKAGE_FACTOR;
 import static com.brownfield.vre.VREConstants.SINGLE_RATE_TEST;
+import static com.brownfield.vre.VREConstants.SINGLE_RATE_WELL_TEST_DASHBOARD_LINK;
 import static com.brownfield.vre.VREConstants.SOURCE_VALUES;
 import static com.brownfield.vre.VREConstants.SQL_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
@@ -47,6 +53,7 @@ import static com.brownfield.vre.VREConstants.TEST_SEPARATOR_PRESSURE;
 import static com.brownfield.vre.VREConstants.TEST_START_DATE;
 import static com.brownfield.vre.VREConstants.TEST_TYPE;
 import static com.brownfield.vre.VREConstants.UWI;
+import static com.brownfield.vre.VREConstants.VALID;
 import static com.brownfield.vre.VREConstants.VRE1;
 import static com.brownfield.vre.VREConstants.VRE_DB_URL;
 import static com.brownfield.vre.VREConstants.VRE_FLAG;
@@ -55,8 +62,13 @@ import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_USER;
 import static com.brownfield.vre.VREConstants.WATER_CUT;
 import static com.brownfield.vre.VREConstants.WCUT_STABILITY_QUERY;
+import static com.brownfield.vre.VREConstants.WELL_TEST_BODY_START;
+import static com.brownfield.vre.VREConstants.WELL_TEST_EMAIL_TABLE_BODY;
+import static com.brownfield.vre.VREConstants.WELL_TEST_EMAIL_TABLE_HEADER;
+import static com.brownfield.vre.VREConstants.WELL_TEST_EMAIL_TABLE_ROW;
 import static com.brownfield.vre.VREConstants.WELL_TEST_ID;
 import static com.brownfield.vre.VREConstants.WELL_TEST_NEW_QUERY;
+import static com.brownfield.vre.VREConstants.WELL_TEST_SUBJECT;
 import static com.brownfield.vre.VREConstants.WHP1;
 import static com.brownfield.vre.VREConstants.WTV_WORKFLOW;
 import static com.brownfield.vre.VREConstants.WT_TREND_LIMIT;
@@ -83,6 +95,7 @@ import java.util.logging.Logger;
 import org.teiid.core.util.StringUtil;
 
 import com.brownfield.vre.VREConstants.SOURCE;
+import com.brownfield.vre.exe.models.StringModel;
 
 /**
  * The Class ValidateWellTest.
@@ -138,6 +151,8 @@ public class ValidateWellTest {
 			Timestamp testDate, prevDay;
 			double prevVRE;
 			String effectiveTestDate, testType, vreTestType;
+			int rowCount = 0;
+			StringBuilder emailBody = new StringBuilder();
 
 			if (rset != null) {
 				while (rset.next()) {
@@ -151,6 +166,8 @@ public class ValidateWellTest {
 					double gasFlowRateFT = rset.getDouble(GAS_FLOW_RATE);
 					double sepPressureFT = rset.getDouble(TEST_SEPARATOR_PRESSURE);
 					vreTestType = SINGLE_RATE_TEST;
+					rowCount++;
+					StringModel sm = Utils.getStringModel(vreConn, stringID);
 
 					StringBuilder sb = new StringBuilder();
 
@@ -398,11 +415,16 @@ public class ValidateWellTest {
 						}
 						
 						if(!setVRE){
-							// TODO: Set BPM email from here
+							// TODO: WT Consolidation DONE
 						}
 					}
 					
 					sb.delete(sb.length() - 1, sb.length());
+
+					emailBody.append(String.format(WELL_TEST_EMAIL_TABLE_ROW,
+							Utils.convertToString(testDate, DATE_TIME_FORMAT), sm.getPlatformName(), sm.getStringName(),
+							setVRE ? VALID : INVALID, sb.toString().replaceAll("\n", ".")));
+
 					this.insertWellTest(vreConn, stringID, vreTestType, startDate, endDate, standardLiqRate, whp, wcut,
 							setVRE, sb.toString(), ftTestID, gasFlowRate, sepPressure);
 
@@ -411,6 +433,18 @@ public class ValidateWellTest {
 					rset.updateString(ROW_CHANGED_BY, WTV_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
+				}
+				
+				if (rowCount > 0) {
+					String emailContent = String.format(WELL_TEST_EMAIL_TABLE_BODY,
+							WELL_TEST_EMAIL_TABLE_HEADER + emailBody.toString());
+					// generate consolidated email
+					AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
+							APP_BASE_URL + SINGLE_RATE_WELL_TEST_DASHBOARD_LINK,
+							String.format(WELL_TEST_SUBJECT, Utils.convertToString(new Date(), DATE_FORMAT)),
+							String.format(WELL_TEST_BODY_START, Utils.convertToString(new Date(), DATE_FORMAT))
+									+ emailContent);
+
 				}
 			}
 

@@ -12,49 +12,49 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class MultiRateTestModel {
 
 	/** The ql1. */
-	private double ql1;
+	private Double ql1;
 
 	/** The ql2. */
-	private double ql2;
+	private Double ql2;
 
 	/** The ql3. */
-	private double ql3;
+	private Double ql3;
 
 	/** The ql4. */
-	private double ql4;
+	private Double ql4;
 
 	/** The whp1. */
-	private double whp1;
+	private Double whp1;
 
 	/** The whp2. */
-	private double whp2;
+	private Double whp2;
 
 	/** The whp3. */
-	private double whp3;
+	private Double whp3;
 
 	/** The whp4. */
-	private double whp4;
+	private Double whp4;
 
 	/** The bhp1. */
-	private double bhp1;
+	private Double bhp1;
 
 	/** The bhp2. */
-	private double bhp2;
+	private Double bhp2;
 
 	/** The bhp3. */
-	private double bhp3;
+	private Double bhp3;
 
 	/** The bhp4. */
-	private double bhp4;
+	private Double bhp4;
 
 	/** The calc index. */
-	private double calcIndex;
+	private Double calcIndex;
 
 	/** The reservoir pressure. */
-	private double reservoirPressure;
+	private Double reservoirPressure;
 
 	/** The time. */
-	private double time;
+	private Double time;
 
 	/**
 	 * Gets the ql1.
@@ -62,7 +62,7 @@ public class MultiRateTestModel {
 	 * @return the ql1
 	 */
 	@XmlElement(name = "ql1")
-	public double getQl1() {
+	public Double getQl1() {
 		return ql1;
 	}
 
@@ -72,7 +72,7 @@ public class MultiRateTestModel {
 	 * @param ql1
 	 *            the new ql1
 	 */
-	public void setQl1(double ql1) {
+	public void setQl1(Double ql1) {
 		this.ql1 = ql1;
 	}
 
@@ -82,7 +82,7 @@ public class MultiRateTestModel {
 	 * @return the ql2
 	 */
 	@XmlElement(name = "ql2")
-	public double getQl2() {
+	public Double getQl2() {
 		return ql2;
 	}
 
@@ -92,7 +92,7 @@ public class MultiRateTestModel {
 	 * @param ql2
 	 *            the new ql2
 	 */
-	public void setQl2(double ql2) {
+	public void setQl2(Double ql2) {
 		this.ql2 = ql2;
 	}
 
@@ -102,7 +102,7 @@ public class MultiRateTestModel {
 	 * @return the ql3
 	 */
 	@XmlElement(name = "ql3")
-	public double getQl3() {
+	public Double getQl3() {
 		return ql3;
 	}
 
@@ -112,7 +112,7 @@ public class MultiRateTestModel {
 	 * @param ql3
 	 *            the new ql3
 	 */
-	public void setQl3(double ql3) {
+	public void setQl3(Double ql3) {
 		this.ql3 = ql3;
 	}
 
@@ -121,7 +121,7 @@ public class MultiRateTestModel {
 	 *
 	 * @return the ql4
 	 */
-	public double getQl4() {
+	public Double getQl4() {
 		return ql4;
 	}
 
@@ -132,7 +132,7 @@ public class MultiRateTestModel {
 	 *            the new ql4
 	 */
 	@XmlElement(name = "ql4")
-	public void setQl4(double ql4) {
+	public void setQl4(Double ql4) {
 		this.ql4 = ql4;
 	}
 
@@ -142,7 +142,7 @@ public class MultiRateTestModel {
 	 * @return the whp1
 	 */
 	@XmlElement(name = "whp1")
-	public double getWhp1() {
+	public Double getWhp1() {
 		return whp1;
 	}
 
@@ -152,7 +152,7 @@ public class MultiRateTestModel {
 	 * @param whp1
 	 *            the new whp1
 	 */
-	public void setWhp1(double whp1) {
+	public void setWhp1(Double whp1) {
 		this.whp1 = whp1;
 	}
 
@@ -162,7 +162,7 @@ public class MultiRateTestModel {
 	 * @return the whp2
 	 */
 	@XmlElement(name = "whp1")
-	public double getWhp2() {
+	public Double getWhp2() {
 		return whp2;
 	}
 
@@ -172,7 +172,7 @@ public class MultiRateTestModel {
 	 * @param whp2
 	 *            the new whp2
 	 */
-	public void setWhp2(double whp2) {
+	public void setWhp2(Double whp2) {
 		this.whp2 = whp2;
 	}
 
@@ -182,7 +182,7 @@ public class MultiRateTestModel {
 	 * @return the whp3
 	 */
 	@XmlElement(name = "whp3")
-	public double getWhp3() {
+	public Double getWhp3() {
 		return whp3;
 	}
 
@@ -192,7 +192,7 @@ public class MultiRateTestModel {
 	 * @param whp3
 	 *            the new whp3
 	 */
-	public void setWhp3(double whp3) {
+	public void setWhp3(Double whp3) {
 		this.whp3 = whp3;
 	}
 
@@ -202,7 +202,7 @@ public class MultiRateTestModel {
 	 * @return the whp4
 	 */
 	@XmlElement(name = "whp4")
-	public double getWhp4() {
+	public Double getWhp4() {
 		return whp4;
 	}
 
@@ -212,7 +212,7 @@ public class MultiRateTestModel {
 	 * @param whp4
 	 *            the new whp4
 	 */
-	public void setWhp4(double whp4) {
+	public void setWhp4(Double whp4) {
 		this.whp4 = whp4;
 	}
 
@@ -222,7 +222,7 @@ public class MultiRateTestModel {
 	 * @return the bhp1
 	 */
 	@XmlElement(name = "bhp1")
-	public double getBhp1() {
+	public Double getBhp1() {
 		return bhp1;
 	}
 
@@ -232,7 +232,7 @@ public class MultiRateTestModel {
 	 * @param bhp1
 	 *            the new bhp1
 	 */
-	public void setBhp1(double bhp1) {
+	public void setBhp1(Double bhp1) {
 		this.bhp1 = bhp1;
 	}
 
@@ -242,7 +242,7 @@ public class MultiRateTestModel {
 	 * @return the bhp2
 	 */
 	@XmlElement(name = "bhp2")
-	public double getBhp2() {
+	public Double getBhp2() {
 		return bhp2;
 	}
 
@@ -252,7 +252,7 @@ public class MultiRateTestModel {
 	 * @param bhp2
 	 *            the new bhp2
 	 */
-	public void setBhp2(double bhp2) {
+	public void setBhp2(Double bhp2) {
 		this.bhp2 = bhp2;
 	}
 
@@ -262,7 +262,7 @@ public class MultiRateTestModel {
 	 * @return the bhp3
 	 */
 	@XmlElement(name = "bhp3")
-	public double getBhp3() {
+	public Double getBhp3() {
 		return bhp3;
 	}
 
@@ -272,7 +272,7 @@ public class MultiRateTestModel {
 	 * @param bhp3
 	 *            the new bhp3
 	 */
-	public void setBhp3(double bhp3) {
+	public void setBhp3(Double bhp3) {
 		this.bhp3 = bhp3;
 	}
 
@@ -282,7 +282,7 @@ public class MultiRateTestModel {
 	 * @return the bhp4
 	 */
 	@XmlElement(name = "bhp4")
-	public double getBhp4() {
+	public Double getBhp4() {
 		return bhp4;
 	}
 
@@ -292,7 +292,7 @@ public class MultiRateTestModel {
 	 * @param bhp4
 	 *            the new bhp4
 	 */
-	public void setBhp4(double bhp4) {
+	public void setBhp4(Double bhp4) {
 		this.bhp4 = bhp4;
 	}
 
@@ -302,7 +302,7 @@ public class MultiRateTestModel {
 	 * @return the calc index
 	 */
 	@XmlElement(name = "calc_index")
-	public double getCalcIndex() {
+	public Double getCalcIndex() {
 		return calcIndex;
 	}
 
@@ -312,7 +312,7 @@ public class MultiRateTestModel {
 	 * @param calcIndex
 	 *            the new calc index
 	 */
-	public void setCalcIndex(double calcIndex) {
+	public void setCalcIndex(Double calcIndex) {
 		this.calcIndex = calcIndex;
 	}
 
@@ -322,7 +322,7 @@ public class MultiRateTestModel {
 	 * @return the reservoir pressure
 	 */
 	@XmlElement(name = "reservoir_pressure")
-	public double getReservoirPressure() {
+	public Double getReservoirPressure() {
 		return reservoirPressure;
 	}
 
@@ -332,7 +332,7 @@ public class MultiRateTestModel {
 	 * @param reservoirPressure
 	 *            the new reservoir pressure
 	 */
-	public void setReservoirPressure(double reservoirPressure) {
+	public void setReservoirPressure(Double reservoirPressure) {
 		this.reservoirPressure = reservoirPressure;
 	}
 
@@ -342,7 +342,7 @@ public class MultiRateTestModel {
 	 * @return the time
 	 */
 	@XmlElement(name = "time")
-	public double getTime() {
+	public Double getTime() {
 		return time;
 	}
 
@@ -352,7 +352,7 @@ public class MultiRateTestModel {
 	 * @param time
 	 *            the new time
 	 */
-	public void setTime(double time) {
+	public void setTime(Double time) {
 		this.time = time;
 	}
 

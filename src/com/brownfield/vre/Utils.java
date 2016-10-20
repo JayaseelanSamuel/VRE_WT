@@ -1,43 +1,13 @@
 package com.brownfield.vre;
 
-import static com.brownfield.vre.VREConstants.COMPLETION_DATE;
-import static com.brownfield.vre.VREConstants.CURRENT_STATUS;
-import static com.brownfield.vre.VREConstants.DATE_FORMAT;
-import static com.brownfield.vre.VREConstants.DATE_TIME_FORMAT;
-import static com.brownfield.vre.VREConstants.GET_STRING_METADATA_QUERY;
-import static com.brownfield.vre.VREConstants.GET_STRING_NAME_QUERY;
-import static com.brownfield.vre.VREConstants.LATITUDE;
-import static com.brownfield.vre.VREConstants.LONGITUDE;
-import static com.brownfield.vre.VREConstants.PIPESIM_MODEL_LOC;
-import static com.brownfield.vre.VREConstants.PLATFORM_ID;
-import static com.brownfield.vre.VREConstants.PLATFORM_NAME;
-import static com.brownfield.vre.VREConstants.SELECTED_VRE;
-import static com.brownfield.vre.VREConstants.STABILITY_FLAG;
-import static com.brownfield.vre.VREConstants.STRING_CATEGORY_ID;
-import static com.brownfield.vre.VREConstants.STRING_ID;
-import static com.brownfield.vre.VREConstants.STRING_NAME;
-import static com.brownfield.vre.VREConstants.STRING_TYPE;
-import static com.brownfield.vre.VREConstants.TAG_ANN_PRESSURE_A;
-import static com.brownfield.vre.VREConstants.TAG_ANN_PRESSURE_B;
-import static com.brownfield.vre.VREConstants.TAG_CHOKE_SIZE;
-import static com.brownfield.vre.VREConstants.TAG_DOWNHOLE_PRESSURE;
-import static com.brownfield.vre.VREConstants.TAG_GASLIFT_INJ_RATE;
-import static com.brownfield.vre.VREConstants.TAG_GAS_RATE;
-import static com.brownfield.vre.VREConstants.TAG_HEADER_PRESSURE;
-import static com.brownfield.vre.VREConstants.TAG_INJ_HEADER_PRESSURE;
-import static com.brownfield.vre.VREConstants.TAG_LIQUID_RATE;
-import static com.brownfield.vre.VREConstants.TAG_OIL_VOL_RATE;
-import static com.brownfield.vre.VREConstants.TAG_SEPARATOR_PRESSURE;
-import static com.brownfield.vre.VREConstants.TAG_WATERCUT;
-import static com.brownfield.vre.VREConstants.TAG_WATER_INJ_RATE;
-import static com.brownfield.vre.VREConstants.TAG_WATER_VOL_RATE;
-import static com.brownfield.vre.VREConstants.TAG_WHP;
-import static com.brownfield.vre.VREConstants.TAG_WHT;
-import static com.brownfield.vre.VREConstants.UWI;
+import static com.brownfield.vre.VREConstants.*;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -59,6 +29,13 @@ public class Utils {
 
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
+	
+	public static void main(String[] args) {
+		Timestamp curr = new Timestamp(new Date().getTime());
+		Timestamp rounded = Utils.getRoundedOffTime(curr, 10);
+		System.out.println("Current : " + curr);
+		System.out.println("Rounded : " + rounded);
+	}
 
 	/**
 	 * Gets the standard condition rate.
@@ -117,7 +94,7 @@ public class Utils {
 	}
 
 	/**
-	 * Parses the date with either date format or date time format
+	 * Parses the date with either date format or date time format.
 	 *
 	 * @param date
 	 *            the date
@@ -145,6 +122,32 @@ public class Utils {
 		 */
 		Timestamp yesterday = Utils.getYesterdayTimestamp();
 		return dateFormat.format(yesterday.getTime());
+	}
+
+	/**
+	 * Convert to string.
+	 *
+	 * @param date
+	 *            the date
+	 * @param format
+	 *            the format
+	 * @return the string
+	 */
+	public static String convertToString(Timestamp date, String format) {
+		return new SimpleDateFormat(format).format(date.getTime());
+	}
+
+	/**
+	 * Convert to string.
+	 *
+	 * @param date
+	 *            the date
+	 * @param format
+	 *            the format
+	 * @return the string
+	 */
+	public static String convertToString(Date date, String format) {
+		return new SimpleDateFormat(format).format(date.getTime());
 	}
 
 	/**
@@ -181,9 +184,11 @@ public class Utils {
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 		return stringName;
 	}
@@ -239,9 +244,11 @@ public class Utils {
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 		return sm;
 	}
@@ -301,4 +308,145 @@ public class Utils {
 		return diffInDays + 1;
 	}
 
+	/**
+	 * Gets the rounded off time.
+	 *
+	 * @param date the date
+	 * @param interval the interval
+	 * @return the rounded off time
+	 */
+	public static Timestamp getRoundedOffTime(Timestamp date, int interval) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		int unroundedMinutes = cal.get(Calendar.MINUTE);
+		int mod = unroundedMinutes % interval;
+		cal.add(Calendar.MINUTE, mod < (interval / 2) ? -mod : (interval - mod));
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Refresh variables.
+	 *
+	 * @param conn
+	 *            the conn
+	 */
+	public static void refreshVariables(Connection conn) {
+		try (Statement stmt = conn.createStatement(); ResultSet rset = stmt.executeQuery(VRE_VARIABLE_QUERY);) {
+			if (rset != null) {
+				LOGGER.info("Refreshing variables...");
+				while (rset.next()) {
+					String name = rset.getString(NAME);
+					String val = rset.getString(VALUE);
+					switch (name) {
+					case "START_OFFSET":
+						START_OFFSET = Double.parseDouble(val);
+						break;
+					case "END_OFFSET":
+						END_OFFSET = Double.parseDouble(val);
+						break;
+					case "SWITCH_TIME_ZONE":
+						SWITCH_TIME_ZONE = val.equalsIgnoreCase(Boolean.TRUE.toString()) ? true : false;
+						break;
+					case "MIN_WHP":
+						MIN_WHP = Double.parseDouble(val);
+						break;
+					case "MAX_WHP":
+						MAX_WHP = Double.parseDouble(val);
+						break;
+					case "MIN_LIQUID_RATE":
+						MIN_LIQUID_RATE = Double.parseDouble(val);
+						break;
+					case "MAX_LIQUID_RATE":
+						MAX_LIQUID_RATE = Double.parseDouble(val);
+						break;
+					case "MIN_WATERCUT":
+						MIN_WATERCUT = Double.parseDouble(val);
+						break;
+					case "MAX_WATERCUT":
+						MAX_WATERCUT = Double.parseDouble(val);
+						break;
+					case "FREEZE_WHP_LIMIT":
+						FREEZE_WHP_LIMIT = Double.parseDouble(val);
+						break;
+					case "FREEZE_LIQUID_RATE_LIMIT":
+						FREEZE_LIQUID_RATE_LIMIT = Double.parseDouble(val);
+						break;
+					case "FREEZE_WATERCUT_LIMIT":
+						FREEZE_WATERCUT_LIMIT = Double.parseDouble(val);
+						break;
+					case "CV_WHP_MAX":
+						CV_WHP_MAX = Double.parseDouble(val);
+						break;
+					case "CV_LIQ_RATE_MAX":
+						CV_LIQ_RATE_MAX = Double.parseDouble(val);
+						break;
+					case "CV_WATERCUT_MAX":
+						CV_WATERCUT_MAX = Double.parseDouble(val);
+						break;
+					case "SHRINKAGE_FACTOR":
+						SHRINKAGE_FACTOR = Double.parseDouble(val);
+						break;
+					case "VRE_EXE_LOC":
+						VRE_EXE_LOC = val;
+						break;
+					case "CONCURRENT_PIPESIM_LICENCES":
+						CONCURRENT_PIPESIM_LICENCES = Integer.parseInt(val);
+						break;
+					case "RECALIBRATE_LOW":
+						RECALIBRATE_LOW = Double.parseDouble(val);
+						break;
+					case "RECALIBRATE_HIGH":
+						RECALIBRATE_HIGH = Double.parseDouble(val);
+						break;
+					case "WT_TREND_LIMIT":
+						WT_TREND_LIMIT = Double.parseDouble(val);
+						break;
+					case "MAX_RATE_DIFF":
+						MAX_RATE_DIFF = Double.parseDouble(val);
+						break;
+					case "MAX_INJ_RATE_PRESS":
+						MAX_INJ_RATE_PRESS = Double.parseDouble(val);
+						break;
+					case "RECAL_DATE_DIFF":
+						RECAL_DATE_DIFF = Integer.parseInt(val);
+						break;
+					case "TECHNICAL_RATE_DIFF":
+						TECHNICAL_RATE_DIFF = Double.parseDouble(val);
+						break;
+
+					}
+				}
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Refresh properties.
+	 */
+	public static void refreshProperties() {
+		try {
+			String configDir = System.getProperty(CONFIG_DIR);
+			String propertyFileLocation = configDir + File.separator + PROPERTY_FILE_NAME;
+			PropertyReader.loadProperties(propertyFileLocation);
+			PHD_TEIID_URL = PropertyReader.getProperty("PHD_TEIID_URL");
+
+			TEIID_USER = PropertyReader.getProperty("TEIID_USER");
+			TEIID_PASSWORD = PropertyReader.getProperty("TEIID_PASSWORD");
+			VRE_JNDI_NAME = PropertyReader.getProperty("VRE_JNDI_NAME");
+			DSIS_HOST = PropertyReader.getProperty("DSIS_HOST");
+			DSIS_PORT = PropertyReader.getProperty("DSIS_PORT");
+			DSBPM_BASE_URL = "http://" + DSIS_HOST + ":" + DSIS_PORT + "/dsbpm-engine/rest";
+			APP_BASE_URL = PropertyReader.getProperty("APP_BASE_URL");
+			EMAIL_GROUP = PropertyReader.getProperty("EMAIL_GROUP");
+			LOGGER.info("Loaded values from properties file.");
+		} catch (IOException e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
 }
