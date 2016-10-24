@@ -28,6 +28,7 @@ import com.brownfield.vre.exe.models.MultiRateTestModel;
 import com.brownfield.vre.exe.models.RecalModel;
 import com.brownfield.vre.exe.models.StringModel;
 import com.brownfield.vre.exe.models.WellModel;
+import com.brownfield.vre.rest.VREContextListener;
 
 /**
  * The Class VREExecutioner.
@@ -147,9 +148,13 @@ public class VREExecutioner {
 					executor.execute(worker);
 					rowCount++;
 				}
+				// add this to context listener bucket to force shutdown the threads
+				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
 				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
 				long end = System.currentTimeMillis();
 				double duration = (end - start) / 1000;
 				LOGGER.info("Finished running VRE for " + rowCount + " strings in " + duration + " seconds");
@@ -191,7 +196,7 @@ public class VREExecutioner {
 	 */
 	public void runVREForDuration(Connection vreConn, int stringID, List<String> vresToRun, Timestamp startDate,
 			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv, double chokeMultiplier,
-			String user) {
+			String user, boolean sendNotification) {
 
 		Double endFFV = ffv, endResPres = reservoirPressure, endHoldUPV = holdUPV, endPI = pi;
 		double endWHP = 0, endWcut = 0;
@@ -330,15 +335,17 @@ public class VREExecutioner {
 				double duration = (end - start) / 1000;
 				LOGGER.info("Finished running VREDuration for " + rowCount + " records in " + duration + " seconds");
 
-				String wellMonitorDaily = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_DASHBOARD, stringID,
-						Utils.convertToString(startDate, DATE_FORMAT_DSPM),
-						Utils.convertToString(endDate, DATE_FORMAT_DSPM));
+				if(sendNotification){
+					String wellMonitorDaily = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_DASHBOARD, stringID,
+							Utils.convertToString(startDate, DATE_FORMAT_DSPM),
+							Utils.convertToString(endDate, DATE_FORMAT_DSPM));
+	
+					AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE, APP_BASE_URL + wellMonitorDaily,
+							String.format(DSBPM_VRE_DURATION_SUBJECT, stringModel.getStringName(), startDate, endDate),
+							String.format(DSBPM_VRE_DURATION_BODY, duration, stringModel.getStringName(), startDate,
+									endDate, user));
 
-				AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE, APP_BASE_URL + wellMonitorDaily,
-						String.format(DSBPM_VRE_DURATION_SUBJECT, stringModel.getStringName(), startDate, endDate),
-						String.format(DSBPM_VRE_DURATION_BODY, duration, stringModel.getStringName(), startDate,
-								endDate, user));
-
+				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -373,6 +380,7 @@ public class VREExecutioner {
 				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
 				this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
 				executor.shutdown();
+				// no need to add to context listener bucket
 				while (!executor.isTerminated()) {
 				}
 			}
@@ -427,11 +435,13 @@ public class VREExecutioner {
 								}
 								if (review) {
 									// TODO: RECAL DONE
+									
+									Timestamp nextDay = Utils.getNextOrPreviousDay(effectiveTestDate, 1);
 
 									String singleRateWellTest = String.format(WELLS_DASHBOARD_LINK,
 											SINGLE_RATE_WELL_TEST_DASHBOARD, stringID,
 											Utils.convertToString(effectiveTestDate, DATE_FORMAT_DSPM),
-											Utils.convertToString(effectiveTestDate, DATE_FORMAT_DSPM));
+											Utils.convertToString(nextDay, DATE_FORMAT_DSPM));
 
 									AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
 											APP_BASE_URL + singleRateWellTest,
@@ -460,9 +470,13 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
 				}
+				// add this to context listener bucket to force shutdown the threads
+				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
 				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
 			}
 
 		} catch (Exception e) {
@@ -498,6 +512,7 @@ public class VREExecutioner {
 				String remark = String.format(JOBS_REMARK, DSIS_JOB_TYPE.IN_PROGRESS, new Date());
 				if (rset.next()) {
 					// if there is already a job; update
+					rset.updateInt(STRING_CATEGORY_ID, stringModel.getStringCategoryID());
 					rset.updateInt(DSIS_STATUS_ID, DSIS_JOB_TYPE.IN_PROGRESS.getNumVal());
 					rset.updateInt(DSRTA_STATUS_ID, DSRTA_JOB_TYPE.INVALID.getNumVal());
 					rset.updateString(REMARK, remark);
@@ -633,9 +648,13 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("Proxy model generation submitted for " + rowCount + " strings in on " + new Date());
 				}
+				// add this to context listener bucket to force shutdown the threads
+				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
 				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -701,15 +720,15 @@ public class VREExecutioner {
 		return null;
 	}
 
+
 	/**
 	 * Run model prediction.
 	 *
-	 * @param vreConn
-	 *            the vre conn
+	 * @param vreConn the vre conn
+	 * @param date the date
 	 */
-	public void runModelPrediction(Connection vreConn) {
-		Timestamp currTime = Utils.getRoundedOffTime(new Timestamp(new Date().getTime()), PREDICTION_FREQUENCY);
-		String currDate = Utils.convertToString(currTime, DATE_FORMAT);
+	public void runModelPrediction(Connection vreConn, Timestamp date) {
+		String currDate = Utils.convertToString(date, DATE_FORMAT);
 
 		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_LATEST_WHP_QUERY)) {
 			statement.setString(1, currDate);
@@ -722,7 +741,7 @@ public class VREExecutioner {
 				while (rset.next()) {
 					stringID = rset.getInt(STRING_ID);
 					whpDate = rset.getTimestamp(RECORDED_DATE);
-					whp = rset.getDouble(TAGRAWVALUE);
+					whp = rset.getDouble(WHP);
 					wcut = rset.getDouble(WATER_CUT_LAB);
 					LOGGER.info("Generating prediction for - " + stringID);
 					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
@@ -734,7 +753,7 @@ public class VREExecutioner {
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
 
-					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, whpDate, currTime,
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, whpDate, date,
 							VRE_TYPE.MODEL_PREDICTION);
 					executor.execute(worker);
 
@@ -743,9 +762,13 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("Prediction generation submitted for " + rowCount + " strings in on " + new Date());
 				}
+				// add this to context listener bucket to force shutdown the threads
+				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
 				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();

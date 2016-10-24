@@ -259,6 +259,21 @@ public class VREBaseResource {
 		result = "{ \"value\" : [" + result + "] }";
 		return Response.status(200).entity(result).build();
 	}
+	
+	
+	/**
+	 * Run model prediction.
+	 *
+	 * @return the response
+	 */
+	@GET
+	@Path("/runModelPrediction")
+	public Response runModelPrediction() {
+		String result = "Model prediction started...";
+		InternalVREManager ivm = new InternalVREManager();
+		ivm.runModelPrediction();
+		return Response.status(200).entity(result).build();
+	}
 
 
 	/**

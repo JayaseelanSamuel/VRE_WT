@@ -1,39 +1,6 @@
 package com.brownfield.vre.exe;
 
 import static com.brownfield.vre.VREConstants.*;
-import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
-import static com.brownfield.vre.VREConstants.DATE_FORMAT_DSPM;
-import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
-import static com.brownfield.vre.VREConstants.DEFAULT_WATER_CUT;
-import static com.brownfield.vre.VREConstants.DSBPM_ALERT_SUBJECT;
-import static com.brownfield.vre.VREConstants.DSBPM_ALERT_TEMPLATE;
-import static com.brownfield.vre.VREConstants.EMAIL_GROUP;
-import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
-import static com.brownfield.vre.VREConstants.GOR;
-import static com.brownfield.vre.VREConstants.HIGH_TECH_RATE;
-import static com.brownfield.vre.VREConstants.HOLDUP;
-import static com.brownfield.vre.VREConstants.INSERT_ALERTS_QUERY;
-import static com.brownfield.vre.VREConstants.INSERT_VRE_QUERY;
-import static com.brownfield.vre.VREConstants.IS_SEABED;
-import static com.brownfield.vre.VREConstants.LOW_TECH_RATE;
-import static com.brownfield.vre.VREConstants.MONITOR_DAILY_ALERT_DASHBOARD;
-import static com.brownfield.vre.VREConstants.PI;
-import static com.brownfield.vre.VREConstants.RESERVOIR_PRESSURE;
-import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
-import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
-import static com.brownfield.vre.VREConstants.SELECT_TECHNICAL_RATE_QUERY;
-import static com.brownfield.vre.VREConstants.STRING_ALERT_MESSAGE;
-import static com.brownfield.vre.VREConstants.VRE1;
-import static com.brownfield.vre.VREConstants.VRE2;
-import static com.brownfield.vre.VREConstants.VRE3;
-import static com.brownfield.vre.VREConstants.VRE4;
-import static com.brownfield.vre.VREConstants.VRE5;
-import static com.brownfield.vre.VREConstants.VRE6;
-import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY;
-import static com.brownfield.vre.VREConstants.VRE_WORKFLOW;
-import static com.brownfield.vre.VREConstants.WATER_CUT;
-import static com.brownfield.vre.VREConstants.WATER_CUT_FLAG;
-import static com.brownfield.vre.VREConstants.WELLS_DASHBOARD_LINK;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -208,14 +175,17 @@ public class VREExeWorker implements Runnable {
 		double duration = ((endT - startT) / 1000);
 		LOGGER.info(threadName + " : Time to run VRE : " + duration);
 		if (wellModel != null) {
-			if (wellModel.getErrors() == null) {
+			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
 				LOGGER.info(threadName + " : Time reported in VRE : " + wellModel.getTime());
 				this.insertOrUpdateVRE(stringID, wcut, wellModel, recordedDate, vreConn, chokeMultiplier, isSeabed);
 			} else {
 				LOGGER.severe(threadName + " : Exception in calling VRE - " + wellModel.getErrors());
+				this.insertOrUpdateVRERemark(vreConn, stringID, recordedDate, wellModel.getError());
 			}
 		} else {
 			LOGGER.severe(threadName + " : Something went wrong while calling VRE for string - " + stringID);
+			// TODO: Constant later
+			this.insertOrUpdateVRERemark(vreConn, stringID, recordedDate, "Something went wrong calling VRE");
 		}
 		LOGGER.info(threadName + " Finished VRE for " + this.stringID);
 	}
@@ -247,9 +217,9 @@ public class VREExeWorker implements Runnable {
 		WellModel wellModel = runVRE(params);
 		long endT = System.currentTimeMillis();
 		double duration = ((endT - startT) / 1000);
-		LOGGER.info(threadName + " : Time to run VRE : " + duration);
+		LOGGER.info(threadName + " : Time to run model prediction : " + duration);
 		if (wellModel != null) {
-			if (wellModel.getErrors() == null) {
+			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
 				LOGGER.info(threadName + " : Time reported in model prediction : " + wellModel.getTime());
 				this.insertOrUpdateModelPrediction(stringID, whp, wellModel, recordedDate, vreConn, whpDate);
 			} else {
@@ -260,6 +230,7 @@ public class VREExeWorker implements Runnable {
 		}
 		LOGGER.info(threadName + " Finished model prediction for " + this.stringID);
 	}
+	// TODO: Onkar : Remove unnecessary arguments like connection
 
 	/**
 	 * Run vre.
@@ -325,7 +296,6 @@ public class VREExeWorker implements Runnable {
 			statement.setInt(2, stringID);
 			StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 			Double vre = null;
-			// TODO: Error in model
 			try (ResultSet rset = statement.executeQuery()) {
 				Double vre1LiqRate = null;
 				if (model.getVre1() != null) {
@@ -463,7 +433,8 @@ public class VREExeWorker implements Runnable {
 			// statement.setDouble(4, vre1 != null ? vre1 : 0);
 			// statement.setDouble(5, vre2 != null ? vre2 : 0);
 			statement.setObject(4, vre1);
-			statement.setObject(5, vre3);
+			statement.setObject(5, vre2);
+			statement.setObject(6, vre3);
 			statement.setObject(7, vre4);
 			statement.setObject(8, vre5);
 			statement.setObject(9, vre6);
@@ -491,9 +462,72 @@ public class VREExeWorker implements Runnable {
 	}
 
 	/**
+	 * Insert or update vre remark.
+	 *
+	 * @param conn the conn
+	 * @param stringID the string id
+	 * @param recordedDate the recorded date
+	 * @param remark the remark
+	 */
+	private void insertOrUpdateVRERemark(Connection conn, int stringID, Timestamp recordedDate, String remark) {
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY,
+				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+
+			statement.setTimestamp(1, recordedDate);
+			statement.setInt(2, stringID);
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) {
+					rset.updateString(REMARK, remark);
+					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
+					LOGGER.info("updated row for error message in VRE table with String : " + stringID + " & Date : "
+							+ recordedDate);
+				} else { // insert
+					this.insertVRERecord(conn, stringID, recordedDate, remark);
+				}
+
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Insert vre record.
+	 *
+	 * @param conn the conn
+	 * @param stringID the string id
+	 * @param recordedDate the recorded date
+	 * @param remark the remark
+	 * @return the int
+	 */
+	private int insertVRERecord(Connection conn, int stringID, Timestamp recordedDate, String remark) {
+		int rowsInserted = 0;
+		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE_SHORT_QUERY);) {
+			statement.setInt(1, stringID);
+			statement.setTimestamp(2, recordedDate);
+			statement.setObject(3, null);
+			statement.setString(4, remark);
+			statement.setString(5, VRE_WORKFLOW);
+			rowsInserted = statement.executeUpdate();
+			LOGGER.info(rowsInserted + " rows inserted with error message in VRE table for String : " + stringID
+					+ " & Date : " + recordedDate);
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return rowsInserted;
+	}
+
+	/**
 	 * Generate technical and model alerts.
 	 *
-	 * @param conn
+	 * @param vreConn
 	 *            the conn
 	 * @param stringModel
 	 *            the string model
@@ -513,85 +547,73 @@ public class VREExeWorker implements Runnable {
 	 *            the res pres
 	 * @return the int
 	 */
-	private int generateTechnicalAndModelAlerts(Connection conn, StringModel stringModel, Timestamp recordedDate,
+	private int generateTechnicalAndModelAlerts(Connection vreConn, StringModel stringModel, Timestamp recordedDate,
 			Double vre, Double gor, Double pi, Double holdUPV, Double ffv, Double resPres) {
 
 		int rowsInserted = 0;
-		try {
-			LOGGER.fine("Autocommit for this transaction is set to : " + conn.getAutoCommit());
-			conn.setAutoCommit(false);
-			PreparedStatement ps = conn.prepareStatement(INSERT_ALERTS_QUERY);
+		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_TECHNICAL_RATE_QUERY);) {
+			statement.setInt(1, stringModel.getStringID());
+			statement.setTimestamp(2, recordedDate);
+			statement.setTimestamp(3, recordedDate);
+			LOGGER.info("Checking technical rate difference for : " + stringModel.getStringID() + " & Date : "
+					+ recordedDate);
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) { // only one record
+					double lowTechRate = rset.getDouble(LOW_TECH_RATE);
+					double highTechRate = rset.getDouble(HIGH_TECH_RATE);
+					rowsInserted += generateAlert(vreConn, stringModel, TagType.TECHNICAL_RATE, recordedDate, vre,
+							lowTechRate, highTechRate);
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
 
-			try (PreparedStatement statement = conn.prepareStatement(SELECT_TECHNICAL_RATE_QUERY);) {
-				statement.setInt(1, stringModel.getStringID());
-				statement.setTimestamp(2, recordedDate);
-				statement.setTimestamp(3, recordedDate);
-				LOGGER.info("Checking technical rate difference for : " + stringModel.getStringID() + " & Date : "
+		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_ALERT_LIMIT_QUERY);) {
+			statement.setTimestamp(1, recordedDate);
+			statement.setInt(2, stringModel.getStringID());
+			try (ResultSet rset = statement.executeQuery()) {
+				LOGGER.info("Checking model rate difference for : " + stringModel.getStringID() + " & Date : "
 						+ recordedDate);
-				try (ResultSet rset = statement.executeQuery()) {
-					if (rset.next()) { // only one record
-						double lowTechRate = rset.getDouble(LOW_TECH_RATE);
-						double highTechRate = rset.getDouble(HIGH_TECH_RATE);
-						rowsInserted += generateAlert(ps, stringModel, TagType.TECHNICAL_RATE, recordedDate, vre,
-								lowTechRate, highTechRate);
+				while (rset.next()) {
+					int tagTypeID = rset.getInt(TAG_TYPE_ID);
+					double lowLimit = rset.getDouble(LOW_LIMIT);
+					double highLimit = rset.getDouble(HIGH_LIMIT);
+
+					if (tagTypeID == TagType.GOR.getTagTypeID()) {
+						rowsInserted += generateAlert(vreConn, stringModel, TagType.GOR, recordedDate, gor, lowLimit,
+								highLimit);
+						continue;
 					}
-				} catch (Exception e) {
-					LOGGER.severe(e.getMessage());
-					e.printStackTrace();
-				}
-			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
-				e.printStackTrace();
-			}
-
-			try (PreparedStatement statement = conn.prepareStatement(SELECT_ALERT_LIMIT_QUERY);) {
-				statement.setTimestamp(1, recordedDate);
-				statement.setInt(2, stringModel.getStringID());
-				try (ResultSet rset = statement.executeQuery()) {
-					LOGGER.info("Checking model rate difference for : " + stringModel.getStringID() + " & Date : "
-							+ recordedDate);
-					while (rset.next()) {
-						int tagTypeID = rset.getInt(TAG_TYPE_ID);
-						double lowLimit = rset.getDouble(LOW_LIMIT);
-						double highLimit = rset.getDouble(HIGH_LIMIT);
-
-						if (tagTypeID == TagType.GOR.getTagTypeID()) {
-							rowsInserted += generateAlert(ps, stringModel, TagType.GOR, recordedDate, gor, lowLimit,
-									highLimit);
-							continue;
-						}
-						if (tagTypeID == TagType.PI.getTagTypeID()) {
-							rowsInserted += generateAlert(ps, stringModel, TagType.PI, recordedDate, pi, lowLimit,
-									highLimit);
-							continue;
-						}
-						if (tagTypeID == TagType.HOLDUP.getTagTypeID()) {
-							rowsInserted += generateAlert(ps, stringModel, TagType.HOLDUP, recordedDate, holdUPV,
-									lowLimit, highLimit);
-							continue;
-						}
-						if (tagTypeID == TagType.FRICTION_FACTOR.getTagTypeID()) {
-							rowsInserted += generateAlert(ps, stringModel, TagType.FRICTION_FACTOR, recordedDate, ffv,
-									lowLimit, highLimit);
-							continue;
-						}
-						if (tagTypeID == TagType.RESERVOIR_PRESSURE.getTagTypeID()) {
-							rowsInserted += generateAlert(ps, stringModel, TagType.RESERVOIR_PRESSURE, recordedDate,
-									resPres, lowLimit, highLimit);
-							continue;
-						}
+					if (tagTypeID == TagType.PI.getTagTypeID()) {
+						rowsInserted += generateAlert(vreConn, stringModel, TagType.PI, recordedDate, pi, lowLimit,
+								highLimit);
+						continue;
+					}
+					if (tagTypeID == TagType.HOLDUP.getTagTypeID()) {
+						rowsInserted += generateAlert(vreConn, stringModel, TagType.HOLDUP, recordedDate, holdUPV,
+								lowLimit, highLimit);
+						continue;
+					}
+					if (tagTypeID == TagType.FRICTION_FACTOR.getTagTypeID()) {
+						rowsInserted += generateAlert(vreConn, stringModel, TagType.FRICTION_FACTOR, recordedDate, ffv,
+								lowLimit, highLimit);
+						continue;
+					}
+					if (tagTypeID == TagType.RESERVOIR_PRESSURE.getTagTypeID()) {
+						rowsInserted += generateAlert(vreConn, stringModel, TagType.RESERVOIR_PRESSURE, recordedDate,
+								resPres, lowLimit, highLimit);
+						continue;
 					}
 				}
-				LOGGER.info(rowsInserted + " alerts were triggered for String : " + stringModel.getStringID()
-						+ " & Date : " + recordedDate);
-			} catch (Exception e) {
-				LOGGER.severe(e.getMessage());
-				e.printStackTrace();
-			}
-
-			ps.executeBatch();
-			conn.commit();
-		} catch (SQLException e) {
+			} 
+			LOGGER.info(rowsInserted + " alerts were triggered for String : " + stringModel.getStringID()
+					+ " & Date : " + recordedDate);
+		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 			e.printStackTrace();
 		}
@@ -599,30 +621,26 @@ public class VREExeWorker implements Runnable {
 
 	}
 
+
 	/**
 	 * Prepare insert record.
 	 *
-	 * @param ps
-	 *            the ps
-	 * @param stringName
-	 *            the string name
-	 * @param tagType
-	 *            the tag type
-	 * @param alertType
-	 *            the alert type
-	 * @param recordedDate
-	 *            the recorded date
-	 * @param value
-	 *            the value
-	 * @param limit
-	 *            the limit
+	 * @param vreConn the vre conn
+	 * @param stringName the string name
+	 * @param tagType the tag type
+	 * @param alertType the alert type
+	 * @param msgType the msg type
+	 * @param recordedDate the recorded date
+	 * @param value the value
+	 * @param limit the limit
 	 * @return the string
 	 */
-	private String prepareInsertRecord(PreparedStatement ps, String stringName, TagType tagType, ALERT_TYPE alertType,
+	private String insertAlert(Connection vreConn, String stringName, TagType tagType, ALERT_TYPE alertType, String msgType,
 			Timestamp recordedDate, Double value, double limit) {
-		String message = String.format(STRING_ALERT_MESSAGE, tagType, value, stringName, alertType, limit,
+		String message = String.format(STRING_ALERT_MESSAGE, tagType, value, stringName, msgType, limit,
 				recordedDate);
-		try {
+		
+		try(PreparedStatement ps = vreConn.prepareStatement(INSERT_ALERTS_QUERY);) {
 			ps.setInt(1, stringID);
 			ps.setInt(2, alertType.getAlertTypeID());
 			ps.setInt(3, tagType.getTagTypeID());
@@ -632,40 +650,34 @@ public class VREExeWorker implements Runnable {
 			ps.setString(6, null); // additional data
 			ps.setTimestamp(7, recordedDate);
 			ps.setString(8, VRE_WORKFLOW);
-			ps.addBatch();
+			ps.executeUpdate();
 		} catch (SQLException e) {
 			LOGGER.severe(e.getMessage());
-			e.printStackTrace();
+			// no need to print complete stack
 		}
 		return message;
 	}
 
+
 	/**
 	 * Generate alert.
 	 *
-	 * @param ps
-	 *            the ps
-	 * @param stringModel
-	 *            the string model
-	 * @param tagType
-	 *            the tag type
-	 * @param recordedDate
-	 *            the recorded date
-	 * @param value
-	 *            the value
-	 * @param lowLimit
-	 *            the low limit
-	 * @param highLimit
-	 *            the high limit
+	 * @param vreConn the vre conn
+	 * @param stringModel the string model
+	 * @param tagType the tag type
+	 * @param recordedDate the recorded date
+	 * @param value the value
+	 * @param lowLimit the low limit
+	 * @param highLimit the high limit
 	 * @return the int
 	 */
-	private int generateAlert(PreparedStatement ps, StringModel stringModel, TagType tagType, Timestamp recordedDate,
+	private int generateAlert(Connection vreConn, StringModel stringModel, TagType tagType, Timestamp recordedDate,
 			Double value, double lowLimit, double highLimit) {
 		String wellMonitorDailyAlert = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_ALERT_DASHBOARD,
 				stringModel.getStringID(), Utils.convertToString(recordedDate, DATE_FORMAT_DSPM),
 				Utils.convertToString(recordedDate, DATE_FORMAT_DSPM));
 		if (value < lowLimit) {
-			String message = this.prepareInsertRecord(ps, stringModel.getStringName(), tagType, ALERT_TYPE.LOWER,
+			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.LOWER, UPPER_LIMIT,
 					recordedDate, value, lowLimit);
 			/*
 			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
@@ -679,7 +691,7 @@ public class VREExeWorker implements Runnable {
 			return 1;
 		}
 		if (value > highLimit) {
-			String message = this.prepareInsertRecord(ps, stringModel.getStringName(), tagType, ALERT_TYPE.UPPER,
+			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.UPPER, LOWER_LIMIT,
 					recordedDate, value, highLimit);
 			/*
 			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
@@ -770,9 +782,8 @@ public class VREExeWorker implements Runnable {
 					if (vre6LiqRate != null) {
 						rset.updateDouble(TAGRAWVALUE, vre6LiqRate);
 					}
-					// rset.updateString(REMARK, DEFAULT_REMARK);
-					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
-					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					// rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new
+					// Date().getTime()));
 					rset.updateRow();
 					LOGGER.info("updated row in real time data table with String : " + stringID + " & Date : "
 							+ recordedDate);
@@ -814,12 +825,12 @@ public class VREExeWorker implements Runnable {
 		int rowsInserted = 0;
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_REAL_TIME_DATA_QUERY);) {
 			statement.setInt(1, stringID);
-			statement.setTimestamp(2, recordedDate);
+			statement.setObject(2, recordedDate);
 			statement.setInt(3, tagTypeID);
 			statement.setObject(4, quality);
 			statement.setObject(5, processedValue);
 			statement.setObject(6, rawValue);
-			statement.setObject(7, VRE_WORKFLOW);
+			// statement.setObject(7, VRE_WORKFLOW);
 
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted in real time data table with String : " + stringID + " & Date : "

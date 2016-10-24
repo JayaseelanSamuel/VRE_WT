@@ -1,9 +1,12 @@
 package com.brownfield.vre.rest;
 
 import static com.brownfield.vre.VREConstants.VRE_JNDI_NAME;
+import java.util.concurrent.ExecutorService;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,6 +32,8 @@ public class VREContextListener implements ServletContextListener {
 
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(VREContextListener.class.getName());
+	
+	public static final List<ExecutorService> executorList = new ArrayList<>();
 
 	/*
 	 * (non-Javadoc)
@@ -38,6 +43,12 @@ public class VREContextListener implements ServletContextListener {
 	 */
 	@Override
 	public void contextDestroyed(ServletContextEvent arg0) {
+		LOGGER.log(Level.INFO, "Destroying active execution queues");
+		for(ExecutorService executor : executorList){ 
+			executor.shutdownNow();
+			while (!executor.isTerminated()) {
+			}
+		}
 	}
 
 	/*

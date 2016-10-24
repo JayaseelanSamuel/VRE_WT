@@ -3,6 +3,7 @@ package com.brownfield.vre.rest;
 import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
 import static com.brownfield.vre.VREConstants.FROM_DATE;
 import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
+import static com.brownfield.vre.VREConstants.PREDICTION_FREQUENCY;
 import static com.brownfield.vre.VREConstants.ROW_CREATED_BY;
 import static com.brownfield.vre.VREConstants.STARTED_ON;
 import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
@@ -18,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -268,7 +270,7 @@ public class InternalVREManager {
 							try (final Connection vreConn = getVREConnection()) {
 								VREExecutioner vreEx = new VREExecutioner();
 								vreEx.runVREForDuration(vreConn, stringID, vresToRun, startDate, endDate, pi,
-										reservoirPressure, holdUPV, ffv, chokeMultiplier, user);
+										reservoirPressure, holdUPV, ffv, chokeMultiplier, user, true);
 								LOGGER.info("Finished running " + vresToRun + " for " + stringID + " from " + startDate
 										+ " to " + endDate);
 							} catch (SQLException e) {
@@ -366,8 +368,9 @@ public class InternalVREManager {
 				public void run() {
 					try (final Connection vreConn = getVREConnection()) {
 						LOGGER.info("Started Running model prediction !!!");
+						Timestamp currTime = Utils.getRoundedOffTime(new Timestamp(new Date().getTime()), PREDICTION_FREQUENCY);
 						VREExecutioner vreEx = new VREExecutioner();
-						vreEx.runModelPrediction(vreConn);
+						vreEx.runModelPrediction(vreConn, currTime);
 						LOGGER.info("Model prediction finished !!!");
 					} catch (SQLException e) {
 						LOGGER.log(Level.SEVERE, e.getMessage());

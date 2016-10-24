@@ -45,7 +45,11 @@ public class WellModel {
 	private PropertiesModel properties;
 
 	/** The errors. */
+	@Deprecated
 	private ErrorsHolderModel errors;
+	
+	/** The error. */
+	private String error;
 
 	/**
 	 * Gets the model name.
@@ -276,6 +280,21 @@ public class WellModel {
 	 */
 	public void setErrors(ErrorsHolderModel errors) {
 		this.errors = errors;
+	}
+
+	/**
+	 * @return the error
+	 */
+	@XmlElement(name = "error")
+	public String getError() {
+		return error;
+	}
+
+	/**
+	 * @param error the error to set
+	 */
+	public void setError(String error) {
+		this.error = error;
 	}
 
 }

@@ -273,6 +273,18 @@ public class Utils {
 		cal.set(Calendar.MILLISECOND, 0);
 		return new Timestamp(cal.getTimeInMillis());
 	}
+	
+	
+	/**
+	 * Gets the next or previous day.
+	 *
+	 * @param testDate the test date
+	 * @param offset the offset
+	 * @return the next or previous day
+	 */
+	public static Timestamp getNextOrPreviousDay(Date testDate, int offset) {
+		return Utils.getNextOrPreviousDay(new Timestamp(testDate.getTime()), offset);
+	}
 
 	/**
 	 * Checks if is within limit.

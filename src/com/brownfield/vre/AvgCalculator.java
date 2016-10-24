@@ -23,7 +23,7 @@ import static com.brownfield.vre.VREConstants.DATE_FORMAT;
 import static com.brownfield.vre.VREConstants.DATE_TIME_FORMAT;
 import static com.brownfield.vre.VREConstants.END_DATE;
 import static com.brownfield.vre.VREConstants.INSERT_AVG_MEASUREMENT_QUERY;
-import static com.brownfield.vre.VREConstants.INSERT_VRE6_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE_SHORT_QUERY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
 import static com.brownfield.vre.VREConstants.RT_DISTINCT_STRING_FOR_DAY_QUERY;
@@ -440,7 +440,7 @@ public class AvgCalculator {
 			try (ResultSet rset = statement.executeQuery()) {
 
 				if (rset.next()) { // record present, just update
-					rset.updateDouble(VRE6, vre6);
+					rset.updateObject(VRE6, vre6);
 					rset.updateString(ROW_CHANGED_BY, AVG_CALC_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
@@ -474,11 +474,12 @@ public class AvgCalculator {
 	 */
 	private int insertVRE6Record(Connection conn, int stringID, Timestamp recordedDate, Double vre6) {
 		int rowsInserted = 0;
-		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE6_QUERY);) {
+		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE_SHORT_QUERY);) {
 			statement.setInt(1, stringID);
 			statement.setTimestamp(2, recordedDate);
-			statement.setDouble(3, vre6 != null ? vre6 : 0);
+			statement.setObject(3, vre6);
 			statement.setString(4, AVG_CALC_WORKFLOW);
+			statement.setString(5, AVG_CALC_WORKFLOW);
 			rowsInserted = statement.executeUpdate();
 			LOGGER.info(rowsInserted + " rows inserted with VRE6 value in VRE table for String : " + stringID
 					+ " & Date : " + recordedDate);

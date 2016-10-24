@@ -1,6 +1,5 @@
 package com.brownfield.vre.jobs;
 
-
 import static com.brownfield.vre.VREConstants.DSIS_STATUS_ID;
 import static com.brownfield.vre.VREConstants.DSRTA_STATUS_ID;
 import static com.brownfield.vre.VREConstants.FILE_MONITORING_SERVICE;
@@ -64,10 +63,12 @@ public class JobsMonitor {
 				jm.monitorJobs(vreConn);
 			} catch (SQLException e) {
 				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
 			}
 
 		} catch (ClassNotFoundException e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 
 	}
@@ -82,12 +83,16 @@ public class JobsMonitor {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE6_JOBS_IN_PROGRESS_QUERY,
 				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery()) {
+			int count = 0;
+			int finishedCount = 0;
 			if (rset != null) {
 				while (rset.next()) {
 					String outputFile = VRE6_OUTPUT_FOLDER + rset.getString(STRING_NAME) + JSON_EXTENSION;
 					File f = new File(outputFile);
 					String remark = "Checking job status";
+					count++;
 					if (f.exists() && !f.isDirectory()) {
+						finishedCount++;
 						LOGGER.info("Reading - " + outputFile);
 						String content = this.getFileContent(f);
 						if (content != null) {
@@ -102,6 +107,7 @@ public class JobsMonitor {
 								LOGGER.info("File deleted successfully - " + f.getName());
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());
+								e.printStackTrace();
 							}
 							LOGGER.info("Updated job entry for - " + rset.getString(STRING_NAME));
 						}
@@ -115,8 +121,12 @@ public class JobsMonitor {
 					rset.updateRow();
 				}
 			}
+			LOGGER.info("Total jobs - " + count);
+			LOGGER.info("Completed jobs - " + finishedCount);
+			LOGGER.info("Pending jobs - " + (count - finishedCount));
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
 		}
 	}
 
@@ -138,6 +148,7 @@ public class JobsMonitor {
 		} catch (IOException e) {
 			LOGGER.severe(file.getName() + " : Can't read the file; file is already opened by another process.\n"
 					+ e.getMessage());
+			e.printStackTrace();
 		}
 		return content;
 	}
