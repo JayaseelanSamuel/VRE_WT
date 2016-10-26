@@ -152,6 +152,9 @@ public class VREExecutioner {
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
+					LOGGER.info("VRE execution process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking VRE execution process...");
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
@@ -474,9 +477,16 @@ public class VREExecutioner {
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
+					LOGGER.info("Calibration process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking calibration process...");
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
+				
+				if (rowCount != 0) {
+					LOGGER.info("VRE6 jobs finished for " + rowCount + " strings in on " + new Date());
+				}
 			}
 
 		} catch (Exception e) {
@@ -652,9 +662,16 @@ public class VREExecutioner {
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
+					LOGGER.info("Proxy model genration process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking proxy model generation...");
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
+				
+				if (rowCount != 0) {
+					LOGGER.info("Proxy model generation finished for " + rowCount + " strings in on " + new Date());
+				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();
@@ -728,10 +745,10 @@ public class VREExecutioner {
 	 * @param date the date
 	 */
 	public void runModelPrediction(Connection vreConn, Timestamp date) {
-		String currDate = Utils.convertToString(date, DATE_FORMAT);
+		//String currDate = Utils.convertToString(date, DATE_FORMAT);
 
 		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_LATEST_WHP_QUERY)) {
-			statement.setString(1, currDate);
+			//statement.setString(1, currDate);
 			try (ResultSet rset = statement.executeQuery()) {
 				ExecutorService executor = Executors.newFixedThreadPool(MODEL_PREDICTION_THREAD_COUNT);
 				int rowCount = 0;
@@ -743,15 +760,21 @@ public class VREExecutioner {
 					whpDate = rset.getTimestamp(RECORDED_DATE);
 					whp = rset.getDouble(WHP);
 					wcut = rset.getDouble(WATER_CUT_LAB);
-					LOGGER.info("Generating prediction for - " + stringID);
+					//LOGGER.info("Generating prediction for - " + stringID);
 					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+					String jsonFile = VRE6_OUTPUT_FOLDER + stringModel.getStringName() + JSON_EXTENSION;
 
 					List<String> params = new ArrayList<>();
-					params.add(VRE_EXE_LOC);
-					params.add(ARG_VRE6);
-					params.add(ARG_MODEL + stringModel.getPipesimModelLoc());
+					params.add(VRE6_EXE_LOC);
+					//params.add(ARG_VRE6);
+					params.add(ARG_JSON + jsonFile);
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
+					if(stringModel.getStringCategoryID() == 2){
+						params.add(ARG_TYPE2);
+					}else{
+						params.add(ARG_TYPE1);
+					}
 
 					Runnable worker = new VREExeWorker(vreConn, params, stringID, whp, wcut, whpDate, date,
 							VRE_TYPE.MODEL_PREDICTION);
@@ -766,9 +789,15 @@ public class VREExecutioner {
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
+					LOGGER.info("Prediction process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking Prediction process...");
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
+				if (rowCount != 0) {
+					LOGGER.info("Prediction generation finished for " + rowCount + " strings in on " + new Date());
+				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();

@@ -32,7 +32,7 @@ public class Utils {
 	
 	public static void main(String[] args) {
 		Timestamp curr = new Timestamp(new Date().getTime());
-		Timestamp rounded = Utils.getRoundedOffTime(curr, 10);
+		Timestamp rounded = Utils.getRoundedOffTime(curr, 30);
 		System.out.println("Current : " + curr);
 		System.out.println("Rounded : " + rounded);
 	}

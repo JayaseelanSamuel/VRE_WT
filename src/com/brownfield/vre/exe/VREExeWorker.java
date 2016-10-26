@@ -2,8 +2,10 @@ package com.brownfield.vre.exe;
 
 import static com.brownfield.vre.VREConstants.*;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,10 +14,16 @@ import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamReader;
+
+import org.apache.commons.io.IOUtils;
 
 import com.brownfield.vre.AlertHandler;
 import com.brownfield.vre.TagType;
@@ -24,6 +32,7 @@ import com.brownfield.vre.VREConstants.ALERT_TYPE;
 import com.brownfield.vre.VREConstants.SOURCE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.StringModel;
+import com.brownfield.vre.exe.models.VREModel;
 import com.brownfield.vre.exe.models.WellModel;
 
 // TODO: Auto-generated Javadoc
@@ -205,6 +214,7 @@ public class VREExeWorker implements Runnable {
 		LOGGER.info(threadName + " Finished VRE6 for " + this.stringID + " in " + duration + " seconds");
 	}
 
+	// TODO: Onkar : Remove unnecessary arguments like connection
 	/**
 	 * Execute model prediction.
 	 *
@@ -212,25 +222,22 @@ public class VREExeWorker implements Runnable {
 	 *            the thread name
 	 */
 	private void executeModelPrediction(String threadName) {
-		LOGGER.info(threadName + " : Started to model prediction for " + this.stringID);
-		long startT = System.currentTimeMillis();
-		WellModel wellModel = runVRE(params);
-		long endT = System.currentTimeMillis();
-		double duration = ((endT - startT) / 1000);
-		LOGGER.info(threadName + " : Time to run model prediction : " + duration);
-		if (wellModel != null) {
-			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
-				LOGGER.info(threadName + " : Time reported in model prediction : " + wellModel.getTime());
+		LOGGER.fine(threadName + " : Started to model prediction for " + this.stringID);
+		String output = runPrediction(params);
+		if (output != null) {
+			Double rateLiquid = this.getVRE6Value(output);
+			if (rateLiquid != null) {
+				WellModel wellModel = new WellModel();
+				VREModel vreModel = new VREModel();
+				vreModel.setRateLiquid(rateLiquid);
+				wellModel.setVre6(vreModel);
 				this.insertOrUpdateModelPrediction(stringID, whp, wellModel, recordedDate, vreConn, whpDate);
-			} else {
-				LOGGER.severe(threadName + " : Exception in calling model prediction - " + wellModel.getErrors());
 			}
 		} else {
 			LOGGER.severe(threadName + " : Something went wrong while predicting model for string - " + stringID);
 		}
-		LOGGER.info(threadName + " Finished model prediction for " + this.stringID);
+		LOGGER.fine(threadName + " Finished model prediction for " + this.stringID);
 	}
-	// TODO: Onkar : Remove unnecessary arguments like connection
 
 	/**
 	 * Run vre.
@@ -242,18 +249,51 @@ public class VREExeWorker implements Runnable {
 	public static WellModel runVRE(List<String> params) {
 		LOGGER.info(Thread.currentThread().getName() + " : Running VRE with " + "\n" + params);
 		WellModel wellModel = null;
+		long startT = System.currentTimeMillis();
+
 		try {
 			ProcessBuilder pb = new ProcessBuilder(params);
+			long endT = System.currentTimeMillis();
+			double duration = ((endT - startT));
+			LOGGER.fine(" : Time to build process : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
 
 			Process p = pb.start();
 
+			endT = System.currentTimeMillis();
+			duration = ((endT - startT));
+			LOGGER.fine(" : Time to start process : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
+
 			InputStream input = p.getInputStream();
+
+			endT = System.currentTimeMillis();
+			duration = ((endT - startT));
+			LOGGER.fine(" : Time to get input stream : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
 			// InputStream error = p.getErrorStream();
 			// OutputStream output = p.getOutputStream();
 
 			JAXBContext jaxbContext = JAXBContext.newInstance(WellModel.class);
+
+			endT = System.currentTimeMillis();
+			duration = ((endT - startT));
+			LOGGER.fine(" : Time to create new instance : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
+
 			Unmarshaller jaxbUnmarshaller = jaxbContext.createUnmarshaller();
+
+			endT = System.currentTimeMillis();
+			duration = ((endT - startT));
+			LOGGER.fine(" : Time to create unmarshaller : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
+
 			wellModel = (WellModel) jaxbUnmarshaller.unmarshal(input);
+
+			endT = System.currentTimeMillis();
+			duration = ((endT - startT));
+			LOGGER.fine(" : Time to unmarshal response : " + duration + " milliseconds");
+			startT = System.currentTimeMillis();
 		} catch (IOException e) {
 			LOGGER.severe("Exception occurred while exeuting system command");
 			LOGGER.severe(e.getMessage());
@@ -267,6 +307,41 @@ public class VREExeWorker implements Runnable {
 			e.printStackTrace();
 		}
 		return wellModel;
+	}
+
+	/**
+	 * Run prediction.
+	 *
+	 * @param params
+	 *            the params
+	 * @return the string
+	 */
+	public static String runPrediction(List<String> params) {
+		LOGGER.fine(Thread.currentThread().getName() + " : Running Prediction with " + "\n" + params);
+		String output = null;
+		try {
+			ProcessBuilder pb = new ProcessBuilder(params);
+
+			Process p = pb.start();
+
+			InputStream input = p.getInputStream();
+
+			InputStreamReader reader = new InputStreamReader(input);
+
+			output = IOUtils.toString(reader);
+
+			// InputStream error = p.getErrorStream();
+			// OutputStream output = p.getOutputStream();
+
+		} catch (IOException e) {
+			LOGGER.severe("Exception occurred while exeuting system command");
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return output;
 	}
 
 	/**
@@ -464,10 +539,14 @@ public class VREExeWorker implements Runnable {
 	/**
 	 * Insert or update vre remark.
 	 *
-	 * @param conn the conn
-	 * @param stringID the string id
-	 * @param recordedDate the recorded date
-	 * @param remark the remark
+	 * @param conn
+	 *            the conn
+	 * @param stringID
+	 *            the string id
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param remark
+	 *            the remark
 	 */
 	private void insertOrUpdateVRERemark(Connection conn, int stringID, Timestamp recordedDate, String remark) {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY,
@@ -500,10 +579,14 @@ public class VREExeWorker implements Runnable {
 	/**
 	 * Insert vre record.
 	 *
-	 * @param conn the conn
-	 * @param stringID the string id
-	 * @param recordedDate the recorded date
-	 * @param remark the remark
+	 * @param conn
+	 *            the conn
+	 * @param stringID
+	 *            the string id
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param remark
+	 *            the remark
 	 * @return the int
 	 */
 	private int insertVRERecord(Connection conn, int stringID, Timestamp recordedDate, String remark) {
@@ -610,9 +693,9 @@ public class VREExeWorker implements Runnable {
 						continue;
 					}
 				}
-			} 
-			LOGGER.info(rowsInserted + " alerts were triggered for String : " + stringModel.getStringID()
-					+ " & Date : " + recordedDate);
+			}
+			LOGGER.info(rowsInserted + " alerts were triggered for String : " + stringModel.getStringID() + " & Date : "
+					+ recordedDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
 			e.printStackTrace();
@@ -621,26 +704,32 @@ public class VREExeWorker implements Runnable {
 
 	}
 
-
 	/**
 	 * Prepare insert record.
 	 *
-	 * @param vreConn the vre conn
-	 * @param stringName the string name
-	 * @param tagType the tag type
-	 * @param alertType the alert type
-	 * @param msgType the msg type
-	 * @param recordedDate the recorded date
-	 * @param value the value
-	 * @param limit the limit
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringName
+	 *            the string name
+	 * @param tagType
+	 *            the tag type
+	 * @param alertType
+	 *            the alert type
+	 * @param msgType
+	 *            the msg type
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param value
+	 *            the value
+	 * @param limit
+	 *            the limit
 	 * @return the string
 	 */
-	private String insertAlert(Connection vreConn, String stringName, TagType tagType, ALERT_TYPE alertType, String msgType,
-			Timestamp recordedDate, Double value, double limit) {
-		String message = String.format(STRING_ALERT_MESSAGE, tagType, value, stringName, msgType, limit,
-				recordedDate);
-		
-		try(PreparedStatement ps = vreConn.prepareStatement(INSERT_ALERTS_QUERY);) {
+	private String insertAlert(Connection vreConn, String stringName, TagType tagType, ALERT_TYPE alertType,
+			String msgType, Timestamp recordedDate, Double value, double limit) {
+		String message = String.format(STRING_ALERT_MESSAGE, tagType, value, stringName, msgType, limit, recordedDate);
+
+		try (PreparedStatement ps = vreConn.prepareStatement(INSERT_ALERTS_QUERY);) {
 			ps.setInt(1, stringID);
 			ps.setInt(2, alertType.getAlertTypeID());
 			ps.setInt(3, tagType.getTagTypeID());
@@ -658,17 +747,23 @@ public class VREExeWorker implements Runnable {
 		return message;
 	}
 
-
 	/**
 	 * Generate alert.
 	 *
-	 * @param vreConn the vre conn
-	 * @param stringModel the string model
-	 * @param tagType the tag type
-	 * @param recordedDate the recorded date
-	 * @param value the value
-	 * @param lowLimit the low limit
-	 * @param highLimit the high limit
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringModel
+	 *            the string model
+	 * @param tagType
+	 *            the tag type
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param value
+	 *            the value
+	 * @param lowLimit
+	 *            the low limit
+	 * @param highLimit
+	 *            the high limit
 	 * @return the int
 	 */
 	private int generateAlert(Connection vreConn, StringModel stringModel, TagType tagType, Timestamp recordedDate,
@@ -677,8 +772,8 @@ public class VREExeWorker implements Runnable {
 				stringModel.getStringID(), Utils.convertToString(recordedDate, DATE_FORMAT_DSPM),
 				Utils.convertToString(recordedDate, DATE_FORMAT_DSPM));
 		if (value < lowLimit) {
-			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.LOWER, UPPER_LIMIT,
-					recordedDate, value, lowLimit);
+			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.LOWER,
+					UPPER_LIMIT, recordedDate, value, lowLimit);
 			/*
 			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
 			 * APP_BASE_URL + wellMonitorDailyAlert,
@@ -691,8 +786,8 @@ public class VREExeWorker implements Runnable {
 			return 1;
 		}
 		if (value > highLimit) {
-			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.UPPER, LOWER_LIMIT,
-					recordedDate, value, highLimit);
+			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.UPPER,
+					LOWER_LIMIT, recordedDate, value, highLimit);
 			/*
 			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
 			 * APP_BASE_URL + wellMonitorDailyAlert,
@@ -833,7 +928,7 @@ public class VREExeWorker implements Runnable {
 			// statement.setObject(7, VRE_WORKFLOW);
 
 			rowsInserted = statement.executeUpdate();
-			LOGGER.info(rowsInserted + " rows inserted in real time data table with String : " + stringID + " & Date : "
+			LOGGER.fine(rowsInserted + " rows inserted in real time data table with String : " + stringID + " & Date : "
 					+ recordedDate);
 		} catch (Exception e) {
 			LOGGER.severe(e.getMessage());
@@ -842,4 +937,31 @@ public class VREExeWorker implements Runnable {
 		return rowsInserted;
 	}
 
+	/**
+	 * Gets the VR e6 value.
+	 *
+	 * @param output
+	 *            the output
+	 * @return the VR e6 value
+	 */
+	public Double getVRE6Value(String output) {
+		Double d = null;
+		String value = "";
+		try {
+			String regex = "<qliq>(.*)</qliq>";
+			Pattern p = Pattern.compile(regex);
+			Matcher m = p.matcher(output);
+			if (m.find()) {
+				value = m.group(1);
+				d = Double.parseDouble(value);
+			} else {
+				LOGGER.severe(
+						"<qliq> not present in " + output + " for string " + stringID + " when executing " + params);
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return d;
+	}
 }
