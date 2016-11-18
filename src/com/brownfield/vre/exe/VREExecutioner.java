@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -27,6 +28,7 @@ import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.MultiRateTestModel;
 import com.brownfield.vre.exe.models.RecalModel;
 import com.brownfield.vre.exe.models.StringModel;
+import com.brownfield.vre.exe.models.VREDBModel;
 import com.brownfield.vre.exe.models.WellModel;
 import com.brownfield.vre.rest.VREContextListener;
 
@@ -148,7 +150,8 @@ public class VREExecutioner {
 					executor.execute(worker);
 					rowCount++;
 				}
-				// add this to context listener bucket to force shutdown the threads
+				// add this to context listener bucket to force shutdown the
+				// threads
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
@@ -198,13 +201,11 @@ public class VREExecutioner {
 	 *            the user
 	 */
 	public void runVREForDuration(Connection vreConn, int stringID, List<String> vresToRun, Timestamp startDate,
-			Timestamp endDate, double pi, double reservoirPressure, double holdUPV, double ffv, double chokeMultiplier,
+			Timestamp endDate, Double pi, Double reservoirPressure, Double holdUPV, Double ffv, Double chokeMultiplier,
 			String user, boolean sendNotification) {
 
-		Double endFFV = ffv, endResPres = reservoirPressure, endHoldUPV = holdUPV, endPI = pi;
 		double endWHP = 0, endWcut = 0;
 		boolean firstRecord = true, resetLast = false;
-		String pipesimLoc = null;
 		StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_MODEL_RESET_QUERY)) {
@@ -216,14 +217,10 @@ public class VREExecutioner {
 					Timestamp vreLastDate = rset.getTimestamp(RECORDED_DATE);
 					// reset model to latest value if endDate is less than vre
 					// latest date
-					// if (endDate.compareTo(vreLastDate) < 0) {
-					if (Utils.getDifferenceBetweenTwoDates(endDate, vreLastDate) > RECAL_DATE_DIFF) {
+					if (endDate.compareTo(vreLastDate) < 0) {
+						// if (Utils.getDifferenceBetweenTwoDates(endDate,
+						// vreLastDate) > RECAL_DATE_DIFF) {
 						resetLast = true;
-						endFFV = rset.getObject(FRICTION_FACTOR) == null ? 0 : rset.getDouble(FRICTION_FACTOR);
-						endResPres = rset.getObject(RESERVOIR_PRESSURE) == null ? 0
-								: rset.getDouble(RESERVOIR_PRESSURE);
-						endHoldUPV = rset.getObject(HOLDUP) == null ? 0 : rset.getDouble(HOLDUP);
-						endPI = rset.getObject(PI) == null ? 0 : rset.getDouble(PI);
 					}
 				}
 			} catch (Exception e) {
@@ -295,7 +292,6 @@ public class VREExecutioner {
 						if (resetLast) {
 							// doesn't matter what whp and wcuts are because
 							// they are just fillers for model reset
-							pipesimLoc = rset.getString(PIPESIM_MODEL_LOC);
 							endWHP = whp;
 							endWcut = wcut;
 						}
@@ -338,11 +334,11 @@ public class VREExecutioner {
 				double duration = (end - start) / 1000;
 				LOGGER.info("Finished running VREDuration for " + rowCount + " records in " + duration + " seconds");
 
-				if(sendNotification){
+				if (sendNotification) {
 					String wellMonitorDaily = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_DASHBOARD, stringID,
 							Utils.convertToString(startDate, DATE_FORMAT_DSPM),
 							Utils.convertToString(endDate, DATE_FORMAT_DSPM));
-	
+
 					AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE, APP_BASE_URL + wellMonitorDaily,
 							String.format(DSBPM_VRE_DURATION_SUBJECT, stringModel.getStringName(), startDate, endDate),
 							String.format(DSBPM_VRE_DURATION_BODY, duration, stringModel.getStringName(), startDate,
@@ -365,19 +361,7 @@ public class VREExecutioner {
 			// Reset model back to latest values if this is historic
 			// recalculation
 			if (resetLast) {
-				LOGGER.info(
-						" Resetting model back to latest settings - PI : " + endPI + " , ResPressure : " + endResPres);
-				List<String> params = new ArrayList<>();
-				params.add(VRE_EXE_LOC);// executable
-				params.add(ARG_VRE1);
-				params.add(ARG_MODEL + pipesimLoc);
-				params.add(ARG_WHP + endWHP);
-				params.add(ARG_WATERCUT + endWcut);
-				params.add(ARG_VERTICAL_FRICTION_FACTOR + endFFV);
-				params.add(ARG_RES_STATIC_PRESSURE + endResPres);
-				params.add(ARG_VERTICAL_HOLDUP_FACTOR + endHoldUPV);
-				params.add(ARG_PRODUCTIVITY_INDEX + endPI);
-				VREExeWorker.runVRE(params);
+				resetModel(vreConn, stringModel, endWHP, endWcut);
 			} else {
 				// model might have been calibrated..better update proxy model
 				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
@@ -391,13 +375,326 @@ public class VREExecutioner {
 	}
 
 	/**
+	 * Reset model.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringModel
+	 *            the string model
+	 * @param endWHP
+	 *            the end WHP
+	 * @param endWcut
+	 *            the end wcut
+	 */
+	private void resetModel(Connection vreConn, StringModel stringModel, double endWHP, double endWcut) {
+		double endFFV = 0, endResPres = 0, endHoldUPV = 0, endPI = 0;
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_MODEL_RESET_QUERY)) {
+			statement.setInt(1, stringModel.getStringID());
+			// statement.setTimestamp(2, startDate);
+			statement.setInt(2, stringModel.getStringID());
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) {
+					endFFV = rset.getObject(FRICTION_FACTOR) == null ? 0 : rset.getDouble(FRICTION_FACTOR);
+					endResPres = rset.getObject(RESERVOIR_PRESSURE) == null ? 0 : rset.getDouble(RESERVOIR_PRESSURE);
+					endHoldUPV = rset.getObject(HOLDUP) == null ? 0 : rset.getDouble(HOLDUP);
+					endPI = rset.getObject(PI) == null ? 0 : rset.getDouble(PI);
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+
+		LOGGER.info(" Resetting model back to latest settings - PI : " + endPI + " , ResPressure : " + endResPres
+				+ " for - " + stringModel.getStringName());
+		List<String> params = new ArrayList<>();
+		params.add(VRE_EXE_LOC);// executable
+		params.add(ARG_VRE1);
+		params.add(ARG_MODEL + stringModel.getPipesimModelLoc());
+		params.add(ARG_WHP + endWHP);
+		params.add(ARG_WATERCUT + endWcut);
+		params.add(ARG_VERTICAL_FRICTION_FACTOR + endFFV);
+		params.add(ARG_RES_STATIC_PRESSURE + endResPres);
+		params.add(ARG_VERTICAL_HOLDUP_FACTOR + endHoldUPV);
+		params.add(ARG_PRODUCTIVITY_INDEX + endPI);
+		VREExeWorker.runVRE(params);
+	}
+
+	/**
+	 * Update VRE params.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param stringID
+	 *            the string ID
+	 */
+	@SuppressWarnings("unused")
+	private void updateVREParams(Connection vreConn, Timestamp recordedDate, int stringID) {
+		VREDBModel vm = Utils.getVREDBModel(vreConn, stringID, Utils.getNextOrPreviousDay(recordedDate, -1));
+		if (vm != null) {
+			this.updateVREParams(vreConn, stringID, recordedDate, vm.getPi(), vm.getHoldup(), vm.getFrictionFactor(),
+					vm.getReservoirPressure(), vm.getChokeMultiplier());
+		}
+	}
+
+	/**
+	 * Update VRE params.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string ID
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param pi
+	 *            the pi
+	 * @param holdup
+	 *            the holdup
+	 * @param ffv
+	 *            the ffv
+	 * @param resPress
+	 *            the res press
+	 * @param chokeMultiplier
+	 *            the choke multiplier
+	 */
+	private void updateVREParams(Connection vreConn, int stringID, Timestamp recordedDate, Double pi, Double holdup,
+			Double ffv, Double resPress, Double chokeMultiplier) {
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY,
+				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+
+			statement.setTimestamp(1, recordedDate);
+			statement.setInt(2, stringID);
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) {
+					rset.updateObject(PI, pi);
+					rset.updateObject(HOLDUP, holdup);
+					rset.updateObject(FRICTION_FACTOR, ffv);
+					rset.updateObject(RESERVOIR_PRESSURE, resPress);
+					rset.updateObject(CHOKE_MULTIPLIER, chokeMultiplier);
+					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
+					LOGGER.info("updated row for model params in VRE table with String : " + stringID + " & Date : "
+							+ recordedDate);
+				}
+
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Run VRE post recalibration.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string ID
+	 * @param wellTestID
+	 *            the well test ID
+	 * @param wellTestDate
+	 *            the well test date
+	 * @param user
+	 *            the user
+	 * @param isAutomated
+	 *            the is automated
+	 * @param calibrateFlag
+	 *            the calibrate flag
+	 */
+	public void runVREPostRecalibration(Connection vreConn, int stringID, int wellTestID, Timestamp wellTestDate,
+			String user, boolean isAutomated, boolean calibrateFlag) {
+
+		Timestamp currDate = Utils.getDayFromTimestamp(new Timestamp(new Date().getTime()));
+		boolean isHistoric = (Utils.getDifferenceBetweenTwoDates(wellTestDate, currDate) > RECAL_DATE_DIFF) ? true
+				: false;
+
+		LOGGER.info("Running VREPostRecalibration for : " + stringID + " & Date : " + wellTestDate + " isAutomated : "
+				+ isAutomated + " calibrateFlag : " + calibrateFlag);
+
+		StringModel sm = Utils.getStringModel(vreConn, stringID);
+
+		if (!isAutomated) {
+			// this is manual so calibrate/decalibrate the model first
+			if (calibrateFlag) {
+				try (PreparedStatement statement = vreConn.prepareStatement(GET_WELL_TEST_QUERY);) {
+					statement.setInt(1, wellTestID);
+					try (ResultSet rset = statement.executeQuery();) {
+						if (rset.next()) {
+							double whp = rset.getDouble(WHP1);
+							double wcut = rset.getDouble(TEST_WATER_CUT);
+							double qLiq = rset.getDouble(QL1);
+							List<String> params = new ArrayList<>();
+							params.add(VRE_EXE_LOC);// executable
+							params.add(ARG_VRE1);
+							params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+							params.add(ARG_WHP + whp);
+							params.add(ARG_WATERCUT + wcut);
+							params.add(ARG_TEST_LIQ_RATE + qLiq);
+							params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_FORCE_LOW);
+							params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_FORCE_HIGH);
+							LOGGER.info("Running recalibation for " + stringID);
+							WellModel wellModel = VREExeWorker.runVRE(params);
+							boolean isCalibrated = false;
+							if (wellModel != null) {
+								if (wellModel.getErrors() == null) {
+									RecalModel recal = wellModel.getRecal();
+									if (recal != null) {
+										isCalibrated = recal.getCalibration();
+										boolean review = recal.isReview();
+										LOGGER.info(
+												"Model calibration flag " + isCalibrated + " review flag : " + review);
+										if (isCalibrated) {
+											// FIXME Later
+											// this.insertOrUpdateVRE6Job(vreConn,
+											// stringModel, executor);
+											// call same API as if model is
+											// already
+											// calibrated
+											this.runVREPostRecalibration(vreConn, stringID, wellTestID, wellTestDate,
+													user, true, calibrateFlag);
+										} else {
+
+										}
+									}
+								}
+							}
+						}
+					} catch (Exception e) {
+						LOGGER.severe(e.getMessage());
+						e.printStackTrace();
+					}
+				} catch (Exception e) {
+					LOGGER.severe(e.getMessage());
+					e.printStackTrace();
+				}
+			} else {
+				Timestamp startDate = wellTestDate;
+				Timestamp endDate = isHistoric ? wellTestDate : currDate;
+				List<String> vres = Arrays.asList(VRE1);
+				// uncalibrate
+				VREDBModel vm = Utils.getVREDBModel(vreConn, stringID, Utils.getNextOrPreviousDay(wellTestDate, -1));
+				this.runVREForDuration(vreConn, stringID, vres, startDate, endDate, vm.getPi(),
+						vm.getReservoirPressure(), vm.getHoldup(), vm.getFrictionFactor(), vm.getChokeMultiplier(),
+						user, false);
+
+			}
+			if (isHistoric) {
+				this.resetModel(vreConn, sm, 100, 0);
+			}
+		}
+
+		if (isAutomated) {
+			// model is already calibrated/de-calibrated
+			Timestamp startDate = wellTestDate;
+			Timestamp endDate = isHistoric ? wellTestDate : currDate;
+
+			try (PreparedStatement statement = vreConn.prepareStatement(VRE_DURATION_QUERY);) {
+				statement.setInt(1, stringID);
+				statement.setTimestamp(2, startDate);
+				statement.setTimestamp(3, endDate);
+				try (ResultSet rset = statement.executeQuery();) {
+
+					long start = System.currentTimeMillis();
+					int rowCount = 0;
+					long durationInDays = Utils.getDifferenceBetweenTwoDates(startDate, endDate);
+					Timestamp startedOn = new Timestamp(new Date().getTime());
+
+					while (rset.next()) {
+						// VRE.exe -vre1 -modelUZ496L.bps -whp450 -wc10
+						Timestamp recordedDate = rset.getTimestamp(RECORDED_DATE);
+						Double whp = rset.getObject(AVG_WHP) == null ? null : rset.getDouble(AVG_WHP);
+						Double wcut = rset.getObject(WATER_CUT) == null ? null : rset.getDouble(WATER_CUT);
+						Double pdgp = rset.getObject(AVG_DOWNHOLE_PRESSURE) == null ? null
+								: rset.getDouble(AVG_DOWNHOLE_PRESSURE);
+						Double gasInjRate = rset.getObject(AVG_GASLIFT_INJ_RATE) == null ? null
+								: rset.getDouble(AVG_GASLIFT_INJ_RATE);
+						Double hp = rset.getObject(AVG_HEADER_PRESSURE) == null ? null
+								: rset.getDouble(AVG_HEADER_PRESSURE);
+						Double choke = rset.getObject(CHOKE_SETTING) == null ? null : rset.getDouble(CHOKE_SETTING);
+						Double chokeMultiplier = rset.getObject(CHOKE_MULTIPLIER) == null ? 1
+								: rset.getDouble(CHOKE_MULTIPLIER);
+						Boolean isSeabed = rset.getObject(IS_SEABED) == null ? null : rset.getBoolean(IS_SEABED);
+
+						// TODO: Refactor code to move paramsList population to
+						// method which can be used from runVREs API
+						List<String> params = new ArrayList<>();
+						params.add(VRE_EXE_LOC);// executable
+						params.add(ARG_VRE1);
+						params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+						params.add(ARG_WHP + whp);
+						params.add(ARG_WATERCUT + wcut);
+						// VRE2 , VRE3, VRE4
+						if (pdgp != null) {
+							params.add(ARG_VRE2);
+							params.add(ARG_VRE3);
+							params.add(ARG_VRE4);
+							params.add(ARG_PDGP + pdgp);
+
+							if (gasInjRate != null) {
+								params.add(ARG_GAS_INJ_RATE + gasInjRate);
+							}
+						}
+						// VRE5
+						if (hp != null && choke != null) {
+							params.add(ARG_VRE5);
+							params.add(ARG_HEADER + hp);
+							params.add(ARG_RESERVOIR + rset.getString(RESERVOIR_MODEL_LOC));
+							params.add(ARG_BEANSIZE + choke);
+							params.add(ARG_CHOKE_MULTIPLIER + chokeMultiplier);
+						}
+						rowCount++;
+						this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, durationInDays,
+								Boolean.TRUE, 0, startedOn, null, RECAL_REMARK, user);
+						VREExeWorker vreExeWorker = new VREExeWorker(vreConn, params, stringID, wcut, recordedDate,
+								chokeMultiplier, isSeabed);
+						vreExeWorker.executeVRE("runVREPostRecalibration");
+
+					}
+					long end = System.currentTimeMillis();
+					double duration = (end - start) / 1000;
+					LOGGER.info("Finished running VREs post calibration for " + rowCount + " records in " + duration
+							+ " seconds");
+
+					if (isHistoric) {
+						// reset model back to latest value
+						this.resetModel(vreConn, sm, 100, 0);
+					}
+
+				} catch (Exception e) {
+					LOGGER.severe(e.getMessage());
+					e.printStackTrace();
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			} finally {
+				Timestamp currTime = new Timestamp(new Date().getTime());
+				// mark the job as done
+				this.insertOrUpdateVreExeJobs(vreConn, stringID, startDate, endDate, 0, Boolean.TRUE, 0, currTime,
+						currTime, RECAL_REMARK, user);
+			}
+		}
+
+	}
+
+	/**
 	 * Run calibration.
 	 *
 	 * @param vreConn
 	 *            the vre conn
 	 */
 	public void runCalibration(Connection vreConn) {
-		int stringID;
+		int stringID, wellTestID;
 		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
 				ResultSet rset = statement.executeQuery(WELL_TEST_CALIBRATE_QUERY);) {
 			if (rset != null) {
@@ -406,6 +703,7 @@ public class VREExecutioner {
 				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
 				int rowCount = 0;
 				while (rset.next()) {
+					wellTestID = rset.getInt(WELL_TEST_ID);
 					stringID = rset.getInt(STRING_ID);
 					double whp = rset.getDouble(WHP1);
 					double wcut = rset.getDouble(TEST_WATER_CUT);
@@ -432,14 +730,17 @@ public class VREExecutioner {
 								boolean review = recal.isReview();
 								LOGGER.info("Model calibration flag " + isCalibrated + " review flag : " + review);
 								if (isCalibrated) {
+									Timestamp wellTestDate = new Timestamp(effectiveTestDate.getTime());
+									this.runVREPostRecalibration(vreConn, stringID, wellTestID, wellTestDate,
+											RECAL_WORKFLOW, true, false);
 									this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
 									LOGGER.info(" VRE6 job submitted for - " + stringID);
 									rowCount++;
 								}
 								if (review) {
-									// TODO: RECAL DONE
-									
 									Timestamp nextDay = Utils.getNextOrPreviousDay(effectiveTestDate, 1);
+
+									double predictedRate = wellModel.getVre1().getRateLiquid();
 
 									String singleRateWellTest = String.format(WELLS_DASHBOARD_LINK,
 											SINGLE_RATE_WELL_TEST_DASHBOARD, stringID,
@@ -449,11 +750,18 @@ public class VREExecutioner {
 									AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
 											APP_BASE_URL + singleRateWellTest,
 											String.format(DSBPM_WT_CALIBRATION_SUBJECT, stringModel.getStringName()),
-											String.format(DSBPM_WT_CALIBRATION_BODY,
-													DECIMAL_FORMAT.format(recal.getError()),
-													stringModel.getStringName(), effectiveTestDate, RECALIBRATE_LOW,
-													RECALIBRATE_HIGH));
+											/**
+											 * String.format(DSBPM_WT_CALIBRATION_BODY,
+											 * DECIMAL_FORMAT.format(recal.getError()),
+											 * stringModel.getStringName(),
+											 * effectiveTestDate,
+											 * RECALIBRATE_LOW,
+											 * RECALIBRATE_HIGH));
+											 */
 
+											String.format(DSBPM_WT_CALIBRATION_BODY2, stringModel.getStringName(),
+													predictedRate, DECIMAL_FORMAT.format(recal.getError()), qLiq,
+													effectiveTestDate, RECALIBRATE_LOW, RECALIBRATE_HIGH));
 								}
 
 							} else {
@@ -473,7 +781,8 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());
 				}
-				// add this to context listener bucket to force shutdown the threads
+				// add this to context listener bucket to force shutdown the
+				// threads
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
@@ -483,7 +792,7 @@ public class VREExecutioner {
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
-				
+
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs finished for " + rowCount + " strings in on " + new Date());
 				}
@@ -658,7 +967,8 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("Proxy model generation submitted for " + rowCount + " strings in on " + new Date());
 				}
-				// add this to context listener bucket to force shutdown the threads
+				// add this to context listener bucket to force shutdown the
+				// threads
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
@@ -668,7 +978,7 @@ public class VREExecutioner {
 				}
 				// remove from bucket if executor is already terminated.
 				VREContextListener.executorList.remove(executor);
-				
+
 				if (rowCount != 0) {
 					LOGGER.info("Proxy model generation finished for " + rowCount + " strings in on " + new Date());
 				}
@@ -737,18 +1047,19 @@ public class VREExecutioner {
 		return null;
 	}
 
-
 	/**
 	 * Run model prediction.
 	 *
-	 * @param vreConn the vre conn
-	 * @param date the date
+	 * @param vreConn
+	 *            the vre conn
+	 * @param date
+	 *            the date
 	 */
 	public void runModelPrediction(Connection vreConn, Timestamp date) {
-		//String currDate = Utils.convertToString(date, DATE_FORMAT);
+		// String currDate = Utils.convertToString(date, DATE_FORMAT);
 
 		try (PreparedStatement statement = vreConn.prepareStatement(SELECT_LATEST_WHP_QUERY)) {
-			//statement.setString(1, currDate);
+			// statement.setString(1, currDate);
 			try (ResultSet rset = statement.executeQuery()) {
 				ExecutorService executor = Executors.newFixedThreadPool(MODEL_PREDICTION_THREAD_COUNT);
 				int rowCount = 0;
@@ -760,19 +1071,19 @@ public class VREExecutioner {
 					whpDate = rset.getTimestamp(RECORDED_DATE);
 					whp = rset.getDouble(WHP);
 					wcut = rset.getDouble(WATER_CUT_LAB);
-					//LOGGER.info("Generating prediction for - " + stringID);
+					// LOGGER.info("Generating prediction for - " + stringID);
 					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
 					String jsonFile = VRE6_OUTPUT_FOLDER + stringModel.getStringName() + JSON_EXTENSION;
 
 					List<String> params = new ArrayList<>();
 					params.add(VRE6_EXE_LOC);
-					//params.add(ARG_VRE6);
+					// params.add(ARG_VRE6);
 					params.add(ARG_JSON + jsonFile);
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
-					if(stringModel.getStringCategoryID() == 2){
+					if (stringModel.getStringCategoryID() == 2) {
 						params.add(ARG_TYPE2);
-					}else{
+					} else {
 						params.add(ARG_TYPE1);
 					}
 
@@ -785,7 +1096,8 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("Prediction generation submitted for " + rowCount + " strings in on " + new Date());
 				}
-				// add this to context listener bucket to force shutdown the threads
+				// add this to context listener bucket to force shutdown the
+				// threads
 				VREContextListener.executorList.add(executor);
 				executor.shutdown();
 				while (!executor.isTerminated()) {
@@ -798,6 +1110,152 @@ public class VREExecutioner {
 				if (rowCount != 0) {
 					LOGGER.info("Prediction generation finished for " + rowCount + " strings in on " + new Date());
 				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Checks if VRE for a string is already running.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param sm
+	 *            the sm
+	 * @return the string
+	 */
+	public String isRunning(Connection vreConn, StringModel sm) {
+		String message = null;
+		Timestamp fromDate, toDate, startedOn;
+		String currentUser;
+		int currentCounter;
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_EXE_RUNNING_QUERY);) {
+			statement.setInt(1, sm.getStringID());
+			try (ResultSet rset = statement.executeQuery();) {
+				if (rset != null && rset.next()) {
+					fromDate = rset.getTimestamp(FROM_DATE);
+					toDate = rset.getTimestamp(TO_DATE);
+					startedOn = rset.getTimestamp(STARTED_ON);
+					currentCounter = rset.getInt(CURRENT_COUNTER);
+					currentUser = rset.getString(ROW_CREATED_BY);
+					message = "Another recalculation for " + sm.getStringName() + " is already running from : "
+							+ fromDate + " to : " + toDate + " initiated by user : " + currentUser + " on " + startedOn;
+					message += ".\n The process has already executed for " + currentCounter
+							+ " days. Kindly wait for it to finish and then try again.";
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return message;
+	}
+
+	/**
+	 * Run injection calibration.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param date
+	 *            the date
+	 */
+	public void runInjectionCalibration(Connection vreConn, Timestamp date) {
+		try (PreparedStatement statement = vreConn.prepareStatement(INJECTION_WELL_CALIBRATION_QUERY)) {
+			statement.setTimestamp(1, date);
+			try (ResultSet rset = statement.executeQuery()) {
+				// leave 1 license for main thread which will calibrate the well
+				// model
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES - 1);
+				int rowCount = 0, calCount = 0, calibratedCount = 0;
+				int stringID;
+				while (rset.next()) {
+					rowCount++;
+					stringID = rset.getInt(STRING_ID);
+					Double whp = rset.getDouble(AVG_WHP);
+					Double wcut = MAX_WATERCUT;
+					Double qLiq = rset.getDouble(AVG_WATER_INJ_RATE);
+					if (whp != null && qLiq != null) {
+						calCount++;
+						StringModel stringModel = Utils.getStringModel(vreConn, stringID);
+						List<String> params = new ArrayList<>();
+						params.add(VRE_EXE_LOC);// executable
+						params.add(ARG_VRE1);
+						params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+						params.add(ARG_WHP + whp);
+						params.add(ARG_WATERCUT + wcut);
+						params.add(ARG_TEST_LIQ_RATE + qLiq);
+						params.add(ARG_RECALIBRATE_LOW + RECALIBRATE_FORCE_LOW);
+						params.add(ARG_RECALIBRATE_HIGH + RECALIBRATE_FORCE_HIGH);
+						LOGGER.info("Running injection recalibation for " + stringID);
+						WellModel wellModel = VREExeWorker.runVRE(params);
+						boolean isCalibrated = false;
+						if (wellModel != null) {
+							if (wellModel.getErrors() == null) {
+								RecalModel recal = wellModel.getRecal();
+								if (recal != null) {
+									isCalibrated = recal.getCalibration();
+									boolean review = recal.isReview();
+									LOGGER.info("Injection model calibration flag " + isCalibrated + " review flag : "
+											+ review);
+									if (isCalibrated) {
+										this.insertOrUpdateVRE6Job(vreConn, stringModel, executor);
+										LOGGER.info("Injection VRE6 job submitted for - " + stringID);
+										calibratedCount++;
+									}
+									if (review) {
+
+										double predictedRate = wellModel.getVre1().getRateLiquid();
+
+										AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE, APP_BASE_URL,
+												String.format(DSBPM_WT_CALIBRATION_SUBJECT,
+														stringModel.getStringName()),
+												String.format(DSBPM_INJ_CALIBRATION_BODY, stringModel.getStringName(),
+														predictedRate, DECIMAL_FORMAT.format(recal.getError()), qLiq));
+									}
+
+								} else {
+									LOGGER.severe("No recal tag present in output for string - " + stringID);
+								}
+							} else {
+								LOGGER.severe("Exception in calling recal - " + wellModel.getErrors());
+							}
+						} else {
+							LOGGER.severe("Something went wrong while calling recal for string - " + stringID);
+						}
+					}
+
+				}
+				LOGGER.info(calCount + " out of " + rowCount + " injection wells were elegible for calibration."
+						+ calibratedCount + " were of them calibrated successfully on " + new Date());
+
+				if (calibratedCount != 0) {
+					LOGGER.info(
+							"Injection VRE6 jobs submitted for " + calibratedCount + " strings in on " + new Date());
+				}
+				// add this to context listener bucket to force shutdown the
+				// threads
+				VREContextListener.executorList.add(executor);
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+					LOGGER.info("Injection calibration process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking injection calibration process...");
+				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
+
+				if (calibratedCount != 0) {
+					LOGGER.info("Injection VRE6 jobs finished for " + calibratedCount + " strings in on " + new Date());
+				}
+
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
 				e.printStackTrace();

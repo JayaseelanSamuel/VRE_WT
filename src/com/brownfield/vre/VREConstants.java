@@ -7,6 +7,7 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class VREConstants.
  *
@@ -21,39 +22,39 @@ public class VREConstants {
 	public static final String TEIID_DRIVER_NAME = "org.teiid.jdbc.TeiidDriver";
 
 	/** The vre db url. */
-	public static String VRE_DB_URL = "<SERVER_URL>";
+	public static String VRE_DB_URL = "jdbc:sqlserver://vwsp13bft:1433;databaseName=VRE";
 
 	/** The vre user. */
-	public static String VRE_USER = "<USER>";
+	public static String VRE_USER = "vre";
 
 	/** The vre password. */
-	public static String VRE_PASSWORD = "<PASSWORD>";
+	public static String VRE_PASSWORD = "vre";
 
 	// Properties which will be overridden at the application context load
 
 	/** The phd teiid url. */
-	public static String PHD_TEIID_URL = "<SERVER_URL>";
+	public static String PHD_TEIID_URL = "jdbc:teiid:OPCHD@mm://VWBFAPPT.zadco.ad:31000;version=1;";
 
 	/** The teiid user. */
-	public static String TEIID_USER = "<USER>";
+	public static String TEIID_USER = "dsdsadmin";
 
 	/** The teiid password. */
-	public static String TEIID_PASSWORD = "<PASSWORD>";
+	public static String TEIID_PASSWORD = "dsdsadmin";
 
 	/** The vre jndi name. */
 	public static String VRE_JNDI_NAME = "java:/VRE";
 
 	/** The dsis host. */
-	public static String DSIS_HOST = "<HOST>";
+	public static String DSIS_HOST = "vwsntt";
 
 	/** The dsis port. */
-	public static String DSIS_PORT = "<PORT>";
+	public static String DSIS_PORT = "8080";
 
 	/** The dsbpm base url. */
-	public static String DSBPM_BASE_URL = "<SERVER_URL>";
+	public static String DSBPM_BASE_URL = "http://" + DSIS_HOST + ":" + DSIS_PORT + "/dsbpm-engine/rest";
 
 	/** The app base url. */
-	public static String APP_BASE_URL = "<SERVER_URL>";
+	public static String APP_BASE_URL = "http://vwsp13bft.zadco.ad:4430/VRE/Lists/DSPAppPages/DSPMaster.aspx";
 
 	/** The email group. */
 	public static String EMAIL_GROUP = "IronMan@mailinator.com;Thor@mailinator.com;Hulk@mailinator.com";
@@ -446,7 +447,7 @@ public class VREConstants {
 			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = T.STRING_ID AND DAM.RECORDED_DATE = DD.RECORDED_DATE  "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_WHP ON SAL_WHP.STRING_ID = T.STRING_ID AND SAL_WHP.TAG_TYPE_ID = 1 "
 			+ " LEFT OUTER JOIN STRING_ALERT_LIMIT SAL_HEADER ON SAL_HEADER.STRING_ID = T.STRING_ID AND SAL_HEADER.TAG_TYPE_ID = 13 "
-			+ " LEFT OUTER JOIN WELL_TEST WT ON WT.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = CAST(WT.TEST_END_DATE AS DATE) AND WT.VRE_FLAG = 'TRUE' "
+			+ " LEFT OUTER JOIN WELL_TEST WT ON WT.STRING_ID = T.STRING_ID AND DD.RECORDED_DATE = CAST(WT.TEST_END_DATE AS DATE) AND WT.IS_CALIBRATED = 'TRUE' "
 			+ " LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VR ON VR.STRING_ID = T.STRING_ID AND VR.RECORDED_DATE = DD.RECORDED_DATE "
 			+ " WHERE T.STRING_ID = ? AND DD.RECORDED_DATE BETWEEN ? AND ? AND "
 			+ " ((DAM.AVG_WHP IS NOT NULL AND DAM.AVG_WHP <> 0) OR (DD.WELLHEAD_PRESSURE IS NOT NULL AND DD.WELLHEAD_PRESSURE <> 0)) ";
@@ -470,10 +471,16 @@ public class VREConstants {
 	 * calibration by looking for SR testType, VRE flag = true and Calibrated
 	 * flag set to null. We will then update IS_CALIBRATED to true or false.
 	 */
-	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CAST(TEST_END_DATE AS DATE) AS EFFECTIVE_DATE, "
+	public static final String WELL_TEST_CALIBRATE_QUERY = "SELECT WT.WELL_TEST_ID, WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CAST(TEST_END_DATE AS DATE) AS EFFECTIVE_DATE, "
 			+ " IS_CALIBRATED, TEST_WATER_CUT, SM.PIPESIM_MODEL_LOC, WT.ROW_CHANGED_BY, WT.ROW_CHANGED_DATE "
 			+ " FROM WELL_TEST WT " + " LEFT OUTER JOIN STRING_METADATA SM ON WT.STRING_ID = SM.STRING_ID "
 			+ " WHERE TEST_TYPE = 'SR' AND VRE_FLAG = 1 AND IS_CALIBRATED IS NULL AND SM.PIPESIM_MODEL_LOC IS NOT NULL ";
+
+	/** The Constant GET_WELL_TEST_QUERY. */
+	public static final String GET_WELL_TEST_QUERY = "SELECT WT.WELL_TEST_ID, WT.STRING_ID, QL1, WHP1, TEST_START_DATE, TEST_END_DATE, CAST(TEST_END_DATE AS DATE) AS EFFECTIVE_DATE, "
+			+ " IS_CALIBRATED, TEST_WATER_CUT, SM.PIPESIM_MODEL_LOC, WT.ROW_CHANGED_BY, WT.ROW_CHANGED_DATE "
+			+ " FROM WELL_TEST WT " + " LEFT OUTER JOIN STRING_METADATA SM ON WT.STRING_ID = SM.STRING_ID "
+			+ " WHERE WELL_TEST_ID = ? AND SM.PIPESIM_MODEL_LOC IS NOT NULL ";
 
 	/** The Constant VRE_TABLE_SELECT_QUERY. */
 	public static final String VRE_TABLE_SELECT_QUERY = "SELECT STRING_ID, RECORDED_DATE, VRE1, VRE2, VRE3, VRE4, VRE5, VRE6, "
@@ -490,7 +497,7 @@ public class VREConstants {
 	public static final String VRE_TABLE_SELECT_QUERY_VRE6 = "SELECT STRING_ID, RECORDED_DATE, VRE6, ROW_CHANGED_BY, ROW_CHANGED_DATE "
 			+ " FROM VIRTUAL_RATE_ESTIMATION " + " WHERE RECORDED_DATE = ? AND STRING_ID = ? ";
 
-	/** The Constant INSERT_VRE_SHORT_QUERY */
+	/** The Constant INSERT_VRE_SHORT_QUERY. */
 	public static final String INSERT_VRE_SHORT_QUERY = "INSERT INTO VIRTUAL_RATE_ESTIMATION (STRING_ID, RECORDED_DATE, VRE6, REMARK, ROW_CREATED_BY) VALUES (?, ?, ?, ?, ?)";
 
 	/** The Constant VRE_JOBS_QUERY. */
@@ -600,6 +607,31 @@ public class VREConstants {
 	public static final String INSERT_REAL_TIME_DATA_QUERY = "INSERT INTO REAL_TIME_DATA (STRING_ID, RECORDED_DATE, TAG_TYPE_ID, TAGQUALITY, TAGPROCESSEDVALUE, TAGRAWVALUE) "
 			+ " VALUES (?, ?, ?, ?, ?, ?)";
 
+	/** The Constant GET_TECHNICAL_RATE_TAG. */
+	public static final String GET_TECHNICAL_RATE_TAG = "SELECT S.STRING_ID, STRING_NAME, STRING_CATEGORY_ID, TAG_WATER_VOL_RATE, TAG_OIL_VOL_RATE, "
+			+ " CASE S.STRING_CATEGORY_ID WHEN 2 THEN TAG_WATER_VOL_RATE ELSE TAG_OIL_VOL_RATE END AS TECHNICAL_RATE "
+			+ " FROM STRING S LEFT OUTER JOIN STRING_METADATA SM ON S.STRING_ID = SM.STRING_ID ";
+
+	/** The Constant GET_PHD_QUERY. */
+	public static final String GET_PHD_QUERY = "SELECT \"timestamp\", \"sourceValues\", \"tagid\", \"quality\", \"aggregateId\", \"noOfValues\" "
+			+ " FROM \"OPCHD.TagValues\" "
+			+ " WHERE ((\"tagid\" = ?)  AND \"timestamp\" <= ? AND (\"noOfValues\" = '1000')) "
+			+ " ORDER BY \"timestamp\" DESC LIMIT 1 ";
+
+	/** The Constant TECHNICAL_RATE_QUERY. */
+	public static final String TECHNICAL_RATE_QUERY = "SELECT STRING_ID, TECHNICAL_RATE, WELLHEAD_PRESSURE_AT_TECH_RATE, MAX_FLOW_RATE_PRESSURE, RECORDED_DATE, ROW_CHANGED_DATE "
+			+ " FROM STRING_MONTHLY_TARGET_RATE WHERE STRING_ID = ? AND RECORDED_DATE = ? ";
+
+	/** The Constant INSERT_TECHNICAL_RATE_QUERY. */
+	public static final String INSERT_TECHNICAL_RATE_QUERY = "INSERT INTO STRING_MONTHLY_TARGET_RATE (STRING_ID, RECORDED_DATE, TECHNICAL_RATE) "
+			+ " VALUES (?, ?, ?) ";
+
+	/** The Constant INJECTION_WELL_CALIBRATION_QUERY. */
+	public static final String INJECTION_WELL_CALIBRATION_QUERY = "SELECT S.STRING_ID, S.STRING_NAME, SM.PIPESIM_MODEL_LOC, DAM.AVG_WHP, DAM.AVG_WATER_INJ_RATE "
+			+ "	FROM STRING S " + " LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
+			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = S.STRING_ID AND DAM.RECORDED_DATE = ? "
+			+ "	WHERE S.STRING_CATEGORY_ID = 2 AND SM.PIPESIM_MODEL_LOC IS NOT NULL";
+
 	/** The Constant STRING_ALERT_MESSAGE. */
 	public static final String STRING_ALERT_MESSAGE = "%S value (%S) for Well %S is %S value (%S) at time %S";
 
@@ -657,6 +689,12 @@ public class VREConstants {
 
 	/** The Constant DEFAULT_REMARK. */
 	public static final String DEFAULT_REMARK = "Inserted/Updated by VRE Workflow";
+
+	/** The Constant SEABED_REMARK. */
+	public static final String SEABED_REMARK = "Missing Real Time Data";
+
+	/** The Constant RECAL_REMARK. */
+	public static final String RECAL_REMARK = "Inserted/Updated by Recalibration Workflow";
 
 	/** The Constant CSV_EXTENSION. */
 	public static final String CSV_EXTENSION = ".csv";
@@ -1021,7 +1059,7 @@ public class VREConstants {
 	public static final int RECALIBRATE_FORCE_LOW = 0;
 
 	/** The Constant RECALIBRATE_FORCE_HIGH. */
-	public static final int RECALIBRATE_FORCE_HIGH = 100;
+	public static final int RECALIBRATE_FORCE_HIGH = 300;
 
 	// arguments
 
@@ -1103,10 +1141,13 @@ public class VREConstants {
 	/** The Constant ARG_MULTI_WHP. */
 	public static final String ARG_MULTI_WHP = "-twhp";
 
+	/** The Constant ARG_JSON. */
 	public static final String ARG_JSON = "-json";
 
+	/** The Constant ARG_TYPE1. */
 	public static final String ARG_TYPE1 = "-type1";
 
+	/** The Constant ARG_TYPE2. */
 	public static final String ARG_TYPE2 = "-type2";
 
 	// arguments end
@@ -1142,6 +1183,12 @@ public class VREConstants {
 
 	/** The Constant DSBPM_WT_CALIBRATION_BODY. */
 	public static final String DSBPM_WT_CALIBRATION_BODY = "A calibration %s%% of  %s well for date %s is not within the limit %s and %s";
+
+	/** The Constant DSBPM_WT_CALIBRATION_BODY2. */
+	public static final String DSBPM_WT_CALIBRATION_BODY2 = "%s well was not auto-calibrated as its predicted rate of %s varies %s%% from test rate %s for date %s which is not within the global limit of %s and %s";
+	
+	/** The Constant DSBPM_INJ_CALIBRATION_BODY. */
+	public static final String DSBPM_INJ_CALIBRATION_BODY = "%s injection well was not calibrated as its predicted rate of %s varies %s%% from measured injection rate %s ";
 
 	/** The Constant MONITOR_DAILY_DASHBOARD. */
 	public static final int MONITOR_DAILY_DASHBOARD = 3;

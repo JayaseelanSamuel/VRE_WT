@@ -4,6 +4,7 @@ import static com.brownfield.vre.VREConstants.VRE_LIST;
 
 import java.sql.Timestamp;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 
 import javax.ws.rs.GET;
@@ -259,8 +260,7 @@ public class VREBaseResource {
 		result = "{ \"value\" : [" + result + "] }";
 		return Response.status(200).entity(result).build();
 	}
-	
-	
+
 	/**
 	 * Run model prediction.
 	 *
@@ -275,6 +275,105 @@ public class VREBaseResource {
 		return Response.status(200).entity(result).build();
 	}
 
+	/**
+	 * Run VRE post recalibration.
+	 *
+	 * @param stringID
+	 *            the string ID
+	 * @param wellTestID
+	 *            the well test ID
+	 * @param wellTestDate
+	 *            the well test date
+	 * @param user
+	 *            the user
+	 * @param calibrateFlag
+	 *            the calibrate flag
+	 * @return the response
+	 */
+	@GET
+	@Path("/runVREPostRecalibration")
+	public Response runVREPostRecalibration(@QueryParam("stringID") int stringID,
+			@QueryParam("wellTestID") int wellTestID, @QueryParam("wellTestDate") String wellTestDate,
+			@QueryParam("user") String user, @QueryParam("calibrateFlag") boolean calibrateFlag) {
+
+		Timestamp startDate = null;
+		String result = null;
+		if (wellTestDate != null && wellTestDate.length() != 0) {
+			startDate = Utils.parseDate(wellTestDate);
+		} else {
+			result = "Invalid well test date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+
+		if (startDate != null) {
+			InternalVREManager ivm = new InternalVREManager();
+			result = ivm.runVREPostRecalibration(stringID, wellTestID, startDate, user, calibrateFlag);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+
+		result = "{ \"value\" : [\"" + result + "\"] }";
+		return Response.status(200).entity(result).type(MediaType.APPLICATION_JSON).build();
+	}
+
+	/**
+	 * Populate technical rate.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/populateTechnicalRate")
+	public Response populateTechnicalRate(@QueryParam("date") String date) {
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			// get tomorrows date
+			recordedDate = Utils.getNextOrPreviousDay(new Timestamp(new Date().getTime()), 1);
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Populated technical rates for the month of - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.populateTechnicalRate(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Run injection calibration.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/runInjectionCalibration")
+	public Response runInjectionCalibration(@QueryParam("date") String date) {
+
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			recordedDate = Utils.getYesterdayTimestamp();
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Ran injection calibration for - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.runInjectionCalibration(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
 
 	/**
 	 * Prints the message.

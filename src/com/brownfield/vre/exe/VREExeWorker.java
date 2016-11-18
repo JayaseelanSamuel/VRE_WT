@@ -1,8 +1,49 @@
 package com.brownfield.vre.exe;
 
-import static com.brownfield.vre.VREConstants.*;
+import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
+import static com.brownfield.vre.VREConstants.DATE_FORMAT_DSPM;
+import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
+import static com.brownfield.vre.VREConstants.DEFAULT_WATER_CUT;
+import static com.brownfield.vre.VREConstants.EMAIL_GROUP;
+import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
+import static com.brownfield.vre.VREConstants.GOR;
+import static com.brownfield.vre.VREConstants.HIGH_LIMIT;
+import static com.brownfield.vre.VREConstants.HIGH_TECH_RATE;
+import static com.brownfield.vre.VREConstants.HOLDUP;
+import static com.brownfield.vre.VREConstants.INSERT_ALERTS_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_REAL_TIME_DATA_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_VRE_SHORT_QUERY;
+import static com.brownfield.vre.VREConstants.IS_SEABED;
+import static com.brownfield.vre.VREConstants.LOWER_LIMIT;
+import static com.brownfield.vre.VREConstants.LOW_LIMIT;
+import static com.brownfield.vre.VREConstants.LOW_TECH_RATE;
+import static com.brownfield.vre.VREConstants.MODEL_PREDECTION_QUERY;
+import static com.brownfield.vre.VREConstants.MONITOR_DAILY_ALERT_DASHBOARD;
+import static com.brownfield.vre.VREConstants.PI;
+import static com.brownfield.vre.VREConstants.REMARK;
+import static com.brownfield.vre.VREConstants.RESERVOIR_PRESSURE;
+import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
+import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
+import static com.brownfield.vre.VREConstants.SEABED_REMARK;
+import static com.brownfield.vre.VREConstants.SELECT_ALERT_LIMIT_QUERY;
+import static com.brownfield.vre.VREConstants.SELECT_TECHNICAL_RATE_QUERY;
+import static com.brownfield.vre.VREConstants.STRING_ALERT_MESSAGE;
+import static com.brownfield.vre.VREConstants.TAGRAWVALUE;
+import static com.brownfield.vre.VREConstants.TAG_TYPE_ID;
+import static com.brownfield.vre.VREConstants.UPPER_LIMIT;
+import static com.brownfield.vre.VREConstants.VRE1;
+import static com.brownfield.vre.VREConstants.VRE2;
+import static com.brownfield.vre.VREConstants.VRE3;
+import static com.brownfield.vre.VREConstants.VRE4;
+import static com.brownfield.vre.VREConstants.VRE5;
+import static com.brownfield.vre.VREConstants.VRE6;
+import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY;
+import static com.brownfield.vre.VREConstants.VRE_WORKFLOW;
+import static com.brownfield.vre.VREConstants.WATER_CUT;
+import static com.brownfield.vre.VREConstants.WATER_CUT_FLAG;
+import static com.brownfield.vre.VREConstants.WELLS_DASHBOARD_LINK;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,12 +61,9 @@ import java.util.regex.Pattern;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamReader;
 
 import org.apache.commons.io.IOUtils;
 
-import com.brownfield.vre.AlertHandler;
 import com.brownfield.vre.TagType;
 import com.brownfield.vre.Utils;
 import com.brownfield.vre.VREConstants.ALERT_TYPE;
@@ -402,6 +440,9 @@ public class VREExeWorker implements Runnable {
 				double ii = model.getProperties().getIi();
 				// set pi to ii if pi is 0 (e.g. Injector wells)
 				pi = pi != 0 ? pi : ii;
+
+				String remark = isSeabed ? SEABED_REMARK : DEFAULT_REMARK;
+
 				if (rset.next()) { // record present, just update
 					if (vre1LiqRate != null) {
 						rset.updateDouble(VRE1, vre1LiqRate);
@@ -430,7 +471,7 @@ public class VREExeWorker implements Runnable {
 					rset.updateDouble(CHOKE_MULTIPLIER, chokeMuliplier);
 					rset.updateBoolean(IS_SEABED, isSeabed);
 
-					// rset.updateString(REMARK, DEFAULT_REMARK);
+					rset.updateString(REMARK, remark);
 					rset.updateString(ROW_CHANGED_BY, VRE_WORKFLOW);
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
 					rset.updateRow();
@@ -438,7 +479,7 @@ public class VREExeWorker implements Runnable {
 				} else { // insert
 					this.insertVRERecord(vreConn, stringID, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
 							vre4LiqRate, vre5LiqRate, null, wcut, DEFAULT_WATER_CUT, gor, pi, holdUPV, ffv, resPres,
-							chokeMuliplier, isSeabed, DEFAULT_REMARK);
+							chokeMuliplier, isSeabed, remark);
 				}
 				vre = this.getVRE(vreConn, stringModel, recordedDate, vre1LiqRate, vre2LiqRate, vre3LiqRate,
 						vre4LiqRate, vre5LiqRate, vre6LiqRate);
@@ -563,7 +604,7 @@ public class VREExeWorker implements Runnable {
 					LOGGER.info("updated row for error message in VRE table with String : " + stringID + " & Date : "
 							+ recordedDate);
 				} else { // insert
-					this.insertVRERecord(conn, stringID, recordedDate, remark);
+					this.insertVRERemark(conn, stringID, recordedDate, remark);
 				}
 
 			} catch (Exception e) {
@@ -589,7 +630,7 @@ public class VREExeWorker implements Runnable {
 	 *            the remark
 	 * @return the int
 	 */
-	private int insertVRERecord(Connection conn, int stringID, Timestamp recordedDate, String remark) {
+	private int insertVRERemark(Connection conn, int stringID, Timestamp recordedDate, String remark) {
 		int rowsInserted = 0;
 		try (PreparedStatement statement = conn.prepareStatement(INSERT_VRE_SHORT_QUERY);) {
 			statement.setInt(1, stringID);
@@ -606,6 +647,7 @@ public class VREExeWorker implements Runnable {
 		}
 		return rowsInserted;
 	}
+
 
 	/**
 	 * Generate technical and model alerts.
@@ -880,7 +922,7 @@ public class VREExeWorker implements Runnable {
 					// rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new
 					// Date().getTime()));
 					rset.updateRow();
-					LOGGER.info("updated row in real time data table with String : " + stringID + " & Date : "
+					LOGGER.fine("updated row in real time data table with String : " + stringID + " & Date : "
 							+ recordedDate);
 				} else { // insert
 					this.insertRealTimeData(vreConn, stringID, recordedDate, TagType.VRE6_CALC.getTagTypeID(),
@@ -955,7 +997,7 @@ public class VREExeWorker implements Runnable {
 				value = m.group(1);
 				d = Double.parseDouble(value);
 			} else {
-				LOGGER.severe(
+				LOGGER.fine(
 						"<qliq> not present in " + output + " for string " + stringID + " when executing " + params);
 			}
 		} catch (Exception e) {

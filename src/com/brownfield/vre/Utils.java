@@ -19,7 +19,9 @@ import java.util.logging.Logger;
 
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.StringModel;
+import com.brownfield.vre.exe.models.VREDBModel;
 
+// TODO: Auto-generated Javadoc
 /**
  * The Class Utils.
  * 
@@ -29,7 +31,13 @@ public class Utils {
 
 	/** The logger. */
 	private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
-	
+
+	/**
+	 * The main method.
+	 *
+	 * @param args
+	 *            the arguments
+	 */
 	public static void main(String[] args) {
 		Timestamp curr = new Timestamp(new Date().getTime());
 		Timestamp rounded = Utils.getRoundedOffTime(curr, 30);
@@ -273,13 +281,14 @@ public class Utils {
 		cal.set(Calendar.MILLISECOND, 0);
 		return new Timestamp(cal.getTimeInMillis());
 	}
-	
-	
+
 	/**
 	 * Gets the next or previous day.
 	 *
-	 * @param testDate the test date
-	 * @param offset the offset
+	 * @param testDate
+	 *            the test date
+	 * @param offset
+	 *            the offset
 	 * @return the next or previous day
 	 */
 	public static Timestamp getNextOrPreviousDay(Date testDate, int offset) {
@@ -323,8 +332,10 @@ public class Utils {
 	/**
 	 * Gets the rounded off time.
 	 *
-	 * @param date the date
-	 * @param interval the interval
+	 * @param date
+	 *            the date
+	 * @param interval
+	 *            the interval
 	 * @return the rounded off time
 	 */
 	public static Timestamp getRoundedOffTime(Timestamp date, int interval) {
@@ -336,6 +347,85 @@ public class Utils {
 		cal.set(Calendar.SECOND, 0);
 		cal.set(Calendar.MILLISECOND, 0);
 		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Gets the day from timestamp.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the day from timestamp
+	 */
+	public static Timestamp getDayFromTimestamp(Timestamp date) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Gets the start of the month.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the start of the month
+	 */
+	public static Timestamp getStartOfTheMonth(Timestamp date) {
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(date);
+		cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH));
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		return new Timestamp(cal.getTimeInMillis());
+	}
+
+	/**
+	 * Gets the VREDB model.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string ID
+	 * @param recordedDate
+	 *            the recorded date
+	 * @return the VREDB model
+	 */
+	public static VREDBModel getVREDBModel(Connection vreConn, int stringID, Timestamp recordedDate) {
+		VREDBModel vm = null;
+		try (PreparedStatement statement = vreConn.prepareStatement(VRE_TABLE_SELECT_QUERY);) {
+			statement.setTimestamp(1, recordedDate);
+			statement.setInt(2, stringID);
+			try (ResultSet rset = statement.executeQuery();) {
+				if (rset != null && rset.next()) { // always one row
+					vm = new VREDBModel();
+					// vm.setVreID(rset.getInt(VRE_ID));
+					vm.setStringID(rset.getInt(STRING_ID));
+					vm.setVre1(rset.getDouble(VRE1));
+					vm.setVre2(rset.getDouble(VRE2));
+					vm.setVre3(rset.getDouble(VRE3));
+					vm.setVre4(rset.getDouble(VRE4));
+					vm.setVre5(rset.getDouble(VRE5));
+					vm.setVre6(rset.getDouble(VRE6));
+					vm.setGor(rset.getDouble(GOR));
+					vm.setPi(rset.getDouble(PI));
+					vm.setFrictionFactor(rset.getDouble(FRICTION_FACTOR));
+					vm.setReservoirPressure(rset.getDouble(RESERVOIR_PRESSURE));
+					vm.setChokeMultiplier(rset.getDouble(CHOKE_MULTIPLIER));
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+		return vm;
 	}
 
 	/**

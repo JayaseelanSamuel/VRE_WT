@@ -1,22 +1,15 @@
 package com.brownfield.vre.rest;
 
-import static com.brownfield.vre.VREConstants.CURRENT_COUNTER;
-import static com.brownfield.vre.VREConstants.FROM_DATE;
 import static com.brownfield.vre.VREConstants.PHD_TEIID_URL;
 import static com.brownfield.vre.VREConstants.PREDICTION_FREQUENCY;
-import static com.brownfield.vre.VREConstants.ROW_CREATED_BY;
-import static com.brownfield.vre.VREConstants.STARTED_ON;
+import static com.brownfield.vre.VREConstants.RECAL_DATE_DIFF;
 import static com.brownfield.vre.VREConstants.TEIID_DRIVER_NAME;
 import static com.brownfield.vre.VREConstants.TEIID_PASSWORD;
 import static com.brownfield.vre.VREConstants.TEIID_USER;
-import static com.brownfield.vre.VREConstants.TO_DATE;
-import static com.brownfield.vre.VREConstants.VRE_EXE_RUNNING_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_JNDI_NAME;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -30,10 +23,12 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import com.brownfield.vre.AvgCalculator;
+import com.brownfield.vre.RatePopulator;
 import com.brownfield.vre.Utils;
 import com.brownfield.vre.ValidateWellTest;
 import com.brownfield.vre.exe.VREExecutioner;
 import com.brownfield.vre.exe.models.MultiRateTestModel;
+import com.brownfield.vre.exe.models.StringModel;
 import com.brownfield.vre.jobs.JobsMonitor;
 import com.google.gson.Gson;
 
@@ -227,41 +222,20 @@ public class InternalVREManager {
 		String message = "Recalculation process started for - " + vresToRun;
 
 		try (Connection vreConn = getVREConnection()) {
-			String stringName = Utils.getStringNameFromID(vreConn, stringID);
-			if (stringName == null) {
+			StringModel sm = Utils.getStringModel(vreConn, stringID);
+			if (sm == null) {
 				message = "Invalid stringID";
 			} else {
-				message = "Started running " + vresToRun + " for " + stringName + " from " + startDate + " to "
-						+ endDate;
 				boolean isRunning = false;
-				Timestamp fromDate, toDate, startedOn;
-				String currentUser;
-				int currentCounter;
-				try (PreparedStatement statement = vreConn.prepareStatement(VRE_EXE_RUNNING_QUERY);) {
-					statement.setInt(1, stringID);
-					try (ResultSet rset = statement.executeQuery();) {
-						if (rset != null && rset.next()) {
-							isRunning = true;
-							fromDate = rset.getTimestamp(FROM_DATE);
-							toDate = rset.getTimestamp(TO_DATE);
-							startedOn = rset.getTimestamp(STARTED_ON);
-							currentCounter = rset.getInt(CURRENT_COUNTER);
-							currentUser = rset.getString(ROW_CREATED_BY);
-							message = "Another recalculation for " + stringName + " is already running from : "
-									+ fromDate + " to : " + toDate + " initiated by user : " + currentUser + " on "
-									+ startedOn;
-							message += ".\n The process has already executed for " + currentCounter
-									+ " days. Kindly wait for it to finish and then try again.";
-						}
-					} catch (Exception e) {
-						LOGGER.severe(e.getMessage());
-						e.printStackTrace();
-					}
-				} catch (Exception e) {
-					LOGGER.severe(e.getMessage());
-					e.printStackTrace();
-				}
+				VREExecutioner vreEx = new VREExecutioner();
+				message = vreEx.isRunning(vreConn, sm);
 
+				if (message != null) {
+					isRunning = true;
+				} else {
+					message = "Started running " + vresToRun + " for " + sm.getStringName() + " from " + startDate
+							+ " to " + endDate;
+				}
 				if (!isRunning) {
 					Runnable r = new Runnable() {
 						public void run() {
@@ -368,7 +342,8 @@ public class InternalVREManager {
 				public void run() {
 					try (final Connection vreConn = getVREConnection()) {
 						LOGGER.info("Started Running model prediction !!!");
-						Timestamp currTime = Utils.getRoundedOffTime(new Timestamp(new Date().getTime()), PREDICTION_FREQUENCY);
+						Timestamp currTime = Utils.getRoundedOffTime(new Timestamp(new Date().getTime()),
+								PREDICTION_FREQUENCY);
 						VREExecutioner vreEx = new VREExecutioner();
 						vreEx.runModelPrediction(vreConn, currTime);
 						LOGGER.info("Model prediction finished !!!");
@@ -383,6 +358,123 @@ public class InternalVREManager {
 			};
 			new Thread(r).start();
 		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Run VRE post recalibration.
+	 *
+	 * @param stringID
+	 *            the string ID
+	 * @param wellTestID
+	 *            the well test ID
+	 * @param wellTestDate
+	 *            the well test date
+	 * @param user
+	 *            the user
+	 * @param calibrateFlag
+	 *            the calibrate flag
+	 * @return the string
+	 */
+	public String runVREPostRecalibration(final int stringID, final int wellTestID, final Timestamp wellTestDate,
+			final String user, final boolean calibrateFlag) {
+
+		String message = "Recalibration process started for - " + stringID;
+		final Timestamp startDate = Utils.getDayFromTimestamp(wellTestDate);
+		Timestamp currDate = Utils.getDayFromTimestamp(new Timestamp(new Date().getTime()));
+		boolean isHistoric = (Utils.getDifferenceBetweenTwoDates(wellTestDate, currDate) > RECAL_DATE_DIFF) ? true
+				: false;
+		final Timestamp endDate = isHistoric ? startDate : currDate;
+
+		try (Connection vreConn = getVREConnection()) {
+			StringModel sm = Utils.getStringModel(vreConn, stringID);
+			if (sm == null) {
+				message = "Invalid stringID";
+			} else {
+				boolean isRunning = false;
+				VREExecutioner vreEx = new VREExecutioner();
+				message = vreEx.isRunning(vreConn, sm);
+
+				if (message != null) {
+					isRunning = true;
+				} else {
+					message = "Started running recalibration for " + sm.getStringName() + " from " + startDate + " to "
+							+ endDate;
+				}
+				if (!isRunning) {
+					Runnable r = new Runnable() {
+						public void run() {
+							LOGGER.info(
+									"Running recalibration for " + stringID + " from " + startDate + " to " + endDate);
+							try (final Connection vreConn = getVREConnection()) {
+								VREExecutioner vreEx = new VREExecutioner();
+								vreEx.runVREPostRecalibration(vreConn, stringID, wellTestID, wellTestDate, user, false,
+										calibrateFlag);
+								LOGGER.info("Finished running recalibration for " + stringID + " from " + startDate
+										+ " to " + endDate);
+							} catch (SQLException e) {
+								LOGGER.log(Level.SEVERE, e.getMessage());
+							} catch (NamingException e) {
+								LOGGER.log(Level.SEVERE, e.getMessage());
+							}
+						}
+					};
+					new Thread(r).start();
+				}
+			}
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+
+		return message;
+	}
+
+	/**
+	 * Populate technical rate.
+	 *
+	 * @param recordedDate
+	 *            the recorded date
+	 */
+	public void populateTechnicalRate(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection();) {
+			LOGGER.info("Populate technical rates started for - " + recordedDate);
+			RatePopulator rp = new RatePopulator();
+			rp.populateTechnicalRates(vreConn, phdConn, recordedDate);
+			LOGGER.info("Populate technical rates finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Run injection calibration.
+	 *
+	 * @param recordedDate
+	 *            the recorded date
+	 */
+	public void runInjectionCalibration(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection()) {
+			LOGGER.info("run injection calibration started for - " + recordedDate);
+			VREExecutioner vreEx = new VREExecutioner();
+			vreEx.runInjectionCalibration(vreConn, recordedDate);
+			LOGGER.info("run injection calibration finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 			e.printStackTrace();
 		}

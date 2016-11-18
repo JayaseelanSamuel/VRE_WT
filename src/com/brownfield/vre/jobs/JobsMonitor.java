@@ -103,7 +103,7 @@ public class JobsMonitor {
 							rset.updateString(VRE6_EXE_OUTPUT, content);
 							// Delete the output file
 							try {
-								FileUtils.forceDelete(f);
+								//FileUtils.forceDelete(f);
 								LOGGER.info("File deleted successfully - " + f.getName());
 							} catch (Exception e) {
 								LOGGER.severe(e.getMessage());

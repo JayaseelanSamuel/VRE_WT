@@ -445,6 +445,13 @@ public class ValidateWellTest {
 							String.format(WELL_TEST_BODY_START, Utils.convertToString(new Date(), DATE_FORMAT))
 									+ emailContent);
 
+				} else {
+					String emailContent = String.format("No new well tests to process/validate");
+					
+					AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
+							APP_BASE_URL,
+							String.format(WELL_TEST_SUBJECT, Utils.convertToString(new Date(), DATE_FORMAT)),
+							emailContent);
 				}
 			}
 
