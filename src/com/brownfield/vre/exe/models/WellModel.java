@@ -31,7 +31,7 @@ public class WellModel {
 
 	/** The vre5. */
 	private VREModel vre5;
-	
+
 	/** The vre6. */
 	private VREModel vre6;
 
@@ -41,13 +41,19 @@ public class WellModel {
 	/** The multi rate test. */
 	private MultiRateTestModel multiRateTest;
 
+	/** The whp tech rate. */
+	private WHPTechRateModel whpTechRate;
+
+	/** The max flow rate. */
+	private MaxFlowRateModel maxFlowRate;
+
 	/** The properties. */
 	private PropertiesModel properties;
 
 	/** The errors. */
 	@Deprecated
 	private ErrorsHolderModel errors;
-	
+
 	/** The error. */
 	private String error;
 
@@ -200,7 +206,8 @@ public class WellModel {
 	/**
 	 * Sets the vre6.
 	 *
-	 * @param vre6 the new vre6
+	 * @param vre6
+	 *            the new vre6
 	 */
 	public void setVre6(VREModel vre6) {
 		this.vre6 = vre6;
@@ -240,6 +247,37 @@ public class WellModel {
 	 */
 	public void setMultiRateTest(MultiRateTestModel multiRateTest) {
 		this.multiRateTest = multiRateTest;
+	}
+
+	/**
+	 * @return the whpTechRate
+	 */
+	@XmlElement(name = "whp_techrate", type = WHPTechRateModel.class)
+	public WHPTechRateModel getWhpTechRate() {
+		return whpTechRate;
+	}
+
+	/**
+	 * @param whpTechRate
+	 *            the whpTechRate to set
+	 */
+	public void setWhpTechRate(WHPTechRateModel whpTechRate) {
+		this.whpTechRate = whpTechRate;
+	}
+
+	/**
+	 * @return the maxFlowRate
+	 */
+	@XmlElement(name = "max_flow_rate", type = MaxFlowRateModel.class)
+	public MaxFlowRateModel getMaxFlowRate() {
+		return maxFlowRate;
+	}
+
+	/**
+	 * @param maxFlowRate the maxFlowRate to set
+	 */
+	public void setMaxFlowRate(MaxFlowRateModel maxFlowRate) {
+		this.maxFlowRate = maxFlowRate;
 	}
 
 	/**
@@ -291,7 +329,8 @@ public class WellModel {
 	}
 
 	/**
-	 * @param error the error to set
+	 * @param error
+	 *            the error to set
 	 */
 	public void setError(String error) {
 		this.error = error;

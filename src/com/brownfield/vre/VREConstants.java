@@ -7,7 +7,6 @@ import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class VREConstants.
  *
@@ -182,7 +181,13 @@ public class VREConstants {
 		VRE6,
 
 		/** The model prediction. */
-		MODEL_PREDICTION
+		MODEL_PREDICTION,
+
+		/** The whp at tech rate. */
+		WHP_AT_TECH_RATE,
+
+		/** The max flow rate. */
+		MAX_FLOW_RATE
 	};
 
 	/** The Constant VRE_LIST. */
@@ -618,19 +623,56 @@ public class VREConstants {
 			+ " WHERE ((\"tagid\" = ?)  AND \"timestamp\" <= ? AND (\"noOfValues\" = '1000')) "
 			+ " ORDER BY \"timestamp\" DESC LIMIT 1 ";
 
-	/** The Constant TECHNICAL_RATE_QUERY. */
-	public static final String TECHNICAL_RATE_QUERY = "SELECT STRING_ID, TECHNICAL_RATE, WELLHEAD_PRESSURE_AT_TECH_RATE, MAX_FLOW_RATE_PRESSURE, RECORDED_DATE, ROW_CHANGED_DATE "
-			+ " FROM STRING_MONTHLY_TARGET_RATE WHERE STRING_ID = ? AND RECORDED_DATE = ? ";
-
-	/** The Constant INSERT_TECHNICAL_RATE_QUERY. */
-	public static final String INSERT_TECHNICAL_RATE_QUERY = "INSERT INTO STRING_MONTHLY_TARGET_RATE (STRING_ID, RECORDED_DATE, TECHNICAL_RATE) "
-			+ " VALUES (?, ?, ?) ";
-
 	/** The Constant INJECTION_WELL_CALIBRATION_QUERY. */
 	public static final String INJECTION_WELL_CALIBRATION_QUERY = "SELECT S.STRING_ID, S.STRING_NAME, SM.PIPESIM_MODEL_LOC, DAM.AVG_WHP, DAM.AVG_WATER_INJ_RATE "
 			+ "	FROM STRING S " + " LEFT OUTER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID "
 			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = S.STRING_ID AND DAM.RECORDED_DATE = ? "
 			+ "	WHERE S.STRING_CATEGORY_ID = 2 AND SM.PIPESIM_MODEL_LOC IS NOT NULL";
+
+	/** The Constant GET_SATELLITE_MEASURED_RATE_TAG. */
+	public static final String GET_SATELLITE_QUERY = "SELECT SATELLITE_ID, SATELLITE_NAME, TAG_MEASURED_RATE FROM SATELLITE";
+
+	/** The Constant MEASURED_RATE_QUERY. */
+	public static final String MEASURED_RATE_QUERY = "SELECT SATELLITE_MEASURED_ID, SATELLITE_ID, MEASURED_RATE, RECORDED_DATE, ROW_CHANGED_DATE "
+			+ " FROM SATELLITE_MEASURED_RATE WHERE SATELLITE_ID = ? AND RECORDED_DATE = ? ";
+
+	/** The Constant WHP_AT_TECH_RATE_QUERY. */
+	public static final String WHP_AT_TECH_RATE_QUERY = "SELECT STRING_TARGET_RATE_ID, SMTR.STRING_ID, WELLHEAD_PRESSURE_AT_TECH_RATE, MAX_FLOW_RATE_PRESSURE, SMTR.RECORDED_DATE, SM.PIPESIM_MODEL_LOC,  "
+			+ " ISNULL(VRE.WATER_CUT, ISNULL(DD.WATER_CUT_LAB, 0)) AS WATER_CUT "
+			+ " FROM STRING_MONTHLY_TARGET_RATE SMTR "
+			+ " INNER JOIN STRING_METADATA SM ON SM.STRING_ID = SMTR.STRING_ID AND SM.PIPESIM_MODEL_LOC IS NOT NULL "
+			+ " LEFT OUTER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = SM.STRING_ID AND DD.RECORDED_DATE = ? "
+			+ " LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VRE ON VRE.STRING_ID = SM.STRING_ID AND VRE.RECORDED_DATE = DD.RECORDED_DATE "
+			+ " WHERE SMTR.RECORDED_DATE  = ? ";
+
+	/** The Constant INSERT_TECHNICAL_RATE_QUERY. */
+	public static final String INSERT_MEASURED_RATE_QUERY = "INSERT INTO SATELLITE_MEASURED_RATE (SATELLITE_ID, RECORDED_DATE, MEASURED_RATE) "
+			+ " VALUES (?, ?, ?) ";
+
+	/** The Constant UPDATE_WHP_AT_TECH_RATE. */
+	public static final String UPDATE_WHP_AT_TECH_RATE = "UPDATE STRING_MONTHLY_TARGET_RATE SET WELLHEAD_PRESSURE_AT_TECH_RATE = ?, ROW_CHANGED_DATE = GETDATE() "
+			+ " WHERE STRING_TARGET_RATE_ID = ? ";
+
+	/** The Constant MAX_FLOW_RATE_QUERY. */
+	public static final String MAX_FLOW_RATE_QUERY = "SELECT S.STRING_ID, S.STRING_CATEGORY_ID, SM.PIPESIM_MODEL_LOC, "
+			+ " ISNULL(VRE.WATER_CUT, ISNULL(DD.WATER_CUT_LAB, 0)) AS WATER_CUT, DAM.AVG_HEADER_PRESSURE,  "
+			+ " CASE WHEN S.STRING_CATEGORY_ID = 2 THEN CAST(VVI.VALUE AS INTEGER) ELSE CAST(VVP.VALUE AS INTEGER) END AS MAXP "
+			+ " FROM STRING S  "
+			+ " INNER JOIN STRING_METADATA SM ON SM.STRING_ID = S.STRING_ID AND SM.PIPESIM_MODEL_LOC IS NOT NULL "
+			+ " LEFT OUTER JOIN DAILY_ALLOCATED_DATA DD ON DD.STRING_ID = S.STRING_ID AND DD.RECORDED_DATE = ? "
+			+ " LEFT OUTER JOIN VIRTUAL_RATE_ESTIMATION VRE ON VRE.STRING_ID = SM.STRING_ID AND VRE.RECORDED_DATE = DD.RECORDED_DATE "
+			+ " LEFT OUTER JOIN DAILY_AVERAGE_MEASUREMENT DAM ON DAM.STRING_ID = SM.STRING_ID AND DAM.RECORDED_DATE = DD.RECORDED_DATE "
+			+ " LEFT OUTER JOIN VRE_VARIABLES AS VVP ON VVP.NAME = 'MAX_RATE_DIFF' "
+			+ " LEFT OUTER JOIN VRE_VARIABLES AS VVI ON VVI.NAME = 'MAX_INJ_RATE_PRESS'";
+
+	/** The Constant STRING_TARGET_RATE_QUERY. */
+	public static final String STRING_TARGET_RATE_QUERY = "SELECT STRING_TARGET_RATE_ID, STRING_ID, TECHNICAL_RATE, WELLHEAD_PRESSURE_AT_TECH_RATE, "
+			+ " MAX_FLOW_RATE_PRESSURE, RECORDED_DATE, ROW_CHANGED_BY, ROW_CHANGED_DATE  "
+			+ " FROM STRING_MONTHLY_TARGET_RATE WHERE STRING_ID = ? AND RECORDED_DATE  = ? ";
+
+	/** The Constant INSERT_TARGET_RATE_QUERY. */
+	public static final String INSERT_TARGET_RATE_QUERY = "INSERT INTO STRING_MONTHLY_TARGET_RATE (STRING_ID, RECORDED_DATE, TECHNICAL_RATE, MAX_FLOW_RATE_PRESSURE) "
+			+ " VALUES (?, ?, ?, ?) ";
 
 	/** The Constant STRING_ALERT_MESSAGE. */
 	public static final String STRING_ALERT_MESSAGE = "%S value (%S) for Well %S is %S value (%S) at time %S";
@@ -643,6 +685,12 @@ public class VREConstants {
 
 	/** The Constant LOWER_LIMIT. */
 	public static final String LOWER_LIMIT = "Below lower limit";
+
+	/** The Constant PRODUCER. */
+	public static final int PRODUCER = 1;
+
+	/** The Constant INJECTOR. */
+	public static final int INJECTOR = 2;
 	// other constants
 
 	/** The flow test. */
@@ -814,6 +862,9 @@ public class VREConstants {
 
 	/** The Constant START_TIMESTAMP. */
 	public static final String START_TIMESTAMP = "startTimestamp";
+
+	/** The Constant TAG_MEASURED_RATE. */
+	public static final String TAG_MEASURED_RATE = "TAG_MEASURED_RATE";
 
 	/** The Constant END_TIMESTAMP. */
 	public static final String END_TIMESTAMP = "endTimestamp";
@@ -1061,6 +1112,24 @@ public class VREConstants {
 	/** The Constant RECALIBRATE_FORCE_HIGH. */
 	public static final int RECALIBRATE_FORCE_HIGH = 300;
 
+	/** The Constant SATELLITE_ID. */
+	public static final String SATELLITE_ID = "SATELLITE_ID";
+
+	/** The Constant STRING_TARGET_RATE_ID. */
+	public static final String STRING_TARGET_RATE_ID = "STRING_TARGET_RATE_ID";
+
+	/** The Constant MEASURED_RATE. */
+	public static final String MEASURED_RATE = "MEASURED_RATE";
+
+	/** The Constant WELLHEAD_PRESSURE_AT_TECH_RATE. */
+	public static final String WELLHEAD_PRESSURE_AT_TECH_RATE = "WELLHEAD_PRESSURE_AT_TECH_RATE";
+
+	/** The Constant MAX_FLOW_RATE_PRESSURE. */
+	public static final String MAX_FLOW_RATE_PRESSURE = "MAX_FLOW_RATE_PRESSURE";
+
+	/** The Constant MAXP. */
+	public static final String MAXP = "MAXP";
+
 	// arguments
 
 	/** The Constant ARG_VRE1. */
@@ -1150,6 +1219,12 @@ public class VREConstants {
 	/** The Constant ARG_TYPE2. */
 	public static final String ARG_TYPE2 = "-type2";
 
+	/** The Constant ARG_QTECH. */
+	public static final String ARG_QTECH = "-qtech";
+
+	/** The Constant ARG_MAXP. */
+	public static final String ARG_MAXP = "-maxp";
+
 	// arguments end
 
 	// BPM constants
@@ -1186,7 +1261,7 @@ public class VREConstants {
 
 	/** The Constant DSBPM_WT_CALIBRATION_BODY2. */
 	public static final String DSBPM_WT_CALIBRATION_BODY2 = "%s well was not auto-calibrated as its predicted rate of %s varies %s%% from test rate %s for date %s which is not within the global limit of %s and %s";
-	
+
 	/** The Constant DSBPM_INJ_CALIBRATION_BODY. */
 	public static final String DSBPM_INJ_CALIBRATION_BODY = "%s injection well was not calibrated as its predicted rate of %s varies %s%% from measured injection rate %s ";
 

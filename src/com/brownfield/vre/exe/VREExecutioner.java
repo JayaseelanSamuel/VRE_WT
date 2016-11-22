@@ -1081,7 +1081,7 @@ public class VREExecutioner {
 					params.add(ARG_JSON + jsonFile);
 					params.add(ARG_WHP + whp);
 					params.add(ARG_WATERCUT + wcut);
-					if (stringModel.getStringCategoryID() == 2) {
+					if (stringModel.getStringCategoryID() == INJECTOR) {
 						params.add(ARG_TYPE2);
 					} else {
 						params.add(ARG_TYPE1);
@@ -1255,6 +1255,124 @@ public class VREExecutioner {
 				if (calibratedCount != 0) {
 					LOGGER.info("Injection VRE6 jobs finished for " + calibratedCount + " strings in on " + new Date());
 				}
+
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Populate WHP at tech rate.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param recordedDate
+	 *            the recorded date
+	 */
+	public void populateWHPAtTechRate(Connection vreConn, Timestamp recordedDate) {
+		int stringID;
+		int stringTargetID;
+		Timestamp startDate = Utils.getStartOfTheMonth(recordedDate);
+		try (PreparedStatement statement = vreConn.prepareStatement(WHP_AT_TECH_RATE_QUERY);) {
+			statement.setTimestamp(1, recordedDate);
+			statement.setTimestamp(2, startDate);
+			try (ResultSet rset = statement.executeQuery();) {
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				long start = System.currentTimeMillis();
+				int rowCount = 0;
+				while (rset.next()) {
+					stringTargetID = rset.getInt(STRING_TARGET_RATE_ID);
+					stringID = rset.getInt(STRING_ID);
+					rowCount++;
+
+					// VRE.exe -modelUZ496L.bps -wc11.2 -qtech3450
+					List<String> params = new ArrayList<>();
+					params.add(VRE_EXE_LOC);// executable
+					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+					params.add(ARG_WATERCUT + (Double) rset.getObject(WATER_CUT));
+					params.add(ARG_QTECH + (Double) rset.getObject(TECHNICAL_RATE));
+					Runnable worker = new VREExeWorker(params, stringID, stringTargetID, VRE_TYPE.WHP_AT_TECH_RATE);
+					executor.execute(worker);
+				}
+				// add this to context listener bucket to force shutdown the
+				// threads
+				VREContextListener.executorList.add(executor);
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+					LOGGER.info("WHPAtTechRate process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking WHPAtTechRate process...");
+				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
+				long end = System.currentTimeMillis();
+				double duration = (end - start) / 1000;
+				LOGGER.info("Finished running WHPAtTechRate for " + rowCount + " strings in " + duration + " seconds");
+
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Populate max flow rate pressure.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param recordedDate
+	 *            the recorded date
+	 */
+	public void populateMaxFlowRatePressure(Connection vreConn, Timestamp recordedDate) {
+		int stringID;
+		Timestamp startDate = Utils.getStartOfTheMonth(recordedDate);
+		try (PreparedStatement statement = vreConn.prepareStatement(MAX_FLOW_RATE_QUERY);) {
+			statement.setTimestamp(1, recordedDate);
+			try (ResultSet rset = statement.executeQuery();) {
+				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				long start = System.currentTimeMillis();
+				int rowCount = 0;
+				while (rset.next()) {
+					stringID = rset.getInt(STRING_ID);
+					rowCount++;
+
+					// VRE.exe -modelUZ496L.bps -wc11.2 -maxp30 -header110 ;
+					// producer
+					// VRE.exe -modelUZ496L.bps -wc11.2 -maxp2500 ; injector
+					List<String> params = new ArrayList<>();
+					params.add(VRE_EXE_LOC);// executable
+					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
+					params.add(ARG_WATERCUT + (Double) rset.getObject(WATER_CUT));
+					params.add(ARG_MAXP + (Double) rset.getObject(MAXP));
+					if (rset.getInt(STRING_CATEGORY_ID) != INJECTOR && rset.getObject(AVG_HEADER_PRESSURE) != null) {
+						params.add(ARG_HEADER + (Double) rset.getObject(AVG_HEADER_PRESSURE));
+					}
+					Runnable worker = new VREExeWorker(params, stringID, startDate, VRE_TYPE.MAX_FLOW_RATE);
+					executor.execute(worker);
+				}
+				// add this to context listener bucket to force shutdown the
+				// threads
+				VREContextListener.executorList.add(executor);
+				executor.shutdown();
+				while (!executor.isTerminated()) {
+					LOGGER.info("MaxFlowRate process still working....");
+					Thread.sleep(10000);
+					LOGGER.info("Checking MaxFlowRate process...");
+				}
+				// remove from bucket if executor is already terminated.
+				VREContextListener.executorList.remove(executor);
+				long end = System.currentTimeMillis();
+				double duration = (end - start) / 1000;
+				LOGGER.info("Finished running MaxFlowRate for " + rowCount + " strings in " + duration + " seconds");
 
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());

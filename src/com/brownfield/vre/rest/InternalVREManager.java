@@ -458,6 +458,30 @@ public class InternalVREManager {
 			e.printStackTrace();
 		}
 	}
+	
+	
+	/**
+	 * Populate satellite measured rates.
+	 *
+	 * @param recordedDate the recorded date
+	 */
+	public void populateSatelliteMeasuredRates(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection();) {
+			LOGGER.info("Populate satellite measured rates started for - " + recordedDate);
+			RatePopulator rp = new RatePopulator();
+			rp.populateSatelliteMeasuredRates(vreConn, phdConn, recordedDate);
+			LOGGER.info("Populate satellite measured finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+	}
 
 	/**
 	 * Run injection calibration.
@@ -475,6 +499,54 @@ public class InternalVREManager {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 			e.printStackTrace();
 		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * Populate WHP at tech rate.
+	 *
+	 * @param recordedDate the recorded date
+	 */
+	public void populateWHPAtTechRate(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection();) {
+			LOGGER.info("Populate WHP at technical rate started for - " + recordedDate);
+			VREExecutioner vreEx = new VREExecutioner();
+			vreEx.populateWHPAtTechRate(vreConn, recordedDate);
+			LOGGER.info("Populate WHP at technical rate finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/**
+	 * Populate max flow rate pressure.
+	 *
+	 * @param recordedDate the recorded date
+	 */
+	public void populateMaxFlowRatePressure(Timestamp recordedDate) {
+		try (Connection vreConn = getVREConnection(); Connection phdConn = getPHDConnection();) {
+			LOGGER.info("Populate Max flow rate pressure started for - " + recordedDate);
+			VREExecutioner vreEx = new VREExecutioner();
+			vreEx.populateMaxFlowRatePressure(vreConn, recordedDate);
+			LOGGER.info("Populate Max flow rate pressure finished for - " + recordedDate);
+		} catch (SQLException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (NamingException e) {
+			LOGGER.log(Level.SEVERE, e.getMessage());
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
 			e.printStackTrace();
 		}

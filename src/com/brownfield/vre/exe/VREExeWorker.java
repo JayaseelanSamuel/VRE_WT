@@ -12,12 +12,14 @@ import static com.brownfield.vre.VREConstants.HIGH_TECH_RATE;
 import static com.brownfield.vre.VREConstants.HOLDUP;
 import static com.brownfield.vre.VREConstants.INSERT_ALERTS_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_REAL_TIME_DATA_QUERY;
+import static com.brownfield.vre.VREConstants.INSERT_TARGET_RATE_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_SHORT_QUERY;
 import static com.brownfield.vre.VREConstants.IS_SEABED;
 import static com.brownfield.vre.VREConstants.LOWER_LIMIT;
 import static com.brownfield.vre.VREConstants.LOW_LIMIT;
 import static com.brownfield.vre.VREConstants.LOW_TECH_RATE;
+import static com.brownfield.vre.VREConstants.MAX_FLOW_RATE_PRESSURE;
 import static com.brownfield.vre.VREConstants.MODEL_PREDECTION_QUERY;
 import static com.brownfield.vre.VREConstants.MONITOR_DAILY_ALERT_DASHBOARD;
 import static com.brownfield.vre.VREConstants.PI;
@@ -29,8 +31,10 @@ import static com.brownfield.vre.VREConstants.SEABED_REMARK;
 import static com.brownfield.vre.VREConstants.SELECT_ALERT_LIMIT_QUERY;
 import static com.brownfield.vre.VREConstants.SELECT_TECHNICAL_RATE_QUERY;
 import static com.brownfield.vre.VREConstants.STRING_ALERT_MESSAGE;
+import static com.brownfield.vre.VREConstants.STRING_TARGET_RATE_QUERY;
 import static com.brownfield.vre.VREConstants.TAGRAWVALUE;
 import static com.brownfield.vre.VREConstants.TAG_TYPE_ID;
+import static com.brownfield.vre.VREConstants.UPDATE_WHP_AT_TECH_RATE;
 import static com.brownfield.vre.VREConstants.UPPER_LIMIT;
 import static com.brownfield.vre.VREConstants.VRE1;
 import static com.brownfield.vre.VREConstants.VRE2;
@@ -73,7 +77,6 @@ import com.brownfield.vre.exe.models.StringModel;
 import com.brownfield.vre.exe.models.VREModel;
 import com.brownfield.vre.exe.models.WellModel;
 
-// TODO: Auto-generated Javadoc
 /**
  * The Class VREExecutioner.
  * 
@@ -113,6 +116,9 @@ public class VREExeWorker implements Runnable {
 
 	/** The whp date. */
 	private Timestamp whpDate;
+
+	/** The string tech rate ID. */
+	private int stringTechRateID;
 
 	/**
 	 * Instantiates a new VRE exe worker.
@@ -191,6 +197,44 @@ public class VREExeWorker implements Runnable {
 		this.vreType = vreType;
 	}
 
+	/**
+	 * Instantiates a new VRE exe worker.
+	 *
+	 * @param params
+	 *            the params
+	 * @param stringID
+	 *            the string ID
+	 * @param stringTechRateID
+	 *            the string tech rate ID
+	 * @param vreType
+	 *            the vre type
+	 */
+	public VREExeWorker(List<String> params, int stringID, int stringTechRateID, VRE_TYPE vreType) {
+		this.params = params;
+		this.stringID = stringID;
+		this.stringTechRateID = stringTechRateID;
+		this.vreType = vreType;
+	}
+
+	/**
+	 * Instantiates a new VRE exe worker.
+	 *
+	 * @param params
+	 *            the params
+	 * @param stringID
+	 *            the string ID
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param vreType
+	 *            the vre type
+	 */
+	public VREExeWorker(List<String> params, int stringID, Timestamp recordedDate, VRE_TYPE vreType) {
+		this.params = params;
+		this.stringID = stringID;
+		this.recordedDate = recordedDate;
+		this.vreType = vreType;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -203,6 +247,10 @@ public class VREExeWorker implements Runnable {
 			this.executeVRE6(threadName);
 		} else if (this.vreType == VRE_TYPE.MODEL_PREDICTION) {
 			this.executeModelPrediction(threadName);
+		} else if (this.vreType == VRE_TYPE.WHP_AT_TECH_RATE) {
+			this.executeWHPAtTechRate(threadName);
+		} else if (this.vreType == VRE_TYPE.MAX_FLOW_RATE) {
+			this.executeMaxFlowRate(threadName);
 		} else {
 			this.executeVRE(threadName);
 		}
@@ -269,12 +317,67 @@ public class VREExeWorker implements Runnable {
 				VREModel vreModel = new VREModel();
 				vreModel.setRateLiquid(rateLiquid);
 				wellModel.setVre6(vreModel);
-				this.insertOrUpdateModelPrediction(stringID, whp, wellModel, recordedDate, vreConn, whpDate);
+				// this.insertOrUpdateModelPrediction(stringID, whp, wellModel,
+				// recordedDate, vreConn, whpDate);
+				this.insertRealTimeData(vreConn, stringID, recordedDate, TagType.VRE6_CALC.getTagTypeID(),
+						whpDate.toString(), whp, rateLiquid);
 			}
 		} else {
 			LOGGER.severe(threadName + " : Something went wrong while predicting model for string - " + stringID);
 		}
 		LOGGER.fine(threadName + " Finished model prediction for " + this.stringID);
+	}
+
+	/**
+	 * Execute WHP at tech rate.
+	 *
+	 * @param threadName
+	 *            the thread name
+	 */
+	private void executeWHPAtTechRate(String threadName) {
+		LOGGER.info(threadName + " : Started to run WHPAtTechRate rate for " + this.stringID);
+		long startT = System.currentTimeMillis();
+		WellModel wellModel = runVRE(params);
+		long endT = System.currentTimeMillis();
+		double duration = ((endT - startT) / 1000);
+		if (wellModel != null) {
+			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
+				LOGGER.info(threadName + " : Time reported in WHPAtTechRate : " + wellModel.getTime());
+				Double whpAtTechRate = wellModel.getWhpTechRate().getWhp();
+				this.updateWHPAtTechRate(vreConn, stringTechRateID, whpAtTechRate);
+			} else {
+				LOGGER.severe(threadName + " : Exception in calling WHPAtTechRate - " + wellModel.getErrors());
+			}
+		} else {
+			LOGGER.severe(threadName + " : Something went wrong while calling WHPAtTechRate for string - " + stringID);
+		}
+		LOGGER.info(threadName + " Finished WHPAtTechRate for " + this.stringID + " in " + duration + " seconds");
+	}
+
+	/**
+	 * Execute max flow rate.
+	 *
+	 * @param threadName
+	 *            the thread name
+	 */
+	private void executeMaxFlowRate(String threadName) {
+		LOGGER.info(threadName + " : Started to run MaxFlowRate rate for " + this.stringID);
+		long startT = System.currentTimeMillis();
+		WellModel wellModel = runVRE(params);
+		long endT = System.currentTimeMillis();
+		double duration = ((endT - startT) / 1000);
+		if (wellModel != null) {
+			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
+				LOGGER.info(threadName + " : Time reported in MaxFlowRate : " + wellModel.getTime());
+				Double maxFlowRatePressure = wellModel.getMaxFlowRate().getWhp();
+				this.insertOrUpdateMaxFlowRate(vreConn, stringID, recordedDate, maxFlowRatePressure);
+			} else {
+				LOGGER.severe(threadName + " : Exception in calling MaxFlowRate - " + wellModel.getErrors());
+			}
+		} else {
+			LOGGER.severe(threadName + " : Something went wrong while calling MaxFlowRate for string - " + stringID);
+		}
+		LOGGER.info(threadName + " Finished MaxFlowRate for " + this.stringID + " in " + duration + " seconds");
 	}
 
 	/**
@@ -648,7 +751,6 @@ public class VREExeWorker implements Runnable {
 		return rowsInserted;
 	}
 
-
 	/**
 	 * Generate technical and model alerts.
 	 *
@@ -904,6 +1006,7 @@ public class VREExeWorker implements Runnable {
 	 * @param whpDate
 	 *            the whp date
 	 */
+	@SuppressWarnings("unused")
 	private void insertOrUpdateModelPrediction(int stringID, double whp, WellModel model, Timestamp recordedDate,
 			Connection vreConn, Timestamp whpDate) {
 		try (PreparedStatement statement = vreConn.prepareStatement(MODEL_PREDECTION_QUERY,
@@ -1005,5 +1108,73 @@ public class VREExeWorker implements Runnable {
 			e.printStackTrace();
 		}
 		return d;
+	}
+
+	/**
+	 * Update WHP at tech rate.
+	 *
+	 * @param vreConn2
+	 *            the vre conn 2
+	 * @param stringTechRateID
+	 *            the string tech rate ID
+	 * @param whpAtTechRate
+	 *            the whp at tech rate
+	 */
+	private void updateWHPAtTechRate(Connection vreConn, int stringTechRateID, Double whpAtTechRate) {
+		try (PreparedStatement stmt = vreConn.prepareStatement(UPDATE_WHP_AT_TECH_RATE);) {
+			stmt.setDouble(1, whpAtTechRate);
+			stmt.setInt(2, stringTechRateID);
+			stmt.executeUpdate();
+			LOGGER.info("updated row in technical rate table with stringTechRateID : " + stringTechRateID
+					+ " with WHP : " + whpAtTechRate);
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Insert or update max flow rate.
+	 *
+	 * @param vreConn
+	 *            the vre conn
+	 * @param stringID
+	 *            the string ID
+	 * @param recordedDate
+	 *            the recorded date
+	 * @param maxFlowRate
+	 *            the max flow rate
+	 */
+	private void insertOrUpdateMaxFlowRate(Connection vreConn, int stringID, Timestamp recordedDate,
+			double maxFlowRate) {
+		try (PreparedStatement statement = vreConn.prepareStatement(STRING_TARGET_RATE_QUERY,
+				ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE)) {
+			statement.setInt(1, stringID);
+			statement.setTimestamp(2, recordedDate);
+			try (ResultSet rset = statement.executeQuery()) {
+				if (rset.next()) {
+					rset.updateDouble(MAX_FLOW_RATE_PRESSURE, maxFlowRate);
+					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateRow();
+				} else {
+					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_TARGET_RATE_QUERY);) {
+						stmt.setInt(1, stringID);
+						stmt.setTimestamp(2, recordedDate);
+						stmt.setObject(3, null);
+						stmt.setDouble(4, maxFlowRate);
+						stmt.executeUpdate();
+					} catch (Exception e) {
+						LOGGER.severe(e.getMessage());
+						e.printStackTrace();
+					}
+				}
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
 	}
 }

@@ -45,6 +45,7 @@ public class VREBaseResource {
 	@Path("/refreshVariables")
 	public Response refreshVariables() {
 		String result = "Refreshed VRE variables";
+		result = "{ \"value\" : [\"" + result + "\"] }";
 		InternalVREManager ivm = new InternalVREManager();
 		ivm.refreshVariables();
 		return Response.status(200).entity(result).build();
@@ -347,6 +348,35 @@ public class VREBaseResource {
 	}
 
 	/**
+	 * Populate satellite measured rates.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/populateSatelliteMeasuredRates")
+	public Response populateSatelliteMeasuredRates(@QueryParam("date") String date) {
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			// get tomorrows date
+			recordedDate = Utils.getNextOrPreviousDay(new Timestamp(new Date().getTime()), 1);
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Populated satellite measured rates for  - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.populateSatelliteMeasuredRates(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
 	 * Run injection calibration.
 	 *
 	 * @param date
@@ -368,6 +398,62 @@ public class VREBaseResource {
 			result = "Ran injection calibration for - " + recordedDate;
 			InternalVREManager ivm = new InternalVREManager();
 			ivm.runInjectionCalibration(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Populate WHP at tech rate.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/populateWHPAtTechRate")
+	public Response populateWHPAtTechRate(@QueryParam("date") String date) {
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			recordedDate = Utils.getYesterdayTimestamp();
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Populated WHPAtTechRate for  - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.populateWHPAtTechRate(recordedDate);
+		} else {
+			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
+					+ VREConstants.DATE_FORMAT + "}";
+		}
+		return Response.status(200).entity(result).build();
+	}
+
+	/**
+	 * Populate max flow rate pressure.
+	 *
+	 * @param date
+	 *            the date
+	 * @return the response
+	 */
+	@GET
+	@Path("/populateMaxFlowRatePressure")
+	public Response populateMaxFlowRatePressure(@QueryParam("date") String date) {
+		Timestamp recordedDate = null;
+		String result = null;
+		if (date == null || date.length() == 0) {
+			recordedDate = Utils.getYesterdayTimestamp();
+		} else {
+			recordedDate = Utils.parseDate(date);
+		}
+		if (recordedDate != null) {
+			result = "Populated MaxFlowRatePressure for  - " + recordedDate;
+			InternalVREManager ivm = new InternalVREManager();
+			ivm.populateMaxFlowRatePressure(recordedDate);
 		} else {
 			result = "Invalid date format. Please use either {" + VREConstants.DATE_TIME_FORMAT + "} OR {"
 					+ VREConstants.DATE_FORMAT + "}";
