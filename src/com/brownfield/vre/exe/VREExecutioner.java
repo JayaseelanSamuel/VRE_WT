@@ -1294,8 +1294,8 @@ public class VREExecutioner {
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
 					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
-					params.add(ARG_WATERCUT + (Double) rset.getObject(WATER_CUT));
-					params.add(ARG_QTECH + (Double) rset.getObject(TECHNICAL_RATE));
+					params.add(ARG_WATERCUT + rset.getDouble(WATER_CUT));
+					params.add(ARG_QTECH + rset.getDouble(TECHNICAL_RATE));
 					Runnable worker = new VREExeWorker(params, stringID, stringTargetID, VRE_TYPE.WHP_AT_TECH_RATE);
 					executor.execute(worker);
 				}
@@ -1351,8 +1351,8 @@ public class VREExecutioner {
 					List<String> params = new ArrayList<>();
 					params.add(VRE_EXE_LOC);// executable
 					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
-					params.add(ARG_WATERCUT + (Double) rset.getObject(WATER_CUT));
-					params.add(ARG_MAXP + (Double) rset.getObject(MAXP));
+					params.add(ARG_WATERCUT + rset.getDouble(WATER_CUT));
+					params.add(ARG_MAXP + rset.getDouble(MAXP));
 					if (rset.getInt(STRING_CATEGORY_ID) != INJECTOR && rset.getObject(AVG_HEADER_PRESSURE) != null) {
 						params.add(ARG_HEADER + (Double) rset.getObject(AVG_HEADER_PRESSURE));
 					}

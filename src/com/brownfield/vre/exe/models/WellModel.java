@@ -268,7 +268,7 @@ public class WellModel {
 	/**
 	 * @return the maxFlowRate
 	 */
-	@XmlElement(name = "max_flow_rate", type = MaxFlowRateModel.class)
+	@XmlElement(name = "max_flowrate", type = MaxFlowRateModel.class)
 	public MaxFlowRateModel getMaxFlowRate() {
 		return maxFlowRate;
 	}

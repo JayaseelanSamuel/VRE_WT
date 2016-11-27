@@ -1,13 +1,11 @@
 package com.brownfield.vre.exe;
 
 import static com.brownfield.vre.VREConstants.CHOKE_MULTIPLIER;
-import static com.brownfield.vre.VREConstants.DATE_FORMAT_DSPM;
 import static com.brownfield.vre.VREConstants.DEFAULT_REMARK;
 import static com.brownfield.vre.VREConstants.DEFAULT_WATER_CUT;
 import static com.brownfield.vre.VREConstants.EMAIL_GROUP;
 import static com.brownfield.vre.VREConstants.FRICTION_FACTOR;
 import static com.brownfield.vre.VREConstants.GOR;
-import static com.brownfield.vre.VREConstants.HIGH_LIMIT;
 import static com.brownfield.vre.VREConstants.HIGH_TECH_RATE;
 import static com.brownfield.vre.VREConstants.HOLDUP;
 import static com.brownfield.vre.VREConstants.INSERT_ALERTS_QUERY;
@@ -17,11 +15,11 @@ import static com.brownfield.vre.VREConstants.INSERT_VRE_QUERY;
 import static com.brownfield.vre.VREConstants.INSERT_VRE_SHORT_QUERY;
 import static com.brownfield.vre.VREConstants.IS_SEABED;
 import static com.brownfield.vre.VREConstants.LOWER_LIMIT;
-import static com.brownfield.vre.VREConstants.LOW_LIMIT;
 import static com.brownfield.vre.VREConstants.LOW_TECH_RATE;
 import static com.brownfield.vre.VREConstants.MAX_FLOW_RATE_PRESSURE;
+import static com.brownfield.vre.VREConstants.MODEL_ALERT_MESSAGE;
 import static com.brownfield.vre.VREConstants.MODEL_PREDECTION_QUERY;
-import static com.brownfield.vre.VREConstants.MONITOR_DAILY_ALERT_DASHBOARD;
+import static com.brownfield.vre.VREConstants.PERCENT_LIMIT;
 import static com.brownfield.vre.VREConstants.PI;
 import static com.brownfield.vre.VREConstants.REMARK;
 import static com.brownfield.vre.VREConstants.RESERVOIR_PRESSURE;
@@ -36,6 +34,7 @@ import static com.brownfield.vre.VREConstants.TAGRAWVALUE;
 import static com.brownfield.vre.VREConstants.TAG_TYPE_ID;
 import static com.brownfield.vre.VREConstants.UPDATE_WHP_AT_TECH_RATE;
 import static com.brownfield.vre.VREConstants.UPPER_LIMIT;
+import static com.brownfield.vre.VREConstants.VALUE;
 import static com.brownfield.vre.VREConstants.VRE1;
 import static com.brownfield.vre.VREConstants.VRE2;
 import static com.brownfield.vre.VREConstants.VRE3;
@@ -46,7 +45,6 @@ import static com.brownfield.vre.VREConstants.VRE_TABLE_SELECT_QUERY;
 import static com.brownfield.vre.VREConstants.VRE_WORKFLOW;
 import static com.brownfield.vre.VREConstants.WATER_CUT;
 import static com.brownfield.vre.VREConstants.WATER_CUT_FLAG;
-import static com.brownfield.vre.VREConstants.WELLS_DASHBOARD_LINK;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +72,6 @@ import com.brownfield.vre.VREConstants.ALERT_TYPE;
 import com.brownfield.vre.VREConstants.SOURCE;
 import com.brownfield.vre.VREConstants.VRE_TYPE;
 import com.brownfield.vre.exe.models.StringModel;
-import com.brownfield.vre.exe.models.VREModel;
 import com.brownfield.vre.exe.models.WellModel;
 
 /**
@@ -313,10 +310,10 @@ public class VREExeWorker implements Runnable {
 		if (output != null) {
 			Double rateLiquid = this.getVRE6Value(output);
 			if (rateLiquid != null) {
-				WellModel wellModel = new WellModel();
-				VREModel vreModel = new VREModel();
-				vreModel.setRateLiquid(rateLiquid);
-				wellModel.setVre6(vreModel);
+				// WellModel wellModel = new WellModel();
+				// VREModel vreModel = new VREModel();
+				// vreModel.setRateLiquid(rateLiquid);
+				// wellModel.setVre6(vreModel);
 				// this.insertOrUpdateModelPrediction(stringID, whp, wellModel,
 				// recordedDate, vreConn, whpDate);
 				this.insertRealTimeData(vreConn, stringID, recordedDate, TagType.VRE6_CALC.getTagTypeID(),
@@ -369,7 +366,7 @@ public class VREExeWorker implements Runnable {
 		if (wellModel != null) {
 			if (wellModel.getError() == null || wellModel.getError().isEmpty()) {
 				LOGGER.info(threadName + " : Time reported in MaxFlowRate : " + wellModel.getTime());
-				Double maxFlowRatePressure = wellModel.getMaxFlowRate().getWhp();
+				Double maxFlowRatePressure = wellModel.getMaxFlowRate().getHeaderPressure();
 				this.insertOrUpdateMaxFlowRate(vreConn, stringID, recordedDate, maxFlowRatePressure);
 			} else {
 				LOGGER.severe(threadName + " : Exception in calling MaxFlowRate - " + wellModel.getErrors());
@@ -788,8 +785,8 @@ public class VREExeWorker implements Runnable {
 				if (rset.next()) { // only one record
 					double lowTechRate = rset.getDouble(LOW_TECH_RATE);
 					double highTechRate = rset.getDouble(HIGH_TECH_RATE);
-					rowsInserted += generateAlert(vreConn, stringModel, TagType.TECHNICAL_RATE, recordedDate, vre,
-							lowTechRate, highTechRate);
+					rowsInserted += generateTechnicalRateAlert(vreConn, stringModel, recordedDate, vre, lowTechRate,
+							highTechRate);
 				}
 			} catch (Exception e) {
 				LOGGER.severe(e.getMessage());
@@ -808,32 +805,32 @@ public class VREExeWorker implements Runnable {
 						+ recordedDate);
 				while (rset.next()) {
 					int tagTypeID = rset.getInt(TAG_TYPE_ID);
-					double lowLimit = rset.getDouble(LOW_LIMIT);
-					double highLimit = rset.getDouble(HIGH_LIMIT);
+					double percentLimit = rset.getDouble(PERCENT_LIMIT);
+					double preValue = rset.getDouble(VALUE);
 
 					if (tagTypeID == TagType.GOR.getTagTypeID()) {
-						rowsInserted += generateAlert(vreConn, stringModel, TagType.GOR, recordedDate, gor, lowLimit,
-								highLimit);
+						rowsInserted += generateModelAlert(vreConn, stringModel, TagType.GOR, recordedDate, gor,
+								preValue, percentLimit);
 						continue;
 					}
 					if (tagTypeID == TagType.PI.getTagTypeID()) {
-						rowsInserted += generateAlert(vreConn, stringModel, TagType.PI, recordedDate, pi, lowLimit,
-								highLimit);
+						rowsInserted += generateModelAlert(vreConn, stringModel, TagType.PI, recordedDate, pi, preValue,
+								percentLimit);
 						continue;
 					}
 					if (tagTypeID == TagType.HOLDUP.getTagTypeID()) {
-						rowsInserted += generateAlert(vreConn, stringModel, TagType.HOLDUP, recordedDate, holdUPV,
-								lowLimit, highLimit);
+						rowsInserted += generateModelAlert(vreConn, stringModel, TagType.HOLDUP, recordedDate, holdUPV,
+								preValue, percentLimit);
 						continue;
 					}
 					if (tagTypeID == TagType.FRICTION_FACTOR.getTagTypeID()) {
-						rowsInserted += generateAlert(vreConn, stringModel, TagType.FRICTION_FACTOR, recordedDate, ffv,
-								lowLimit, highLimit);
+						rowsInserted += generateModelAlert(vreConn, stringModel, TagType.FRICTION_FACTOR, recordedDate,
+								ffv, preValue, percentLimit);
 						continue;
 					}
 					if (tagTypeID == TagType.RESERVOIR_PRESSURE.getTagTypeID()) {
-						rowsInserted += generateAlert(vreConn, stringModel, TagType.RESERVOIR_PRESSURE, recordedDate,
-								resPres, lowLimit, highLimit);
+						rowsInserted += generateModelAlert(vreConn, stringModel, TagType.RESERVOIR_PRESSURE,
+								recordedDate, resPres, preValue, percentLimit);
 						continue;
 					}
 				}
@@ -870,9 +867,7 @@ public class VREExeWorker implements Runnable {
 	 * @return the string
 	 */
 	private String insertAlert(Connection vreConn, String stringName, TagType tagType, ALERT_TYPE alertType,
-			String msgType, Timestamp recordedDate, Double value, double limit) {
-		String message = String.format(STRING_ALERT_MESSAGE, tagType, value, stringName, msgType, limit, recordedDate);
-
+			String message, Timestamp recordedDate) {
 		try (PreparedStatement ps = vreConn.prepareStatement(INSERT_ALERTS_QUERY);) {
 			ps.setInt(1, stringID);
 			ps.setInt(2, alertType.getAlertTypeID());
@@ -891,8 +886,51 @@ public class VREExeWorker implements Runnable {
 		return message;
 	}
 
+	private int generateTechnicalRateAlert(Connection vreConn, StringModel stringModel, Timestamp recordedDate,
+			Double value, double lowLimit, double highLimit) {
+		/*
+		 * String wellMonitorDailyAlert = String.format(WELLS_DASHBOARD_LINK,
+		 * MONITOR_DAILY_ALERT_DASHBOARD, stringModel.getStringID(),
+		 * Utils.convertToString(recordedDate, DATE_FORMAT_DSPM),
+		 * Utils.convertToString(recordedDate, DATE_FORMAT_DSPM));
+		 */
+		if (value < lowLimit) {
+			String message = String.format(STRING_ALERT_MESSAGE, TagType.TECHNICAL_RATE, value,
+					stringModel.getStringName(), LOWER_LIMIT, lowLimit, recordedDate);
+			this.insertAlert(vreConn, stringModel.getStringName(), TagType.TECHNICAL_RATE, ALERT_TYPE.LOWER, message,
+					recordedDate);
+			/*
+			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
+			 * APP_BASE_URL + wellMonitorDailyAlert,
+			 * String.format(DSBPM_ALERT_SUBJECT, tagType,
+			 * stringModel.getStringName()), message);
+			 */
+			LOGGER.info("Generating " + ALERT_TYPE.LOWER + " alert for : " + TagType.TECHNICAL_RATE + " and string : "
+					+ stringModel.getStringName() + " with value " + value + " and limit : " + lowLimit + " & Date : "
+					+ recordedDate + " and emailing it to : " + EMAIL_GROUP);
+			return 1;
+		}
+		if (value > highLimit) {
+			String message = String.format(STRING_ALERT_MESSAGE, TagType.TECHNICAL_RATE, value,
+					stringModel.getStringName(), UPPER_LIMIT, highLimit, recordedDate);
+			this.insertAlert(vreConn, stringModel.getStringName(), TagType.TECHNICAL_RATE, ALERT_TYPE.UPPER, message,
+					recordedDate);
+			/*
+			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
+			 * APP_BASE_URL + wellMonitorDailyAlert,
+			 * String.format(DSBPM_ALERT_SUBJECT, tagType,
+			 * stringModel.getStringName()), message);
+			 */
+			LOGGER.info("Generating " + ALERT_TYPE.UPPER + " alert for : " + TagType.TECHNICAL_RATE + " and string : "
+					+ stringModel.getStringName() + " with value " + value + " and limit : " + highLimit + " & Date : "
+					+ recordedDate + " and emailing it to : " + EMAIL_GROUP);
+			return 1;
+		}
+		return 0;
+	}
+
 	/**
-	 * Generate alert.
+	 * Generate model alert.
 	 *
 	 * @param vreConn
 	 *            the vre conn
@@ -904,43 +942,30 @@ public class VREExeWorker implements Runnable {
 	 *            the recorded date
 	 * @param value
 	 *            the value
-	 * @param lowLimit
-	 *            the low limit
-	 * @param highLimit
-	 *            the high limit
+	 * @param preValue
+	 *            the pre value
+	 * @param percentLimit
+	 *            the percent limit
 	 * @return the int
 	 */
-	private int generateAlert(Connection vreConn, StringModel stringModel, TagType tagType, Timestamp recordedDate,
-			Double value, double lowLimit, double highLimit) {
-		String wellMonitorDailyAlert = String.format(WELLS_DASHBOARD_LINK, MONITOR_DAILY_ALERT_DASHBOARD,
-				stringModel.getStringID(), Utils.convertToString(recordedDate, DATE_FORMAT_DSPM),
-				Utils.convertToString(recordedDate, DATE_FORMAT_DSPM));
-		if (value < lowLimit) {
-			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.LOWER,
-					UPPER_LIMIT, recordedDate, value, lowLimit);
-			/*
-			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
-			 * APP_BASE_URL + wellMonitorDailyAlert,
-			 * String.format(DSBPM_ALERT_SUBJECT, tagType,
-			 * stringModel.getStringName()), message);
-			 */
-			LOGGER.info("Generating " + ALERT_TYPE.LOWER + " alert for : " + tagType + " and string : "
-					+ stringModel.getStringName() + " with value " + value + " and limit : " + lowLimit + " & Date : "
-					+ recordedDate + " and emailing it to : " + EMAIL_GROUP);
-			return 1;
-		}
-		if (value > highLimit) {
-			String message = this.insertAlert(vreConn, stringModel.getStringName(), tagType, ALERT_TYPE.UPPER,
-					LOWER_LIMIT, recordedDate, value, highLimit);
-			/*
-			 * AlertHandler.notifyByEmail(EMAIL_GROUP, DSBPM_ALERT_TEMPLATE,
-			 * APP_BASE_URL + wellMonitorDailyAlert,
-			 * String.format(DSBPM_ALERT_SUBJECT, tagType,
-			 * stringModel.getStringName()), message);
-			 */
-			LOGGER.info("Generating " + ALERT_TYPE.UPPER + " alert for : " + tagType + " and string : "
-					+ stringModel.getStringName() + " with value " + value + " and limit : " + highLimit + " & Date : "
-					+ recordedDate + " and emailing it to : " + EMAIL_GROUP);
+	private int generateModelAlert(Connection vreConn, StringModel stringModel, TagType tagType, Timestamp recordedDate,
+			Double value, double preValue, double percentLimit) {
+
+		boolean withinTrend = Utils.isWithinLimit(value, preValue, percentLimit);
+
+		if (!withinTrend) {
+			ALERT_TYPE alertType = ALERT_TYPE.UPPER;
+			if (value < preValue) {
+				alertType = ALERT_TYPE.LOWER;
+			}
+
+			String message = String.format(MODEL_ALERT_MESSAGE, tagType, value, stringModel.getStringName(),
+					percentLimit, preValue, recordedDate);
+			this.insertAlert(vreConn, stringModel.getStringName(), tagType, alertType, message, recordedDate);
+
+			LOGGER.info("Generating " + alertType + " alert for : " + tagType + " and string : "
+					+ stringModel.getStringName() + " with value " + value + " and percent limit : " + percentLimit
+					+ " & Date : " + recordedDate + " and emailing it to : " + EMAIL_GROUP);
 			return 1;
 		}
 		return 0;
@@ -1069,7 +1094,7 @@ public class VREExeWorker implements Runnable {
 			statement.setInt(3, tagTypeID);
 			statement.setObject(4, quality);
 			statement.setObject(5, processedValue);
-			statement.setObject(6, rawValue);
+			statement.setDouble(6, rawValue);
 			// statement.setObject(7, VRE_WORKFLOW);
 
 			rowsInserted = statement.executeUpdate();

@@ -8,46 +8,82 @@ import javax.xml.bind.annotation.XmlRootElement;
  * 
  * @author Onkar Dhuri <onkar.dhuri@synerzip.com>
  */
-@XmlRootElement(name = "max_flow_rate")
+@XmlRootElement(name = "max_flowrate")
 public class MaxFlowRateModel {
-	/** The tech rate. */
-	private Double techRate;
 
-	/** The whp. */
-	private Double whp;
+	/** The header pressure. */
+	private Double headerPressure;
+
+	/** The minimum whp. */
+	private Double minimumWhp;
+
+	/** The rate liquid. */
+	private Double rateLiquid;
+
+	/** The rate oil. */
+	private Double rateOil;
 
 	/** The time. */
 	private Double time;
 
 	/**
-	 * @return the techRate
+	 * @return the headerPressure
 	 */
-	@XmlElement(name = "techrate")
-	public Double getTechRate() {
-		return techRate;
+	@XmlElement(name = "header_pressure")
+	public Double getHeaderPressure() {
+		return headerPressure;
 	}
 
 	/**
-	 * @param techRate
-	 *            the techRate to set
+	 * @param headerPressure the headerPressure to set
 	 */
-	public void setTechRate(Double techRate) {
-		this.techRate = techRate;
+	public void setHeaderPressure(Double headerPressure) {
+		this.headerPressure = headerPressure;
 	}
 
 	/**
-	 * @return the whp
+	 * @return the minimumWhp
 	 */
-	public Double getWhp() {
-		return whp;
+	@XmlElement(name = "minimum_whp")
+	public Double getMinimumWhp() {
+		return minimumWhp;
 	}
 
 	/**
-	 * @param whp
-	 *            the whp to set
+	 * @param minimumWhp the minimumWhp to set
 	 */
-	public void setWhp(Double whp) {
-		this.whp = whp;
+	public void setMinimumWhp(Double minimumWhp) {
+		this.minimumWhp = minimumWhp;
+	}
+
+	/**
+	 * @return the rateLiquid
+	 */
+	@XmlElement(name = "rate_liquid")
+	public Double getRateLiquid() {
+		return rateLiquid;
+	}
+
+	/**
+	 * @param rateLiquid the rateLiquid to set
+	 */
+	public void setRateLiquid(Double rateLiquid) {
+		this.rateLiquid = rateLiquid;
+	}
+
+	/**
+	 * @return the rateOil
+	 */
+	@XmlElement(name = "rate_oil")
+	public Double getRateOil() {
+		return rateOil;
+	}
+
+	/**
+	 * @param rateOil the rateOil to set
+	 */
+	public void setRateOil(Double rateOil) {
+		this.rateOil = rateOil;
 	}
 
 	/**
@@ -58,10 +94,10 @@ public class MaxFlowRateModel {
 	}
 
 	/**
-	 * @param time
-	 *            the time to set
+	 * @param time the time to set
 	 */
 	public void setTime(Double time) {
 		this.time = time;
 	}
+
 }
