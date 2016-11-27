@@ -206,7 +206,8 @@ public class VREExeWorker implements Runnable {
 	 * @param vreType
 	 *            the vre type
 	 */
-	public VREExeWorker(List<String> params, int stringID, int stringTechRateID, VRE_TYPE vreType) {
+	public VREExeWorker(Connection vreConn, List<String> params, int stringID, int stringTechRateID, VRE_TYPE vreType) {
+		this.vreConn = vreConn;
 		this.params = params;
 		this.stringID = stringID;
 		this.stringTechRateID = stringTechRateID;
@@ -225,7 +226,8 @@ public class VREExeWorker implements Runnable {
 	 * @param vreType
 	 *            the vre type
 	 */
-	public VREExeWorker(List<String> params, int stringID, Timestamp recordedDate, VRE_TYPE vreType) {
+	public VREExeWorker(Connection vreConn, List<String> params, int stringID, Timestamp recordedDate, VRE_TYPE vreType) {
+		this.vreConn = vreConn;
 		this.params = params;
 		this.stringID = stringID;
 		this.recordedDate = recordedDate;

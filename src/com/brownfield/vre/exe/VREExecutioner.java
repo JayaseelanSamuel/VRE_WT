@@ -1296,7 +1296,7 @@ public class VREExecutioner {
 					params.add(ARG_MODEL + rset.getString(PIPESIM_MODEL_LOC));
 					params.add(ARG_WATERCUT + rset.getDouble(WATER_CUT));
 					params.add(ARG_QTECH + rset.getDouble(TECHNICAL_RATE));
-					Runnable worker = new VREExeWorker(params, stringID, stringTargetID, VRE_TYPE.WHP_AT_TECH_RATE);
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, stringTargetID, VRE_TYPE.WHP_AT_TECH_RATE);
 					executor.execute(worker);
 				}
 				// add this to context listener bucket to force shutdown the
@@ -1354,9 +1354,9 @@ public class VREExecutioner {
 					params.add(ARG_WATERCUT + rset.getDouble(WATER_CUT));
 					params.add(ARG_MAXP + rset.getDouble(MAXP));
 					if (rset.getInt(STRING_CATEGORY_ID) != INJECTOR && rset.getObject(AVG_HEADER_PRESSURE) != null) {
-						params.add(ARG_HEADER + (Double) rset.getObject(AVG_HEADER_PRESSURE));
+						params.add(ARG_HEADER + rset.getDouble(AVG_HEADER_PRESSURE));
 					}
-					Runnable worker = new VREExeWorker(params, stringID, startDate, VRE_TYPE.MAX_FLOW_RATE);
+					Runnable worker = new VREExeWorker(vreConn, params, stringID, startDate, VRE_TYPE.MAX_FLOW_RATE);
 					executor.execute(worker);
 				}
 				// add this to context listener bucket to force shutdown the
