@@ -100,10 +100,10 @@ public class VREBaseResource {
 	 */
 	@GET
 	@Path("/runCalibration")
-	public Response runCalibration() {
+	public Response runCalibration(@QueryParam("stringID") int stringIDparam,@QueryParam("testType") String testType) {
 		String result = "Recalibration of models started";
 		InternalVREManager ivm = new InternalVREManager();
-		ivm.runCalibration();
+		ivm.runCalibration(stringIDparam,testType);
 		return Response.status(200).entity(result).build();
 	}
 

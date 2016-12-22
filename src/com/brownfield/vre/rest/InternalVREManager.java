@@ -81,6 +81,8 @@ public class InternalVREManager {
 			LOGGER.info("Refreshing VRE variables started !!!");
 			Utils.refreshVariables(vreConn);
 			Utils.refreshProperties();
+			//Changed by Jay
+			Utils.refreshEmailGroup(vreConn);
 			LOGGER.info("Refreshing VRE variables finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());
@@ -135,12 +137,12 @@ public class InternalVREManager {
 
 	/**
 	 * Run calibration.
-	 */
-	public void runCalibration() {
+	 */ //changed by Jay
+	public void runCalibration(int stringIDParam,String testType) {
 		try (Connection vreConn = getVREConnection()) {
-			LOGGER.info("Run calibrations started !!!");
+			LOGGER.info("Run calibrations started !!! with atrindIDparam "+stringIDParam+" test type"+testType);
 			VREExecutioner vreEx = new VREExecutioner();
-			vreEx.runCalibration(vreConn);
+			vreEx.runCalibration(vreConn,stringIDParam,testType);
 			LOGGER.info("Run calibrations finished !!!");
 		} catch (SQLException e) {
 			LOGGER.log(Level.SEVERE, e.getMessage());

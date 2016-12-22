@@ -99,7 +99,9 @@ public class VREExecutioner {
 		try (PreparedStatement statement = vreConn.prepareStatement(VRE_DATASET_QUERY);) {
 			statement.setTimestamp(1, recordedDate);
 			try (ResultSet rset = statement.executeQuery();) {
-				ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				//ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_PIPESIM_LICENCES);
+				LOGGER.info("changing threads");
+				ExecutorService executor = Executors.newFixedThreadPool(1);
 				long start = System.currentTimeMillis();
 				int rowCount = 0;
 				while (rset.next()) {
@@ -519,7 +521,7 @@ public class VREExecutioner {
 				: false;
 
 		LOGGER.info("Running VREPostRecalibration for : " + stringID + " & Date : " + wellTestDate + " isAutomated : "
-				+ isAutomated + " calibrateFlag : " + calibrateFlag);
+				+ isAutomated + " calibrateFlag : " + calibrateFlag + " User : " + user + " RECAL_DATE_DIFF : " + RECAL_DATE_DIFF + " isHistoric : " + isHistoric);
 
 		StringModel sm = Utils.getStringModel(vreConn, stringID);
 
@@ -594,6 +596,7 @@ public class VREExecutioner {
 		}
 
 		if (isAutomated) {
+			//Jay Changes
 			// model is already calibrated/de-calibrated
 			Timestamp startDate = wellTestDate;
 			Timestamp endDate = isHistoric ? wellTestDate : currDate;
@@ -664,9 +667,10 @@ public class VREExecutioner {
 					double duration = (end - start) / 1000;
 					LOGGER.info("Finished running VREs post calibration for " + rowCount + " records in " + duration
 							+ " seconds");
-
-					if (isHistoric) {
+                    LOGGER.info("before resetting the model"+user+" isHistoric "+isHistoric);
+					if (isHistoric && !user.equalsIgnoreCase("FT Calibration")) {
 						// reset model back to latest value
+						LOGGER.info("inside resetting the model"+user);
 						this.resetModel(vreConn, sm, 100, 0);
 					}
 
@@ -693,10 +697,28 @@ public class VREExecutioner {
 	 * @param vreConn
 	 *            the vre conn
 	 */
-	public void runCalibration(Connection vreConn) {
+	public void runCalibration(Connection vreConn,int stringIDParam,String testType) {
 		int stringID, wellTestID;
-		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-				ResultSet rset = statement.executeQuery(WELL_TEST_CALIBRATE_QUERY);) {
+		//Jay changes
+		ResultSet rset=null;
+		try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);) {
+			if (testType != null && testType.equalsIgnoreCase("FT")){
+				RECAL_WORKFLOW="FT Calibration";
+				if(stringIDParam > 0  ) {
+					LOGGER.info("The Query to be executed for calibration is" + LAST_WELL_TEST_CALIBRATE_QUERY_WITHSTRING);
+					rset = statement.executeQuery(LAST_WELL_TEST_CALIBRATE_QUERY_WITHSTRING);
+				}
+				else {
+					LOGGER.info("The Query to be executed for calibration is" + LAST_WELL_TEST_CALIBRATE_QUERY);
+				    rset = statement.executeQuery(LAST_WELL_TEST_CALIBRATE_QUERY);
+				}
+			}
+			else{
+				LOGGER.info("The Query to be executed for calibration is" + WELL_TEST_CALIBRATE_QUERY);
+			   rset = statement.executeQuery(WELL_TEST_CALIBRATE_QUERY);
+			}
+		/*try (Statement statement = vreConn.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
+				ResultSet rset = statement.executeQuery(LAST_WELL_TEST_CALIBRATE_QUERY_WITHSTRING);) {*/
 			if (rset != null) {
 				// leave 1 license for main thread which will calibrate the well
 				// model
@@ -706,7 +728,7 @@ public class VREExecutioner {
 					wellTestID = rset.getInt(WELL_TEST_ID);
 					stringID = rset.getInt(STRING_ID);
 					double whp = rset.getDouble(WHP1);
-					double wcut = rset.getDouble(TEST_WATER_CUT);
+					double wcut = rset.getDouble(WATER_CUT_LAB);
 					double qLiq = rset.getDouble(QL1);
 					Date effectiveTestDate = rset.getDate(EFFECTIVE_DATE);
 					StringModel stringModel = Utils.getStringModel(vreConn, stringID);
@@ -773,10 +795,21 @@ public class VREExecutioner {
 					} else {
 						LOGGER.severe("Something went wrong while calling recal for string - " + stringID);
 					}
-					rset.updateBoolean(IS_CALIBRATED, isCalibrated);
-					rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
-					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
-					rset.updateRow();
+					/*if(testType!=null && testType.equalsIgnoreCase("FT")){*/
+						PreparedStatement ps=vreConn.prepareStatement("update WELL_TEST set IS_CALIBRATED=?,ROW_CHANGED_BY=?,ROW_CHANGED_DATE=? where WELL_TEST_ID=?");
+						ps.setBoolean(1,isCalibrated);
+						ps.setString(2, RECAL_WORKFLOW);
+						ps.setTimestamp(3, new Timestamp(new Date().getTime()));
+						ps.setInt(4, wellTestID);
+						ps.executeUpdate();
+						ps.close();
+					/*}
+					else{
+						rset.updateBoolean(IS_CALIBRATED, isCalibrated);
+						rset.updateString(ROW_CHANGED_BY, RECAL_WORKFLOW);
+						rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+						rset.updateRow();
+					}*/
 				}
 				if (rowCount != 0) {
 					LOGGER.info("VRE6 jobs submitted for " + rowCount + " strings in on " + new Date());

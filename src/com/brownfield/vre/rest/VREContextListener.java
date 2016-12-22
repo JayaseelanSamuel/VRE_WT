@@ -69,6 +69,7 @@ public class VREContextListener implements ServletContextListener {
 			if (datasource != null) {
 				Connection conn = datasource.getConnection();
 				Utils.refreshVariables(conn);
+				Utils.refreshEmailGroup(conn);
 
 			} else {
 				LOGGER.log(Level.SEVERE, "Failed to lookup datasource.");

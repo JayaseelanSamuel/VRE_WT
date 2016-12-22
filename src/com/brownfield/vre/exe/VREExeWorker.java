@@ -49,6 +49,7 @@ import static com.brownfield.vre.VREConstants.WATER_CUT_FLAG;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -404,9 +405,10 @@ public class VREExeWorker implements Runnable {
 			duration = ((endT - startT));
 			LOGGER.fine(" : Time to start process : " + duration + " milliseconds");
 			startT = System.currentTimeMillis();
-
+			
+            
 			InputStream input = p.getInputStream();
-
+			
 			endT = System.currentTimeMillis();
 			duration = ((endT - startT));
 			LOGGER.fine(" : Time to get input stream : " + duration + " milliseconds");
@@ -1189,6 +1191,8 @@ public class VREExeWorker implements Runnable {
 						stmt.setTimestamp(2, recordedDate);
 						stmt.setObject(3, null);
 						stmt.setDouble(4, maxFlowRate);
+						//Changed by Jay
+						stmt.setString(5, VRE_WORKFLOW);
 						stmt.executeUpdate();
 					} catch (Exception e) {
 						LOGGER.severe(e.getMessage());

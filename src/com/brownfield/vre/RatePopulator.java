@@ -8,6 +8,8 @@ import static com.brownfield.vre.VREConstants.INSERT_TARGET_RATE_QUERY;
 import static com.brownfield.vre.VREConstants.MEASURED_RATE;
 import static com.brownfield.vre.VREConstants.MEASURED_RATE_QUERY;
 import static com.brownfield.vre.VREConstants.ROW_CHANGED_DATE;
+import static com.brownfield.vre.VREConstants.ROW_CHANGED_BY;
+import static com.brownfield.vre.VREConstants.VRE_WORKFLOW;
 import static com.brownfield.vre.VREConstants.SATELLITE_ID;
 import static com.brownfield.vre.VREConstants.SOURCE_VALUES;
 import static com.brownfield.vre.VREConstants.STRING_ID;
@@ -103,7 +105,7 @@ public class RatePopulator {
 	 *            the recorded date
 	 * @param technicalRate
 	 *            the technical rate
-	 */
+	 */ 
 	private void insertOrUpdateTechnicalRate(Connection vreConn, int stringID, Timestamp recordedDate,
 			Double technicalRate) {
 		try (PreparedStatement statement = vreConn.prepareStatement(STRING_TARGET_RATE_QUERY,
@@ -113,7 +115,9 @@ public class RatePopulator {
 			try (ResultSet rset = statement.executeQuery()) {
 				if (rset.next()) {
 					rset.updateDouble(TECHNICAL_RATE, technicalRate);
+					//Changed by Jay
 					rset.updateTimestamp(ROW_CHANGED_DATE, new Timestamp(new Date().getTime()));
+					rset.updateString(ROW_CHANGED_BY,VRE_WORKFLOW);
 					rset.updateRow();
 				} else {
 					try (PreparedStatement stmt = vreConn.prepareStatement(INSERT_TARGET_RATE_QUERY);) {
@@ -121,6 +125,7 @@ public class RatePopulator {
 						stmt.setTimestamp(2, recordedDate);
 						stmt.setDouble(3, technicalRate);
 						stmt.setObject(4, null);// max_flow_rate_pressure
+						stmt.setString(5, VRE_WORKFLOW);
 						stmt.executeUpdate();
 					} catch (Exception e) {
 						LOGGER.severe(e.getMessage());

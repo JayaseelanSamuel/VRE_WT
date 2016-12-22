@@ -528,6 +528,30 @@ public class Utils {
 	}
 
 	/**
+	 * Refresh notification EmailID from DB. Added by Jay
+	 *
+	 * @param conn
+	 *            the conn */
+	
+	public static void refreshEmailGroup(Connection conn) {
+		try (PreparedStatement statement = conn.prepareStatement(NOTIFICATION_EMAIL_QUERY);) {
+			statement.setString(1, GENERAL_NOTIFICATION_GROUP);
+			try (ResultSet rset = statement.executeQuery();) {
+				if (rset != null && rset.next()) { // always one row
+					EMAIL_GROUP=rset.getString("EMAILADDRESS");
+				}
+				LOGGER.info("Refreshing refreshEmailGroup"+EMAIL_GROUP);
+			} catch (Exception e) {
+				LOGGER.severe(e.getMessage());
+				e.printStackTrace();
+			}
+		} catch (Exception e) {
+			LOGGER.severe(e.getMessage());
+			e.printStackTrace();
+		}
+	} 
+
+	/**
 	 * Refresh properties.
 	 */
 	public static void refreshProperties() {
@@ -544,8 +568,10 @@ public class Utils {
 			DSIS_PORT = PropertyReader.getProperty("DSIS_PORT");
 			DSBPM_BASE_URL = "http://" + DSIS_HOST + ":" + DSIS_PORT + "/dsbpm-engine/rest";
 			APP_BASE_URL = PropertyReader.getProperty("APP_BASE_URL");
-			EMAIL_GROUP = PropertyReader.getProperty("EMAIL_GROUP");
-			LOGGER.info("Loaded values from properties file.");
+			//Changed by Jay
+			//EMAIL_GROUP = PropertyReader.getProperty("EMAIL_GROUP");
+			GENERAL_NOTIFICATION_GROUP=PropertyReader.getProperty("GENERAL_NOTIFICATION_GROUP");
+			LOGGER.info("Loaded values from properties file."+GENERAL_NOTIFICATION_GROUP);
 		} catch (IOException e) {
 			LOGGER.severe(e.getMessage());
 			e.printStackTrace();
